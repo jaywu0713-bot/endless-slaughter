@@ -40,7 +40,7 @@ body {
     user-select: none;
     -webkit-user-select: none;
 }
-#app { width: 100%; max-width: 800px; height: 100vh; max-height: 700px; position: relative; }
+#app { width: 100%; max-width: 800px; height: 100dvh; max-height: 100dvh; position: relative; overflow: hidden; }
 
 /* ==================== HUD BAR ==================== */
 #hud-bar {
@@ -378,19 +378,89 @@ body {
 }
 .engrave-card .engrave-hint { font-size: 11px; color: var(--text-dim); }
 
-/* ==================== RESPONSIVE ==================== */
-@media (max-width: 600px) {
-    #screen-menu .title { font-size: 32px; }
-    .card { width: 100px; min-height: 140px; padding: 8px; }
-    .card-icon { font-size: 24px; }
-    .card-title { font-size: 13px; }
-    .card-desc { font-size: 10px; }
-    .card-hand { gap: 8px; }
-    .char-sprite { width: 60px; height: 90px; }
-    .char-panel.enemy .char-sprite { width: 70px; height: 100px; }
-    .char-panel.boss .char-sprite { width: 85px; height: 115px; }
-    .reward-options { flex-direction: column; }
-    .battle-arena { gap: 8px; }
+/* ==================== MOBILE ADAPTATION ==================== */
+@media (max-width: 750px) {
+    #app { max-height: none; height: 100dvh; }
+    #screen-menu .title { font-size: 28px; }
+    #screen-menu .subtitle { font-size: 13px; }
+    .menu-instructions { max-height: 200px; font-size: 11px; }
+    .menu-instructions p { margin-bottom: 4px; }
+    .btn { padding: 12px 28px; font-size: 15px; }
+
+    /* Battle: narrower side panels */
+    .battle-left, .battle-right { width: 85px; font-size: 10px; }
+    .battle-left .stats, .battle-right .stats { font-size: 10px; }
+    .battle-header { flex-wrap: wrap; gap: 4px; }
+    .battle-header .floor { font-size: 13px; }
+    .battle-header .header-gold { font-size: 11px; }
+    .battle-header .btn { padding: 3px 8px; font-size: 10px; }
+
+    /* Cards: smaller, flexible */
+    .card { width: calc(25% - 8px); min-width: 70px; max-width: 110px; min-height: 130px; padding: 6px; }
+    .card-icon { font-size: 18px; }
+    .card-title { font-size: 11px; }
+    .card-desc { font-size: 9px; }
+    .card-cost { width: 22px; height: 22px; font-size: 10px; top: -6px; left: -6px; }
+    .card-type-label { font-size: 8px; padding: 1px 4px; }
+    .card-rune { font-size: 9px; }
+    .card-hand { gap: 4px; }
+
+    /* Sprites: smaller */
+    .char-sprite { width: 50px; height: 80px; }
+    #enemy-sprite { width: 50px; height: 80px; }
+    .boss #enemy-sprite { width: 65px; height: 95px; }
+    .shield-big { font-size: 16px; top: -4px; }
+    .vs-text { font-size: 14px; margin-bottom: 20px; }
+    .char-name { font-size: 11px; }
+    .intent-display { font-size: 12px; }
+    .char-box .hp-bar-wrap { width: 70px; }
+    .char-box .hp-text { font-size: 9px; }
+
+    /* Energy & buttons */
+    .energy-big { font-size: 18px; min-width: 45px; }
+    #btn-end-turn { padding: 10px 16px; font-size: 14px; min-width: 100px; }
+    .btn-view-skill { font-size: 9px; padding: 2px 4px; }
+
+    /* Map */
+    .map-grid { transform: scale(0.75); transform-origin: top center; }
+    #map-area-text { font-size: 13px; }
+
+    /* Modals */
+    .modal-content { padding: 14px 16px; max-width: 95vw; }
+    .boss-intro-text { font-size: 16px; padding: 20px; }
+
+    /* Message log */
+    .message-log { font-size: 10px; min-height: 30px; max-height: 60px; }
+
+    /* Reward */
+    .reward-card { width: 140px; padding: 16px; }
+    .reward-icon { font-size: 32px; }
+
+    /* Deck info */
+    .deck-info { font-size: 10px; }
+
+    /* Records */
+    .record-item { font-size: 10px; gap: 4px; padding: 4px 6px; }
+    .record-icon { font-size: 13px; min-width: 20px; }
+    .record-label { min-width: 60px; }
+    .record-date { font-size: 8px; }
+}
+
+@media (max-width: 400px) {
+    .card { min-width: 60px; max-width: 90px; min-height: 110px; padding: 4px; }
+    .card-icon { font-size: 14px; }
+    .card-title { font-size: 10px; }
+    .card-desc { font-size: 8px; }
+    .card-cost { width: 18px; height: 18px; font-size: 9px; }
+    .battle-left, .battle-right { width: 65px; font-size: 9px; }
+    .battle-left .stats, .battle-right .stats { font-size: 9px; }
+    #screen-menu .title { font-size: 24px; }
+    .char-sprite { width: 40px; height: 65px; }
+    #enemy-sprite { width: 40px; height: 65px; }
+    .boss #enemy-sprite { width: 52px; height: 78px; }
+    .btn { padding: 10px 22px; font-size: 13px; }
+    .energy-big { font-size: 16px; }
+    #btn-end-turn { padding: 8px 12px; font-size: 12px; min-width: 80px; }
 }
 </style>
 </head>
