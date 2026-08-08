@@ -432,6 +432,15 @@ body {
     .map-grid { transform: scale(0.7); transform-origin: top center; }
     #map-area-text { font-size: 12px; }
 
+    /* Shop */
+    .shop-item { padding: 8px; }
+    .shop-item-icon { font-size: 20px; }
+    .shop-item-name { font-size: 12px; }
+    .shop-item-desc { font-size: 10px; }
+    .shop-item-price { font-size: 11px; }
+    #screen-shop { gap: 8px; padding: 8px; }
+    #btn-leave-shop { margin-top: 4px; font-size: 13px; padding: 8px 20px; }
+
     /* Modals */
     .modal-content { padding: 14px 16px; max-width: 95vw; }
     .boss-intro-text { font-size: 16px; padding: 20px; }
@@ -1610,7 +1619,7 @@ function generateEnemy(floor) {
             maxHp: bossCfg.hp,
             hp: bossCfg.hp,
             attack: bossCfg.attack,
-            defense: Math.floor(floor * 3),
+            defense: Math.floor(floor * 2),
             isBoss: true,
             bossId: bossData ? bossData.id : null,
             skillName: bossData ? bossData.skillName : '',
@@ -1690,15 +1699,6 @@ function discardCard(card) {
 function startTurn() {
     if (state.screen !== 'battle' || state.battlePhase === 'over') return;
 
-    // Clean up previous boss skill effects
-    if (state.enemy && state.enemy.isBoss && state.enemy.bossId && BOSS_DEFS[state.enemy.bossId]) {
-        const bossDef = BOSS_DEFS[state.enemy.bossId];
-        if (bossDef.skillCleanup) bossDef.skillCleanup(state);
-    }
-    // Clean up shapeshifter skill (saved costs) — applies even if boss already switched
-    for (const card of state.deck.hand) {
-        if (card._savedCost !== undefined) { card.cost = card._savedCost; delete card._savedCost; }
-    }
     // Decrement plague turns
     if (state.plagueTurns > 0) state.plagueTurns--;
 
@@ -1900,6 +1900,11 @@ function endPlayerTurn() {
     if (state.battlePhase !== 'player') return;
     state.battlePhase = 'enemy';
 
+    // Clean up shapeshifter skill (player's turn is over, restore costs)
+    for (const card of state.deck.hand) {
+        if (card._savedCost !== undefined) { card.cost = card._savedCost; delete card._savedCost; }
+    }
+
     if (state.enemy && state.enemy.isBoss) {
         // Boss: random attack / defense / skill
         state.enemyTurnCounter++;
@@ -1931,7 +1936,7 @@ function endPlayerTurn() {
             state.enemyCurrentDef = Math.floor(state.enemy.defense * 1.5);
         } else {
             state.enemyIntentType = 'attack';
-            state.enemyIntentLabel = '⚔️ 攻击';
+            state.enemyIntentLabel = '';
             const enemyRoll = Math.random();
             state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + enemyRoll * 0.6));
             state.enemyCurrentDef = Math.floor(state.enemy.defense * (1.3 - enemyRoll * 0.6));
@@ -3190,7 +3195,7 @@ function updateBattleUI() {
             $('enemy-intent').classList.add('skill-intent');
             $('enemy-intent').style.color = '';
         } else {
-            $('enemy-intent').textContent = `${state.enemyIntentLabel || '⚔️'} ${state.enemyCurrentAtk || 0}`;
+            $('enemy-intent').textContent = `⚔️ ${state.enemyCurrentAtk || 0}`;
             $('enemy-intent').classList.remove('skill-intent');
             $('enemy-intent').style.color = '';
         }
