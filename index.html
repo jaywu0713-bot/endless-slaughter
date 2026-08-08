@@ -431,6 +431,15 @@ body {
         </div>
     </div>
 
+    <!-- RECORDS MODAL -->
+    <div id="modal-records" class="modal-overlay" style="display:none;" onclick="closeRecordsModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2 style="color:var(--gold);">📜 历史记录</h2>
+            <div id="records-list" style="max-height:50vh;overflow-y:auto;"></div>
+            <button class="btn btn-small" onclick="closeRecordsModal()" style="margin-top:12px;">关闭</button>
+        </div>
+    </div>
+
     <!-- MAIN MENU -->
     <div id="screen-menu" class="screen active">
         <div class="title">无尽杀戮</div>
@@ -444,9 +453,11 @@ body {
             <p><b>📈 升级：</b>获得经验提升等级。升级增加HP、攻击、防御。</p>
             <p><b>🏆 目标：</b>击败第100层最终Boss通关！</p>
         </div>
-        <div id="menu-records"></div>
-        <button class="btn" id="btn-start">开始游戏</button>
-        <button class="btn" id="btn-continue" style="display:none;">继续游戏</button>
+        <div class="menu-buttons">
+            <button class="btn" id="btn-start">开始游戏</button>
+            <button class="btn" id="btn-continue" style="display:none;">继续游戏</button>
+            <button class="btn btn-small" id="btn-records" onclick="showRecordsModal()">📜 历史记录</button>
+        </div>
     </div>
 
     <!-- BATTLE -->
@@ -1880,25 +1891,33 @@ function loadRecords() {
     } catch (e) { return []; }
 }
 
-function renderRecords() {
+function renderRecordsModal() {
     const records = loadRecords();
-    let html = '<div class="records-container"><h3>📜 历史记录</h3>';
+    let html = '';
     if (records.length === 0) {
-        html += '<p style="text-align:center;color:#555;font-size:12px;">暂无记录，开始游戏吧！</p>';
-        return html + '</div>';
+        html = '<p style="text-align:center;color:#666;padding:20px;">暂无记录，开始游戏吧！</p>';
+    } else {
+        for (const r of records) {
+            const icon = r.outcome === 'victory' ? '🏆' : '💀';
+            const label = r.outcome === 'victory' ? '通关' : `止步第 ${r.floor} 层`;
+            html += `<div class="record-item">
+                <span class="record-icon">${icon}</span>
+                <span class="record-label">${label}</span>
+                <span class="record-stats">Lv.${r.level} | ⚔${r.attack} 🛡${r.defense} ❤${r.maxHp}</span>
+                <span class="record-date">${r.date}</span>
+            </div>`;
+        }
     }
-    for (const r of records) {
-        const icon = r.outcome === 'victory' ? '🏆' : '💀';
-        const label = r.outcome === 'victory' ? '通关' : `止步第 ${r.floor} 层`;
-        html += `<div class="record-item">
-            <span class="record-icon">${icon}</span>
-            <span class="record-label">${label}</span>
-            <span class="record-stats">Lv.${r.level} | ⚔${r.attack} 🛡${r.defense} ❤${r.maxHp}</span>
-            <span class="record-date">${r.date}</span>
-        </div>`;
-    }
-    html += '</div>';
-    return html;
+    $('records-list').innerHTML = html;
+}
+
+function showRecordsModal() {
+    renderRecordsModal();
+    $('modal-records').style.display = 'flex';
+}
+
+function closeRecordsModal(e) {
+    $('modal-records').style.display = 'none';
 }
 
 function loadGame() {
@@ -2809,7 +2828,6 @@ function render() {
         case 'menu':
             showScreen('menu');
             $('btn-continue').style.display = loadGame() ? '' : 'none';
-            $('menu-records').innerHTML = renderRecords();
             break;
         case 'battle':
             showScreen('battle');
