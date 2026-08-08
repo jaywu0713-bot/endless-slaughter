@@ -380,6 +380,7 @@ body {
 </style>
 </head>
 <body>
+<div id="error-overlay" style="display:none;position:fixed;top:0;left:0;right:0;background:#c62828;color:#fff;padding:10px 16px;z-index:9999;font-size:13px;white-space:pre-wrap;cursor:pointer;" onclick="this.style.display='none'"></div>
 <div id="app">
 
     <!-- HUD (shown on game screens) -->
@@ -1613,7 +1614,6 @@ function startNewArea(startFloor) {
 // Helper: which columns on the next floor are reachable from the current column?
 function getReachableCols(currentCol) {
     if (currentCol < 0) {
-        // Start of area: all columns that have a room on floor 1 are reachable
         const firstRow = state.currentMap[0];
         const cols = [];
         for (let c = 0; c < MAP_CONFIG.cols; c++) {
@@ -1622,8 +1622,24 @@ function getReachableCols(currentCol) {
         return cols;
     }
     const cols = [];
+    const maxReach = MAP_CONFIG.connectorReach;
+    // First pass: standard reachability
     for (let c = 0; c < MAP_CONFIG.cols; c++) {
-        if (Math.abs(c - currentCol) <= MAP_CONFIG.connectorReach) cols.push(c);
+        if (Math.abs(c - currentCol) <= maxReach) cols.push(c);
+    }
+    // Fallback: if no rooms reachable in the next row, open all paths to prevent dead ends
+    const nextRowIdx = state.mapCursorFloor + 1 - state.mapStartFloor;
+    if (nextRowIdx >= 0 && nextRowIdx < (state.currentMap ? state.currentMap.length : 0)) {
+        const nextRow = state.currentMap[nextRowIdx];
+        const hasAnyReachable = cols.some(c => nextRow[c] !== null);
+        if (!hasAnyReachable) {
+            // No standard-reach rooms exist → return all columns that have a room
+            const allCols = [];
+            for (let c = 0; c < MAP_CONFIG.cols; c++) {
+                if (nextRow[c]) allCols.push(c);
+            }
+            return allCols.length > 0 ? allCols : cols;
+        }
     }
     return cols;
 }
@@ -1759,6 +1775,7 @@ function selectRoom(targetFloor, targetCol) {
 
     const map = state.currentMap;
     const rowIndex = targetFloor - state.mapStartFloor;
+    if (rowIndex < 0 || rowIndex >= map.length) return;
     const cell = map[rowIndex][targetCol];
     if (!cell) return;
 
@@ -1776,7 +1793,12 @@ function selectRoom(targetFloor, targetCol) {
     state.mapCursorPath = targetCol;
     state.floor = targetFloor;
 
-    resolveRoom(cell);
+    try {
+        resolveRoom(cell);
+    } catch (e) {
+        console.error('resolveRoom error:', e.message, e.stack);
+        alert('进入房间失败：' + e.message);
+    }
 }
 
 function resolveRoom(cell) {
@@ -2148,7 +2170,23 @@ function showScreen(name) {
 }
 
 function showEffects() {
-    $('effects-list').innerHTML = ALL_RUNE_IDS.map(id => {
+    const combatInfo = `
+        <div class="effect-entry" style="border-left-color:var(--gold);">
+            <div class="eff-name" style="color:var(--gold);">⚔️ 战斗系统</div>
+            <div class="eff-desc">
+                <b>❤️ HP：</b>生命值，归零则游戏失败<br>
+                <b>⚔️ 攻击：</b>攻击卡造成的伤害值<br>
+                <b>🛡️ 防御：</b>防御卡获得的护盾值<br>
+                <b>🛡️ 护盾：</b>优先抵挡伤害，每回合开始清零<br>
+                <b>⚡ 精力：</b>每回合3点，使用卡牌消耗1点<br>
+                <b>📈 经验：</b>击败敌人获得（=楼层数），满则升级<br>
+                <b>💰 金币：</b>击败敌人获得（=楼层×2），用于商店<br>
+                <b>💀 怪物：</b>有攻击和防御属性，防御值浮动±30%<br>
+                <b>🗺️ 路线：</b>沿连线选相邻房间，只能向下一层移动
+            </div>
+        </div>
+    `;
+    $('effects-list').innerHTML = combatInfo + ALL_RUNE_IDS.map(id => {
         const r = RUNE_DEFS[id];
         const tagText = r.tag === 'attack' ? '攻击' : r.tag === 'defense' ? '防御' : '通用';
         return `
@@ -2482,6 +2520,12 @@ window.playCard = playCard;
 // =====================================================================
 // BOOT
 // =====================================================================
+// Global error display
+window.addEventListener('error', function(e) {
+    const el = document.getElementById('error-overlay');
+    if (el) { el.style.display='block'; el.textContent = '❌ ' + e.message + ' (line '+e.lineno+')'; }
+});
+
 document.addEventListener('DOMContentLoaded', () => {
     try {
         SFX.init();
