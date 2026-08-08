@@ -1943,8 +1943,8 @@ function endPlayerTurn() {
     if (state.battlePhase !== 'player') return;
     state.battlePhase = 'enemy';
 
-    // Clean up shapeshifter skill (player's turn is over, restore costs)
-    for (const card of state.deck.hand) {
+    // Clean up shapeshifter skill (player's turn is over, restore costs in hand + discard)
+    for (const card of [...state.deck.hand, ...state.deck.discard]) {
         if (card._savedCost !== undefined) { card.cost = card._savedCost; delete card._savedCost; }
     }
 
