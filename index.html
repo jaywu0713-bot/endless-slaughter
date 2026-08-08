@@ -605,16 +605,44 @@ body {
         <h2>🏆 战斗胜利！</h2>
         <p id="reward-floor-text">第 1 层</p>
         <div class="reward-options">
-            <div class="reward-card" id="reward-exp">
-                <div class="reward-icon">📈</div>
-                <div class="reward-title" id="reward-exp-title">提升经验值</div>
-                <div class="reward-desc" id="reward-exp-desc">+0 经验</div>
-            </div>
-            <div class="reward-card" id="reward-heal">
+            <div class="reward-card" id="reward-heal" onclick="selectReward('heal')">
                 <div class="reward-icon">💚</div>
                 <div class="reward-title">回复血量</div>
                 <div class="reward-desc" id="reward-heal-desc">+0 HP</div>
             </div>
+            <div class="reward-card" id="reward-attr" onclick="showAttrPick()">
+                <div class="reward-icon">💪</div>
+                <div class="reward-title">提升属性</div>
+                <div class="reward-desc">攻击力或防御力 +1~3</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ATTR PICK -->
+    <div id="screen-attr-pick" class="screen">
+        <h2>💪 选择一个属性免费提升</h2>
+        <p id="attr-pick-gold" style="font-size:14px;color:var(--energy);margin-bottom:8px;"></p>
+        <div class="reward-options">
+            <div class="reward-card" onclick="pickAttr('attack')">
+                <div class="reward-icon">⚔️</div>
+                <div class="reward-title">攻击力 +1</div>
+                <div class="reward-desc">免费</div>
+            </div>
+            <div class="reward-card" onclick="pickAttr('defense')">
+                <div class="reward-icon">🛡️</div>
+                <div class="reward-title">防御力 +1</div>
+                <div class="reward-desc">免费</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ATTR BUY -->
+    <div id="screen-attr-buy" class="screen">
+        <h2 id="attr-buy-title"></h2>
+        <p id="attr-buy-gold" style="font-size:14px;color:var(--energy);"></p>
+        <div style="display:flex;gap:12px;margin-top:12px;">
+            <button class="btn" id="btn-attr-buy" onclick="buyOtherAttr()">购买 2💰</button>
+            <button class="btn btn-small" onclick="finishAttrPick()">跳过</button>
         </div>
     </div>
 
@@ -665,11 +693,22 @@ body {
         <button class="btn" id="btn-chest-continue">继续</button>
     </div>
 
+    <!-- RUNE CONFIRM (accept/decline) -->
+    <div id="screen-rune-confirm" class="screen">
+        <h2>🔮 获得印记</h2>
+        <div id="rune-confirm-card" class="rune-card" style="margin-bottom:16px;"></div>
+        <div style="display:flex;gap:12px;">
+            <button class="btn" id="btn-accept-rune" onclick="acceptRune()">获得</button>
+            <button class="btn btn-small" onclick="declineRune()">放弃</button>
+        </div>
+    </div>
+
     <!-- RUNE SELECTION -->
     <div id="screen-rune-select" class="screen">
         <h2 id="rune-select-title">选择印记</h2>
         <p id="rune-select-desc">选择一个印记刻在卡牌上</p>
         <div class="rune-options" id="rune-options"></div>
+        <button class="btn btn-small" onclick="declineRune()" style="margin-top:12px;">放弃（不获得印记）</button>
     </div>
 
     <!-- CARD ENGRAVE -->
@@ -748,9 +787,9 @@ const BALANCE = {
     bossFloors: [25, 50, 75, 100],
     player: {
         initial: { level: 1, maxHp: 50, hp: 50, attack: 7, defense: 4, exp: 0, gold: 0 },
-        maxEnergy: 3,
-        drawPerTurn: 4,
-        levelUpBonus: { maxHp: 10, attack: 1, defense: 1 },
+        maxEnergy: 2,
+        drawPerTurn: 2,
+        levelUpBonus: { maxHp: 10 },
         initialCards: [
             { id: 'attack', icon: '⚔️', type: 'atk', cost: 1, effect: 'dealDamage', rune: null, runeData: {} },
             { id: 'attack', icon: '⚔️', type: 'atk', cost: 1, effect: 'dealDamage', rune: null, runeData: {} },
@@ -1079,11 +1118,20 @@ const RUNE_DEFS = {
                     addMessage(`🔮 杀戮尖塔：额外获得 ${state.player.defense} 点护盾`, 'info');
                 } else if (card.type === 'def') {
                     if (state.enemy && state.enemy.hp > 0) {
-                        const bonusDmg = Math.max(1, state.player.attack - state.enemyCurrentDef);
+                        let bonusDmg = state.player.attack;
+                        if (state.enemyCurrentDef >= bonusDmg) {
+                            state.enemyCurrentDef -= bonusDmg;
+                            bonusDmg = 0;
+                        } else {
+                            bonusDmg -= state.enemyCurrentDef;
+                            state.enemyCurrentDef = 0;
+                        }
                         state.enemy.hp -= bonusDmg;
-                        addMessage(`🔮 杀戮尖塔：额外造成 ${bonusDmg} 点伤害`, 'damage');
-                        animateDamage('enemy-sprite', bonusDmg, 'damage');
-                        shakeElement('enemy-sprite');
+                        if (bonusDmg > 0) {
+                            addMessage(`🔮 杀戮尖塔：额外造成 ${bonusDmg} 点伤害`, 'damage');
+                            animateDamage('enemy-sprite', bonusDmg, 'damage');
+                            shakeElement('enemy-sprite');
+                        }
                     }
                 }
                 return {};
@@ -1275,6 +1323,22 @@ const SHOP_ITEMS = [
         price: 20,
         apply(state) { return null; },
     },
+    {
+        id: 'buyAttack',
+        name: '攻击卡牌',
+        icon: '⚔️',
+        desc: '获得1张攻击卡牌',
+        price: 20,
+        apply(state) { return null; },
+    },
+    {
+        id: 'buyDefense',
+        name: '防御卡牌',
+        icon: '🛡️',
+        desc: '获得1张防御卡牌',
+        price: 20,
+        apply(state) { return null; },
+    },
 ];
 
 // =====================================================================
@@ -1315,6 +1379,17 @@ const CHEST_REWARDS = [
         apply(state) {
             // Random rune handled in chest flow
             return { msg: null, icon: '🔮' }; // special handling
+        },
+    },
+    {
+        id: 'randomCard',
+        name: '随机卡牌',
+        icon: '🃏',
+        desc: '随机获得一张攻击或防御卡牌',
+        weight: 1,
+        apply(state) {
+            // Special handling in showQuestionRoom
+            return { msg: null, icon: '🃏' };
         },
     },
     {
@@ -1376,7 +1451,10 @@ function freshState() {
             counterAttackCard: null,
         },
         pendingRuneId: null,
+        pendingConfirmRuneId: null,
         pendingRuneChoices: null,
+        pendingCard: null,
+        declinedRunes: [],
         engraveOrigin: 'boss',  // 'boss' | 'shop' | 'chest'
         chestResult: null,
         // Map / road system
@@ -1385,6 +1463,8 @@ function freshState() {
         mapCursorFloor: 1,
         mapCursorPath: 0,
         pendingReward: true,
+        pendingAttrType: null,
+        pendingBuyType: null,
     };
 }
 
@@ -1665,18 +1745,25 @@ function playCard(handIndex) {
             dmg = hooks.modifyDamage(state, card, dmg);
         }
 
-        // Deal damage reduced by enemy defense
+        // Damage vs defense pool
         let actualDmg = dmg;
         if (state.enemy) {
-            actualDmg = Math.max(1, dmg - state.enemyCurrentDef);
-            if (actualDmg < dmg) {
-                addMessage(`🛡️ 怪物防御 ${state.enemyCurrentDef}：伤害 ${dmg} → ${actualDmg}`, 'info');
+            if (state.enemyCurrentDef >= dmg) {
+                state.enemyCurrentDef -= dmg;
+                actualDmg = 0;
+                addMessage(`🛡️ 怪物防御吸收了全部 ${dmg} 点伤害！剩余防御 ${state.enemyCurrentDef}`, 'info');
+            } else {
+                actualDmg = dmg - state.enemyCurrentDef;
+                addMessage(`🛡️ 穿透怪物防御：${dmg} → ${actualDmg}（防御消耗 ${state.enemyCurrentDef}）`, 'info');
+                state.enemyCurrentDef = 0;
             }
         }
         state.enemy.hp -= actualDmg;
-        addMessage(`${T.player} 使用${T.cardAttack}，造成 ${actualDmg} 点伤害！`, 'damage');
-        animateDamage('enemy-sprite', actualDmg, 'damage');
-        shakeElement('enemy-sprite');
+        if (actualDmg > 0) {
+            addMessage(`${T.player} 使用${T.cardAttack}，造成 ${actualDmg} 点伤害！`, 'damage');
+            animateDamage('enemy-sprite', actualDmg, 'damage');
+            shakeElement('enemy-sprite');
+        }
         SFX.play('attack');
 
         // On-damage hook (e.g. bloodthirst)
@@ -1705,14 +1792,21 @@ function playCard(handIndex) {
             }
             let actualExtraDmg = extraDmg;
             if (state.enemy) {
-                actualExtraDmg = Math.max(1, extraDmg - state.enemyCurrentDef);
-                if (actualExtraDmg < extraDmg) {
-                    addMessage(`🛡️ 怪物防御 ${state.enemyCurrentDef}：伤害 ${extraDmg} → ${actualExtraDmg}`, 'info');
+                if (state.enemyCurrentDef >= extraDmg) {
+                    state.enemyCurrentDef -= extraDmg;
+                    actualExtraDmg = 0;
+                    addMessage(`🛡️ 怪物防御吸收了全部连击伤害！剩余防御 ${state.enemyCurrentDef}`, 'info');
+                } else {
+                    actualExtraDmg = extraDmg - state.enemyCurrentDef;
+                    addMessage(`🛡️ 连击穿透防御：${extraDmg} → ${actualExtraDmg}`, 'info');
+                    state.enemyCurrentDef = 0;
                 }
             }
             state.enemy.hp -= actualExtraDmg;
-            addMessage(`⚔️ 连击：额外造成 ${actualExtraDmg} 点伤害！`, 'damage');
-            animateDamage('enemy-sprite', actualExtraDmg, 'damage');
+            if (actualExtraDmg > 0) {
+                addMessage(`⚔️ 连击：额外造成 ${actualExtraDmg} 点伤害！`, 'damage');
+                animateDamage('enemy-sprite', actualExtraDmg, 'damage');
+            }
             shakeElement('enemy-sprite');
             if (hooks.onDamage) hooks.onDamage(state, card, extraDmg);
 
@@ -1872,11 +1966,12 @@ function onEnemyDefeated() {
     if (state.screen !== 'battle') return;
     state.battlePhase = 'over';
 
-    // Gold drop: floor * 2
-    const goldDrop = state.floor * 2;
+    // Gold drop: 2 for normal, 10 for boss
+    const goldDrop = isBossFloor(state.floor) ? 10 : 2;
     state.player.gold += goldDrop;
     addMessage(`${T.msgEnemyDeath(state.enemy.name)}`, 'info');
     addMessage(`💰 获得 ${goldDrop} 金币！`, 'heal');
+    grantBattleExp();
     updateBattleUI();
 
     // Boss floors trigger rune selection
@@ -1903,15 +1998,17 @@ function onPlayerDeath() {
 // PROGRESSION
 // =====================================================================
 function applyReward(type) {
-    if (type === 'exp') {
-        const expGain = Math.floor(5 + state.floor * 1.5);
-        state.player.exp += expGain;
-        addMessage(`获得 ${expGain} 点经验！`, 'heal');
-        checkLevelUp();
-    } else if (type === 'heal') {
+    if (type === 'heal') {
         const healAmt = Math.ceil(state.player.maxHp * BALANCE.healPercent);
         healPlayer(healAmt);
     }
+}
+
+// Auto-grant EXP after every battle
+function grantBattleExp() {
+    state.player.exp += 5;
+    addMessage(`获得 5 点经验！`, 'heal');
+    checkLevelUp();
 }
 
 function checkLevelUp() {
@@ -1922,8 +2019,6 @@ function checkLevelUp() {
         state.player.level++;
         state.player.maxHp += BALANCE.player.levelUpBonus.maxHp;
         healPlayer(BALANCE.player.levelUpBonus.maxHp);
-        state.player.attack += BALANCE.player.levelUpBonus.attack;
-        state.player.defense += BALANCE.player.levelUpBonus.defense;
         leveled = true;
         SFX.play('level_up');
         addMessage(`${T.levelUp} 等级 ${state.player.level}！`, 'heal');
@@ -2440,6 +2535,94 @@ function engraveRuneOnCard(cardIndex) {
     }
 }
 
+// Unified rune confirm — reuse for boss, shop, chest
+function showRuneConfirm(rune) {
+    state.pendingConfirmRuneId = rune.id;
+    const tagText = rune.tag === 'attack' ? T.runeTypeAttack :
+                    rune.tag === 'defense' ? T.runeTypeDefense : T.runeTypeUniversal;
+    $('rune-confirm-card').innerHTML = `
+        <div class="rune-icon">🔮</div>
+        <div class="rune-name">${rune.name}</div>
+        <div class="rune-tag ${rune.tag}">${tagText}</div>
+        <div class="rune-desc">${rune.desc}</div>
+    `;
+    showScreen('rune-confirm');
+}
+
+function acceptRune() {
+    const runeId = state.pendingConfirmRuneId;
+    const rune = RUNE_DEFS[runeId];
+    if (!rune) return;
+    state.pendingRuneId = runeId;
+    showCardEngrave(rune);
+}
+
+function declineRune() {
+    state.pendingConfirmRuneId = null;
+    state.pendingRuneId = null;
+    if (state.engraveOrigin === 'shop') {
+        storeDeclinedRune();
+        state.screen = 'shop';
+        renderShop();
+    } else if (state.engraveOrigin === 'chest') {
+        storeDeclinedRune();
+        state.engraveOrigin = 'boss';
+        proceedAfterRoom();
+    } else {
+        storeDeclinedRune();
+        showReward();
+    }
+}
+
+function storeDeclinedRune() {
+    // Track declined rune so it doesn't show up again soon
+    if (!state.declinedRunes) state.declinedRunes = [];
+    if (state.pendingRuneId) {
+        state.declinedRunes.push(state.pendingRuneId);
+        if (state.declinedRunes.length > 20) state.declinedRunes.shift();
+        addMessage(`放弃了印记`, 'info');
+    }
+    state.pendingRuneId = null;
+    state.pendingConfirmRuneId = null;
+}
+
+// Unified card reward — reuse for chest
+function showCardReward() {
+    const isAttack = Math.random() < 0.5;
+    const card = isAttack
+        ? { id: 'attack', icon: '⚔️', type: 'atk', cost: 1, effect: 'dealDamage', name: T.cardAttack }
+        : { id: 'defense', icon: '🛡️', type: 'def', cost: 1, effect: 'gainShield', name: T.cardDefense };
+    state.pendingCard = card;
+    $('question-room-options').innerHTML = `
+        <div class="reward-card">
+            <div class="reward-icon">${card.icon}</div>
+            <div class="reward-title">随机卡牌</div>
+            <div class="reward-desc">${card.name} | ⚡${card.cost}</div>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:12px;">
+            <button class="btn" onclick="acceptCard()">获得</button>
+            <button class="btn btn-small" onclick="declineCard()">放弃</button>
+        </div>
+    `;
+    showScreen('question-room');
+}
+
+function acceptCard() {
+    const card = state.pendingCard;
+    if (!card) return;
+    state.player.cards.push({ ...card, rune: null, runeData: {} });
+    addMessage(`${card.icon} 获得了一张${card.name}！`, 'heal');
+    state.engraveOrigin = 'boss';
+    proceedAfterRoom();
+}
+
+function declineCard() {
+    state.pendingCard = null;
+    addMessage('放弃了卡牌', 'info');
+    state.engraveOrigin = 'boss';
+    proceedAfterRoom();
+}
+
 // =====================================================================
 // QUESTION ROOM INTERACTION
 // =====================================================================
@@ -2470,23 +2653,16 @@ function showQuestionRoom() {
         // Chest
         const reward = pickChestReward();
         if (reward.id === 'randomRune') {
+            _questionRoomTimer = null; // handled manually
             const runeIds = ALL_RUNE_IDS;
             const randomId = runeIds[Math.floor(Math.random() * runeIds.length)];
             const rune = RUNE_DEFS[randomId];
             state.pendingRuneId = randomId;
             state.engraveOrigin = 'chest';
-            $('question-room-options').innerHTML = `
-                <div class="reward-card">
-                    <div class="reward-icon">📦</div>
-                    <div class="reward-title">发现宝箱！</div>
-                    <div class="reward-desc">获得了印记「${rune.name}」</div>
-                </div>
-            `;
-            showScreen('question-room');
-            _questionRoomTimer = setTimeout(() => {
-                _questionRoomTimer = null;
-                showCardEngrave(rune);
-            }, 1000);
+            showRuneConfirm(rune);
+        } else if (reward.id === 'randomCard') {
+            _questionRoomTimer = null; // handled manually
+            showCardReward();
         } else {
             const result = reward.apply(state);
             $('question-room-options').innerHTML = `
@@ -2574,8 +2750,27 @@ function buyShopItem(itemId) {
         state.player.gold -= item.price;
         state.pendingRuneId = randomId;
         state.engraveOrigin = 'shop';
-        addMessage(`🔮 获得了印记「${rune.name}」！选择一张卡牌刻印`, 'heal');
-        showCardEngrave(rune);
+        showRuneConfirm(rune);
+        return;
+    }
+
+    // Card purchases
+    if (item.id === 'buyAttack') {
+        state.player.gold -= item.price;
+        const newCard = { id: 'attack', icon: '⚔️', type: 'atk', cost: 1, effect: 'dealDamage', rune: null, runeData: {} };
+        state.player.cards.push(newCard);
+        addMessage('⚔️ 获得了一张攻击卡牌！', 'heal');
+        SFX.play('play_card');
+        renderShop();
+        return;
+    }
+    if (item.id === 'buyDefense') {
+        state.player.gold -= item.price;
+        const newCard = { id: 'defense', icon: '🛡️', type: 'def', cost: 1, effect: 'gainShield', rune: null, runeData: {} };
+        state.player.cards.push(newCard);
+        addMessage('🛡️ 获得了一张防御卡牌！', 'heal');
+        SFX.play('play_card');
+        renderShop();
         return;
     }
 
@@ -2615,7 +2810,7 @@ function showScreen(name) {
     const el = $(`screen-${name}`);
     if (el) el.classList.add('active');
     // Show HUD on game screens, hide on menu/victory/gameover
-    const gameScreens = ['map', 'battle', 'question-room', 'shop', 'chest-result', 'rune-select', 'rune-engrave', 'reward'];
+    const gameScreens = ['map', 'battle', 'question-room', 'shop', 'chest-result', 'rune-select', 'rune-engrave', 'rune-confirm', 'reward', 'attr-pick', 'attr-buy'];
     $('hud-bar').style.display = gameScreens.includes(name) ? 'flex' : 'none';
     if (gameScreens.includes(name)) updateHUD();
 }
@@ -2907,9 +3102,8 @@ function renderHand() {
 function showReward() {
     SFX.play('reward');
     state.screen = 'reward';
+    state.attrRefreshCount = 0;
     $('reward-floor-text').textContent = T.floor(state.floor);
-    const expGain = Math.floor(5 + state.floor * 1.5);
-    $('reward-exp-desc').textContent = T.rewardExpDesc(expGain);
     $('reward-heal-desc').textContent = T.rewardHealDesc(Math.ceil(state.player.maxHp * BALANCE.healPercent));
     showScreen('reward');
 }
@@ -2939,11 +3133,20 @@ function render() {
         case 'reward':
             showReward();
             break;
+        case 'attr-pick':
+            showScreen('attr-pick');
+            break;
+        case 'attr-buy':
+            showScreen('attr-buy');
+            break;
         case 'rune-select':
             showScreen('rune-select');
             break;
         case 'rune-engrave':
             showScreen('rune-engrave');
+            break;
+        case 'rune-confirm':
+            showScreen('rune-confirm');
             break;
         case 'victory':
             showScreen('victory');
@@ -2981,8 +3184,7 @@ function bindEvents() {
     $('btn-end-turn').addEventListener('click', endPlayerTurn);
     $('btn-victory-menu').addEventListener('click', backToMenu);
     $('btn-gameover-menu').addEventListener('click', backToMenu);
-    $('reward-exp').addEventListener('click', () => selectReward('exp'));
-    $('reward-heal').addEventListener('click', () => selectReward('heal'));
+    // Reward heal is now triggered via onclick in HTML
     $('btn-leave-shop').addEventListener('click', leaveShop);
     $('btn-chest-continue').addEventListener('click', continueAfterChest);
     $('btn-effects').addEventListener('click', showEffects);
@@ -3001,6 +3203,51 @@ function startGame() {
 
 function selectReward(type) {
     applyReward(type);
+    advanceFloor();
+}
+
+function showAttrPick() {
+    state.screen = 'attr-pick';
+    state.pendingAttrType = null;
+    $('attr-pick-gold').textContent = `💰 金币：${state.player.gold}`;
+    showScreen('attr-pick');
+}
+
+function pickAttr(type) {
+    state.pendingAttrType = type;
+    // Apply the free attribute
+    if (type === 'attack') {
+        state.player.attack += 1;
+        addMessage(`💪 攻击力 +1！`, 'heal');
+        state.pendingBuyType = 'defense';
+    } else {
+        state.player.defense += 1;
+        addMessage(`🛡️ 防御力 +1！`, 'heal');
+        state.pendingBuyType = 'attack';
+    }
+    // Show buy screen for the other attribute
+    const buyName = state.pendingBuyType === 'attack' ? '攻击力' : '防御力';
+    $('attr-buy-title').textContent = `💡 ${buyName} +1？`;
+    $('attr-buy-gold').textContent = `💰 金币：${state.player.gold}`;
+    $('btn-attr-buy').style.display = state.player.gold >= 2 ? '' : 'none';
+    state.screen = 'attr-buy';
+    showScreen('attr-buy');
+}
+
+function buyOtherAttr() {
+    if (state.player.gold < 2) return;
+    state.player.gold -= 2;
+    if (state.pendingBuyType === 'attack') {
+        state.player.attack += 1;
+        addMessage(`💪 攻击力 +1！（花费2💰）`, 'heal');
+    } else {
+        state.player.defense += 1;
+        addMessage(`🛡️ 防御力 +1！（花费2💰）`, 'heal');
+    }
+    advanceFloor();
+}
+
+function finishAttrPick() {
     advanceFloor();
 }
 
