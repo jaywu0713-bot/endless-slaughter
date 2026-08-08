@@ -1695,15 +1695,20 @@ function bindEvents() {
 }
 
 function startGame() {
-    state = freshState();
-    state.floor = 1;
-    state.enemy = generateEnemy(1);
-    state.deck = { draw: createDeck(), hand: [], discard: [] };
-    state.screen = 'battle';
-    render();
-    renderStickFigure('player-sprite', 'var(--player)', false, false);
-    renderStickFigure('enemy-sprite', 'var(--enemy)', true, false);
-    startTurn();
+    try {
+        state = freshState();
+        state.floor = 1;
+        state.enemy = generateEnemy(1);
+        state.deck = { draw: createDeck(), hand: [], discard: [] };
+        state.screen = 'battle';
+        render();
+        renderStickFigure('player-sprite', 'var(--player)', false, false);
+        renderStickFigure('enemy-sprite', 'var(--enemy)', true, false);
+        startTurn();
+    } catch (e) {
+        console.error('startGame error:', e.message, e.stack);
+        alert('游戏启动失败：' + e.message);
+    }
 }
 
 function selectReward(type) {
@@ -1729,9 +1734,22 @@ window.playCard = playCard;
 // BOOT
 // =====================================================================
 document.addEventListener('DOMContentLoaded', () => {
-    bindEvents();
-    state = freshState();
-    render();
+    try {
+        bindEvents();
+        state = freshState();
+        render();
+        console.log('Game initialized successfully');
+    } catch (e) {
+        console.error('Game init error:', e.message, e.stack);
+        // Show error on screen
+        const app = document.getElementById('app');
+        if (app) {
+            app.innerHTML = `<div style="color:red;padding:20px;text-align:center;">
+                <h2>初始化错误</h2>
+                <pre>${e.message}\n${e.stack || ''}</pre>
+            </div>`;
+        }
+    }
 });
 </script>
 </body>
