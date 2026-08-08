@@ -1808,6 +1808,7 @@ function resolveRoom(cell) {
     // Only battle rooms get the EXP/HP reward screen
     state.pendingReward = (cell.type === 'battle' || cell.type === 'boss');
     state.enemyCurrentDef = 0;
+    state.battlePhase = 'player'; // Reset for new battle
 
     switch (cell.type) {
         case 'battle':
@@ -2042,6 +2043,7 @@ function enterQuestionBattle() {
     state.messages = [];
     state.pendingReward = true;
     state.enemyCurrentDef = 0;
+    state.battlePhase = 'player';
     state.screen = 'battle';
     render();
     renderStickFigure('player-sprite', 'var(--player)', false, false);
