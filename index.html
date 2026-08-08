@@ -643,7 +643,6 @@ const BALANCE = {
 const MAP_CONFIG = {
     cols: 5,              // 5 columns — cleaner layout
     previewRows: 8,
-    iconSize: 24,
     cellW: 80,
     cellH: 64,
     rowGap: 40,
@@ -683,13 +682,6 @@ const CARD_DEFS = {
     },
 };
 
-const INITIAL_DECK = [
-    { ...CARD_DEFS.attack },
-    { ...CARD_DEFS.attack },
-    { ...CARD_DEFS.defense },
-    { ...CARD_DEFS.defense },
-];
-
 // =====================================================================
 // RUNE DEFINITIONS (data-driven — add new runes here)
 // =====================================================================
@@ -703,7 +695,7 @@ const RUNE_DEFS = {
         hooks: {
             onDamage(state, card, damageDealt) {
                 const heal = Math.max(1, Math.ceil(state.player.maxHp * 0.025));
-                state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
+                healPlayer(heal);
                 addMessage(`🩸 渴血：回复 ${heal} 点生命`, 'heal');
             },
         },
@@ -760,12 +752,14 @@ const RUNE_DEFS = {
             onKill(state, card) {
                 if (!card.runeData) card.runeData = {};
                 card.runeData.kills = (card.runeData.kills || 0) + 1;
-                // Also update the persistent card
-                const persistentCard = state.player.cards.find(
-                    c => c.id === card.id && c.type === card.type && c.rune === card.rune
-                );
-                if (persistentCard && persistentCard.runeData) {
-                    persistentCard.runeData.kills = card.runeData.kills;
+                // Also update the persistent card via source index
+                const idx = card._sourceIndex;
+                if (idx !== undefined && idx < state.player.cards.length) {
+                    const persistentCard = state.player.cards[idx];
+                    if (persistentCard && persistentCard.rune === 'dominator') {
+                        if (!persistentCard.runeData) persistentCard.runeData = {};
+                        persistentCard.runeData.kills = card.runeData.kills;
+                    }
                 }
                 addMessage(`💀 主宰：击杀计数 +1（当前 ${card.runeData.kills}）`, 'damage');
             },
@@ -896,7 +890,7 @@ function generateMap(startFloor, endFloor) {
 
     for (let f = 0; f < numFloors; f++) {
         const floorNum = startFloor + f;
-        const isBoss = BALANCE.bossFloors.includes(floorNum);
+        const isBoss = isBossFloor(floorNum);
 
         if (isBoss) {
             // Boss: single room in center column
@@ -943,40 +937,6 @@ function generateMap(startFloor, endFloor) {
 }
 
 // =====================================================================
-// QUESTION ROOM EVENTS (data-driven — add new events here)
-// =====================================================================
-const QUESTION_ROOM_EVENTS = [
-    {
-        id: 'heal',
-        name: '回复生命',
-        icon: '💚',
-        desc: '回复最大HP的10%',
-        weight: 1,
-        apply(state) {
-            const heal = Math.ceil(state.player.maxHp * 0.1);
-            state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
-            return `${this.icon} 回复了 ${heal} 点生命！`;
-        },
-    },
-    // Future expansions — add new events here:
-    // { id: 'shop', name: '商店', icon: '🛒', desc: '购买道具', weight: 1, ... },
-    // { id: 'randomRune', name: '随机印记', icon: '🔮', desc: '获得随机印记', weight: 1, ... },
-    // { id: 'specialEvent', name: '特殊事件', icon: '✨', desc: '触发特殊事件', weight: 1, ... },
-];
-
-function pickQuestionRoomEvent() {
-    // Weighted random selection — currently only one event, so it always picks 'heal'
-    // When more events are added, weights control probability
-    const totalWeight = QUESTION_ROOM_EVENTS.reduce((sum, e) => sum + (e.weight || 1), 0);
-    let roll = Math.random() * totalWeight;
-    for (const event of QUESTION_ROOM_EVENTS) {
-        roll -= (event.weight || 1);
-        if (roll <= 0) return { ...event };
-    }
-    return { ...QUESTION_ROOM_EVENTS[0] };
-}
-
-// =====================================================================
 // SHOP ITEMS (data-driven — add new items here)
 // =====================================================================
 const SHOP_ITEMS = [
@@ -988,7 +948,7 @@ const SHOP_ITEMS = [
         price: 12,
         apply(state) {
             const heal = Math.ceil(state.player.maxHp * 0.15);
-            state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
+            healPlayer(heal);
             return `回复了 ${heal} 点生命`;
         },
     },
@@ -1014,7 +974,7 @@ const CHEST_REWARDS = [
         weight: 1,
         apply(state) {
             const heal = Math.ceil(state.player.maxHp * 0.1);
-            state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
+            healPlayer(heal);
             return { msg: `💚 回复了 ${heal} 点生命！`, icon: '💚' };
         },
     },
@@ -1096,7 +1056,6 @@ function freshState() {
         },
         pendingRuneId: null,
         pendingRuneChoices: null,
-        questionRoomEvent: null,
         engraveOrigin: 'boss',  // 'boss' | 'shop' | 'chest'
         chestResult: null,
         // Map / road system
@@ -1104,7 +1063,6 @@ function freshState() {
         mapStartFloor: 1,
         mapCursorFloor: 1,
         mapCursorPath: 0,
-        mapHistory: [],
         pendingReward: true,
     };
 }
@@ -1175,15 +1133,19 @@ function randInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
-function clamp(v, lo, hi) {
-    return Math.max(lo, Math.min(hi, v));
+function isBossFloor(n) { return BALANCE.bossFloors.includes(n); }
+function healPlayer(amount) { state.player.hp = Math.min(state.player.maxHp, state.player.hp + amount); }
+function isRuneCompatible(rune, card) {
+    return rune.tag === 'universal' ||
+           (rune.tag === 'attack' && card.type === 'atk') ||
+           (rune.tag === 'defense' && card.type === 'def');
 }
 
 // =====================================================================
 // ENEMY GENERATION
 // =====================================================================
 function generateEnemy(floor) {
-    if (BALANCE.bossFloors.includes(floor)) {
+    if (isBossFloor(floor)) {
         const bossCfg = BALANCE.bosses[floor];
         return {
             name: T.enemyBoss,
@@ -1213,8 +1175,9 @@ function generateEnemy(floor) {
 // =====================================================================
 function createDeck() {
     // Clone player's persistent cards (with runes) for this battle
-    return shuffle(state.player.cards.map(c => ({
+    return shuffle(state.player.cards.map((c, i) => ({
         ...c,
+        _sourceIndex: i,
         runeData: c.runeData ? { ...c.runeData } : {},
     })));
 }
@@ -1419,8 +1382,10 @@ function enemyAttack() {
 
     // Apply damage to player
     state.player.hp -= netDmg;
-    if (netDmg > 0 || rawEnemyDmg > 0) {
-        addMessage(T.msgEnemyAttack(enemy.name, rawEnemyDmg), 'damage');
+    if (netDmg > 0) {
+        addMessage(T.msgEnemyAttack(enemy.name, netDmg), 'damage');
+    } else if (rawEnemyDmg > 0) {
+        addMessage(`🛡️ ${enemy.name} 的攻击被护盾完全吸收！`, 'info');
     }
     if (netDmg > 0) {
         animateDamage('player-sprite', netDmg, 'damage');
@@ -1473,7 +1438,7 @@ function onEnemyDefeated() {
     updateBattleUI();
 
     // Boss floors trigger rune selection
-    if (BALANCE.bossFloors.includes(state.floor)) {
+    if (isBossFloor(state.floor)) {
         SFX.play('boss_defeat');
         setTimeout(() => showRuneSelection(), 600);
     } else {
@@ -1501,7 +1466,7 @@ function applyReward(type) {
         checkLevelUp();
     } else if (type === 'heal') {
         const healAmt = Math.ceil(state.player.maxHp * BALANCE.healPercent);
-        state.player.hp = Math.min(state.player.maxHp, state.player.hp + healAmt);
+        healPlayer(healAmt);
     }
 }
 
@@ -1512,7 +1477,7 @@ function checkLevelUp() {
         state.player.exp -= cost;
         state.player.level++;
         state.player.maxHp += BALANCE.player.levelUpBonus.maxHp;
-        state.player.hp = Math.min(state.player.maxHp, state.player.hp + BALANCE.player.levelUpBonus.maxHp);
+        healPlayer(BALANCE.player.levelUpBonus.maxHp);
         state.player.attack += BALANCE.player.levelUpBonus.attack;
         state.player.defense += BALANCE.player.levelUpBonus.defense;
         leveled = true;
@@ -1537,7 +1502,6 @@ function saveGame() {
             floor: state.floor, player: state.player,
             mapStartFloor: state.mapStartFloor, currentMap: state.currentMap,
             mapCursorFloor: state.mapCursorFloor, mapCursorPath: state.mapCursorPath,
-            mapHistory: state.mapHistory,
         };
         localStorage.setItem(SAVE_KEY, JSON.stringify(data));
     } catch (e) {}
@@ -1601,7 +1565,6 @@ function startNewArea(startFloor) {
     state.currentMap = generateMap(startFloor, endFloor);
     state.mapCursorFloor = startFloor - 1; // Before first floor → floor 1 rooms are clickable
     state.mapCursorPath = -1;               // No current path yet
-    state.mapHistory = [];
     state.floor = startFloor - 1;
     state.screen = 'map';
     render();
@@ -1665,8 +1628,8 @@ function showMap() {
     const visibleRows = showTo - showFrom;
     const reachableCols = getReachableCols(cursorCol);
 
-    let nodes = '';
-    let svgLines = '';
+    const nodesArr = [];
+    const svgLinesArr = [];
     const totalW = cols * (CW + 8); // 8px gap between col slots
 
     for (let vr = 0; vr < visibleRows; vr++) {
@@ -1677,11 +1640,11 @@ function showMap() {
         const yTop = (visibleRows - 1 - vr) * (CH + GAP);
 
         // Room cells
-        nodes += `<div class="map-row" style="position:absolute;top:${yTop}px;left:0;right:0;gap:8px;">`;
+        nodesArr.push(`<div class="map-row" style="position:absolute;top:${yTop}px;left:0;right:0;gap:8px;">`);
         for (let c = 0; c < cols; c++) {
             const cell = row[c];
             if (!cell) {
-                nodes += '<div class="map-cell empty"></div>';
+                nodesArr.push('<div class="map-cell empty"></div>');
                 continue;
             }
 
@@ -1702,14 +1665,14 @@ function showMap() {
             const onClick = clickable ? `onclick="selectRoom(${floorNum},${c})"` : '';
             const bgStyle = `border-color:${room.color};background:${room.color}15;`;
 
-            nodes += `
+            nodesArr.push(`
                 <div class="map-cell ${stateClass}" style="${bgStyle}" ${onClick}>
                     <div class="cell-icon">${room.icon}</div>
                     <div class="cell-type">${room.name}</div>
                 </div>
-            `;
+            `);
         }
-        nodes += '</div>';
+        nodesArr.push('</div>');
 
         // Connector lines from this row (lower) → next row (upper, above on screen)
         if (r + 1 < totalRows && r + 1 < showTo) {
@@ -1734,7 +1697,7 @@ function showMap() {
                     const stroke = isActive ? 'var(--gold)' : '#2a2a3a';
                     const sw = isActive ? 3.5 : 1;
                     const op = isActive ? 1 : 0.25;
-                    svgLines += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" opacity="${op}"/>`;
+                    svgLinesArr.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" opacity="${op}"/>`);
                 }
             }
         }
@@ -1743,8 +1706,8 @@ function showMap() {
     const totalH = Math.max(200, visibleRows * (CH + GAP) - GAP);
     $('map-grid').innerHTML = `
         <div style="position:relative;width:${totalW}px;height:${totalH}px;margin:0 auto;">
-            <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;">${svgLines}</svg>
-            <div style="position:relative;z-index:1;">${nodes}</div>
+            <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;">${svgLinesArr.join('')}</svg>
+            <div style="position:relative;z-index:1;">${nodesArr.join('')}</div>
         </div>
     `;
 
@@ -1776,17 +1739,9 @@ function selectRoom(targetFloor, targetCol) {
     const map = state.currentMap;
     const rowIndex = targetFloor - state.mapStartFloor;
     if (rowIndex < 0 || rowIndex >= map.length) return;
+    if (targetCol < 0 || targetCol >= map[rowIndex].length) return;
     const cell = map[rowIndex][targetCol];
     if (!cell) return;
-
-    // Record history
-    state.mapHistory.push({
-        floor: state.mapCursorFloor >= state.mapStartFloor ? state.mapCursorFloor : 0,
-        col: state.mapCursorPath,
-        type: state.mapCursorFloor >= state.mapStartFloor
-            ? (map[state.mapCursorFloor - state.mapStartFloor]?.[state.mapCursorPath]?.type || 'unknown')
-            : 'start'
-    });
 
     // Move cursor
     state.mapCursorFloor = targetFloor;
@@ -1832,13 +1787,11 @@ function resolveRoom(cell) {
 
         case 'question':
             state.screen = 'question-room';
-            state.questionRoomEvent = { type: 'question' };
             render();
             break;
 
         case 'shop':
             state.screen = 'shop';
-            state.questionRoomEvent = null;
             state.engraveOrigin = 'boss';
             render();
             break;
@@ -1902,10 +1855,7 @@ function showCardEngrave(rune) {
 
     // Check if any compatible, unengraved cards exist
     const hasCompatibleCard = state.player.cards.some(card => {
-        const compatible = rune.tag === 'universal' ||
-                          (rune.tag === 'attack' && card.type === 'atk') ||
-                          (rune.tag === 'defense' && card.type === 'def');
-        return compatible && !card.rune;
+        return isRuneCompatible(rune, card) && !card.rune;
     });
 
     // If no compatible cards, skip to reward
@@ -1920,9 +1870,7 @@ function showCardEngrave(rune) {
     $('rune-engrave-desc').textContent = T.runeEngraveDesc(rune.name);
 
     $('card-engrave-options').innerHTML = state.player.cards.map((card, i) => {
-        const compatible = rune.tag === 'universal' ||
-                          (rune.tag === 'attack' && card.type === 'atk') ||
-                          (rune.tag === 'defense' && card.type === 'def');
+        const compatible = isRuneCompatible(rune, card);
         const hasRune = !!card.rune;
         const disabled = !compatible || hasRune;
         const cardName = card.id === 'attack' ? T.cardAttack : T.cardDefense;
@@ -1950,9 +1898,7 @@ function engraveRuneOnCard(cardIndex) {
     const card = state.player.cards[cardIndex];
     if (!rune || !card) return;
 
-    const compatible = rune.tag === 'universal' ||
-                      (rune.tag === 'attack' && card.type === 'atk') ||
-                      (rune.tag === 'defense' && card.type === 'def');
+    const compatible = isRuneCompatible(rune, card);
     if (!compatible || card.rune) return;
 
     // Engrave the rune
@@ -1971,7 +1917,6 @@ function engraveRuneOnCard(cardIndex) {
         renderShop();
     } else if (state.engraveOrigin === 'chest') {
         // Continue after chest rune
-        state.questionRoomEvent = null;
         state.engraveOrigin = 'boss';
         proceedAfterRoom();
     } else {
@@ -1984,7 +1929,11 @@ function engraveRuneOnCard(cardIndex) {
 // QUESTION ROOM INTERACTION
 // =====================================================================
 
+let _questionRoomTimer = null;
+
 function showQuestionRoom() {
+    // Prevent re-entry (race condition from multiple render() calls)
+    if (_questionRoomTimer !== null) return;
     SFX.play('question');
     // Auto-resolve: 50% monster, 50% chest
     const isMonster = Math.random() < 0.5;
@@ -1998,7 +1947,10 @@ function showQuestionRoom() {
             </div>
         `;
         showScreen('question-room');
-        setTimeout(() => enterQuestionBattle(), 1000);
+        _questionRoomTimer = setTimeout(() => {
+            _questionRoomTimer = null;
+            enterQuestionBattle();
+        }, 1000);
     } else {
         // Chest
         const reward = pickChestReward();
@@ -2016,7 +1968,10 @@ function showQuestionRoom() {
                 </div>
             `;
             showScreen('question-room');
-            setTimeout(() => showCardEngrave(rune), 1000);
+            _questionRoomTimer = setTimeout(() => {
+                _questionRoomTimer = null;
+                showCardEngrave(rune);
+            }, 1000);
         } else {
             const result = reward.apply(state);
             $('question-room-options').innerHTML = `
@@ -2027,8 +1982,8 @@ function showQuestionRoom() {
                 </div>
             `;
             showScreen('question-room');
-            setTimeout(() => {
-                state.questionRoomEvent = null;
+            _questionRoomTimer = setTimeout(() => {
+                _questionRoomTimer = null;
                 state.engraveOrigin = 'boss';
                 proceedAfterRoom();
             }, 1500);
@@ -2086,10 +2041,19 @@ function buyShopItem(itemId) {
 
     // Special handling for random rune
     if (item.id === 'randomRune') {
-        state.player.gold -= item.price;
+        // Pick random rune first, then check compatibility before charging gold
         const runeIds = ALL_RUNE_IDS;
         const randomId = runeIds[Math.floor(Math.random() * runeIds.length)];
         const rune = RUNE_DEFS[randomId];
+        // Check if any compatible, unengraved cards exist
+        const hasCompatibleCard = state.player.cards.some(card => {
+            return isRuneCompatible(rune, card) && !card.rune;
+        });
+        if (!hasCompatibleCard) {
+            addMessage('没有可刻印的卡牌，无法购买随机印记', 'damage');
+            return;
+        }
+        state.player.gold -= item.price;
         state.pendingRuneId = randomId;
         state.engraveOrigin = 'shop';
         addMessage(`🔮 获得了印记「${rune.name}」！选择一张卡牌刻印`, 'heal');
@@ -2105,44 +2069,12 @@ function buyShopItem(itemId) {
 }
 
 function leaveShop() {
-    state.questionRoomEvent = null;
     state.engraveOrigin = 'boss';
     proceedAfterRoom();
 }
 
-// =====================================================================
-// RANDOM CHEST
-// =====================================================================
-
-function openChest() {
-    const reward = pickChestReward();
-
-    // Special handling for random rune
-    if (reward.id === 'randomRune') {
-        const runeIds = ALL_RUNE_IDS;
-        const randomId = runeIds[Math.floor(Math.random() * runeIds.length)];
-        const rune = RUNE_DEFS[randomId];
-        state.pendingRuneId = randomId;
-        state.engraveOrigin = 'chest';
-        addMessage(`🔮 宝箱开出了印记「${rune.name}」！`, 'heal');
-        showCardEngrave(rune);
-        return;
-    }
-
-    // Apply reward and show result
-    const result = reward.apply(state);
-    state.chestResult = { icon: result.icon, msg: result.msg, desc: reward.desc };
-    state.screen = 'chest-result';
-    $('chest-result-content').innerHTML = `
-        <div class="chest-icon">${result.icon}</div>
-        <div class="chest-msg">${result.msg}</div>
-    `;
-    showScreen('chest-result');
-}
-
 function continueAfterChest() {
     state.chestResult = null;
-    state.questionRoomEvent = null;
     state.engraveOrigin = 'boss';
     proceedAfterRoom();
 }
@@ -2151,7 +2083,6 @@ function continueAfterChest() {
 window.selectRune = selectRune;
 window.engraveRuneOnCard = engraveRuneOnCard;
 window.enterShop = enterShop;
-window.openChest = openChest;
 window.buyShopItem = buyShopItem;
 window.leaveShop = leaveShop;
 window.continueAfterChest = continueAfterChest;
@@ -2344,7 +2275,7 @@ function updateBattleUI() {
         $('enemy-stats').innerHTML = `
             <div class="stat-row"><span class="label">攻击</span><span class="value">${e.attack}</span></div>
             <div class="stat-row"><span class="label">防御</span><span class="value">${e.defense}</span></div>
-            <div class="stat-row"><span class="label">本回合</span><span class="value">${state.enemyCurrentDef || e.defense}</span></div>
+            <div class="stat-row"><span class="label">本回合</span><span class="value">${state.enemyCurrentDef}</span></div>
         `;
     }
 
@@ -2383,7 +2314,7 @@ function renderHand() {
     for (let i = 0; i < maxSlots; i++) {
         if (i < cards.length) {
             const card = cards[i];
-            const disabled = state.energy < card.cost ? 'disabled' : '';
+            const disabled = (state.energy < card.cost && card.rune !== 'freeEnergy') ? 'disabled' : '';
             const typeClass = card.type === 'atk' ? 'atk-card' : 'def-card';
             const typeLabel = card.type === 'atk' ? 'ATTACK' : 'DEFENSE';
             const typeLabelClass = card.type === 'atk' ? 'atk' : 'def';
@@ -2511,6 +2442,7 @@ function selectReward(type) {
 }
 
 function backToMenu() {
+    clearSave();
     state = freshState();
     state.screen = 'menu';
     render();
