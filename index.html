@@ -275,16 +275,16 @@ body {
 .map-grid { min-width: 100%; display: flex; justify-content: center; }
 .map-row { display: flex; gap: 8px; justify-content: center; }
 .map-cell {
-    width: 72px; min-height: 62px; border-radius: 10px; flex-shrink: 0;
+    width: 80px; min-height: 64px; border-radius: 10px; flex-shrink: 0;
     display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
     font-size: 11px; font-weight: 700; cursor: default; transition: all 0.2s;
     border: 2px solid transparent; background: var(--panel);
 }
 .map-cell.empty { background: transparent; border: none; pointer-events: none; }
-.map-cell.past { opacity: 0.28; border-color: #444; }
-.map-cell.current { border-color: #fff; box-shadow: 0 0 14px rgba(255,255,255,0.4); background: var(--panel-light); animation: pulse-current 1.5s ease-in-out infinite; }
-.map-cell.future { border-color: #333; opacity: 0.5; }
-.map-cell.next { border-color: var(--gold); cursor: pointer; animation: pulse-next 2s ease-in-out infinite; opacity: 1; }
+.map-cell.past { opacity: 0.2; }
+.map-cell.current { border-color: #fff; box-shadow: 0 0 14px rgba(255,255,255,0.4); animation: pulse-current 1.5s ease-in-out infinite; opacity: 1; }
+.map-cell.future { opacity: 0.3; }
+.map-cell.next { cursor: pointer; animation: pulse-next 2s ease-in-out infinite; opacity: 1; z-index: 1; }
 .map-cell.next:hover { transform: scale(1.1); box-shadow: 0 0 20px rgba(255,215,0,0.6); z-index: 2; }
 .map-cell .cell-icon { font-size: 24px; line-height: 1; }
 .map-cell .cell-type { font-size: 10px; line-height: 1; }
@@ -640,18 +640,19 @@ const BALANCE = {
 // MAP / ROAD SYSTEM CONFIG
 // =====================================================================
 const MAP_CONFIG = {
-    cols: 7,              // Wide grid for branching
-    previewRows: 8,       // How many upcoming floors to show
-    iconSize: 24,         // Icon font size
-    cellW: 72,            // Cell width
-    cellH: 62,            // Cell height
-    rowGap: 44,           // Vertical gap between rows
-    connectorReach: 2,    // Max column distance for connections
+    cols: 5,              // 5 columns — cleaner layout
+    previewRows: 8,
+    iconSize: 24,
+    cellW: 80,
+    cellH: 64,
+    rowGap: 40,
+    connectorReach: 1,    // Tighter connections = less visual noise
     roomWeights: {
-        battle: 50,
-        question: 30,
-        shop: 20,
+        battle: 65,
+        question: 20,
+        shop: 15,
     },
+    maxSpecialPerFloor: 1, // Max 1 non-battle room per floor
 };
 
 const ROOM_TYPES = {
@@ -921,8 +922,18 @@ function generateMap(startFloor, endFloor) {
             const row = new Array(cols).fill(null);
             const count = randInt(2, 4);
             const pos = pickConnectedPositions(cols, count, prevPositions);
+            let specialCount = 0;
             for (const c of pos) {
-                row[c] = { type: randomRoomType(), floor: floorNum, col: c };
+                let type = randomRoomType();
+                // Limit non-battle rooms per floor
+                if (type !== 'battle') {
+                    if (specialCount >= MAP_CONFIG.maxSpecialPerFloor) {
+                        type = 'battle';
+                    } else {
+                        specialCount++;
+                    }
+                }
+                row[c] = { type, floor: floorNum, col: c };
             }
             map.push(row);
         }
@@ -1673,9 +1684,10 @@ function showMap() {
 
             const room = ROOM_TYPES[cell.type];
             const onClick = clickable ? `onclick="selectRoom(${floorNum},${c})"` : '';
+            const bgStyle = `border-color:${room.color};background:${room.color}15;`;
 
             nodes += `
-                <div class="map-cell ${stateClass}" ${onClick}>
+                <div class="map-cell ${stateClass}" style="${bgStyle}" ${onClick}>
                     <div class="cell-icon">${room.icon}</div>
                     <div class="cell-type">${room.name}</div>
                 </div>
@@ -1701,9 +1713,11 @@ function showMap() {
 
                     const isActive = (cursorFloor >= mapStart && floorNum === cursorFloor
                                     && c === cursorCol && reachableCols.includes(nc));
-                    const stroke = isActive ? 'var(--gold)' : '#3a3a5a';
-                    const sw = isActive ? 3 : 1.5;
-                    const op = isActive ? 0.9 : 0.4;
+                    // Only show inactive lines for direct connections (less visual noise)
+                    if (!isActive && Math.abs(c - nc) > 1) continue;
+                    const stroke = isActive ? 'var(--gold)' : '#2a2a3a';
+                    const sw = isActive ? 3.5 : 1;
+                    const op = isActive ? 1 : 0.25;
                     svgLines += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" opacity="${op}"/>`;
                 }
             }
