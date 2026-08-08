@@ -873,11 +873,20 @@ const BOSS_DEFS = {
         skillEffect(state) {
             const selfDmg = Math.floor(state.enemy.hp * 0.3);
             state.enemy.hp -= selfDmg;
-            const dmg = state.enemy.attack * 2;
+            let dmg = state.enemy.attack * 2;
+            // Apply shield first
+            if (state.shield > 0) {
+                const blocked = Math.min(state.shield, dmg);
+                state.shield -= blocked;
+                dmg -= blocked;
+                if (blocked > 0) addMessage(T.msgShieldBlock(blocked), 'info');
+            }
             state.player.hp -= dmg;
             addMessage(`🩸 嗜血狂魔使用了「鲜血暴怒」：自损 ${selfDmg}，对你造成 ${dmg} 点伤害！`, 'damage');
-            animateDamage('player-sprite', dmg, 'damage');
-            shakeElement('player-sprite');
+            if (dmg > 0) {
+                animateDamage('player-sprite', dmg, 'damage');
+                shakeElement('player-sprite');
+            }
             SFX.play('hit');
         },
     },
