@@ -137,6 +137,13 @@ body {
 .card-type-label.atk { color: var(--card-atk); }
 .card-type-label.def { color: var(--card-def); }
 
+.card-rune {
+    font-size: 10px; text-align: center; font-weight: 700;
+    color: #ce93d8; background: rgba(156,39,176,0.15);
+    border-radius: 4px; padding: 1px 6px; margin: 2px 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
 .deck-info { text-align: center; font-size: 11px; color: var(--text-dim); margin-top: 4px; }
 
 /* ==================== END TURN BUTTON ==================== */
@@ -183,6 +190,44 @@ body {
     0% { opacity: 1; transform: translateY(0); }
     100% { opacity: 0; transform: translateY(-50px); }
 }
+
+/* ==================== RUNE SELECTION ==================== */
+#screen-rune-select h2, #screen-rune-engrave h2 { font-size: 24px; color: var(--gold); margin-bottom: 4px; }
+#screen-rune-select p, #screen-rune-engrave p { color: var(--text-dim); margin-bottom: 16px; font-size: 14px; }
+
+.rune-options, .card-engrave-options { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+
+.rune-card, .engrave-card {
+    width: 200px; padding: 16px; border-radius: 12px;
+    border: 2px solid #555; background: var(--panel-light);
+    cursor: pointer; transition: all 0.2s; text-align: center;
+}
+.rune-card:hover, .engrave-card:hover:not(.disabled) {
+    border-color: var(--gold); transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(255,215,0,0.2);
+}
+.engrave-card.disabled { opacity: 0.35; cursor: not-allowed; filter: grayscale(60%); }
+.engrave-card.hasRune { border-color: #9c27b0; }
+.engrave-card.selected { border-color: var(--gold) !important; box-shadow: 0 0 16px rgba(255,215,0,0.4); }
+
+.rune-card .rune-icon { font-size: 36px; margin-bottom: 4px; }
+.rune-card .rune-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.rune-card .rune-tag {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: 700; letter-spacing: 1px; margin-bottom: 6px;
+}
+.rune-tag.attack { background: rgba(239,83,80,0.2); color: var(--card-atk); }
+.rune-tag.defense { background: rgba(66,165,245,0.2); color: var(--card-def); }
+.rune-tag.universal { background: rgba(255,215,0,0.2); color: var(--gold); }
+.rune-card .rune-desc { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+
+.engrave-card .engrave-icon { font-size: 32px; margin-bottom: 4px; }
+.engrave-card .engrave-name { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+.engrave-card .engrave-rune {
+    font-size: 11px; padding: 1px 6px; border-radius: 6px;
+    background: rgba(156,39,176,0.2); color: #ce93d8; display: inline-block; margin-bottom: 4px;
+}
+.engrave-card .engrave-hint { font-size: 11px; color: var(--text-dim); }
 
 /* ==================== RESPONSIVE ==================== */
 @media (max-width: 600px) {
@@ -274,6 +319,20 @@ body {
         <button class="btn" id="btn-victory-menu">返回主界面</button>
     </div>
 
+    <!-- RUNE SELECTION -->
+    <div id="screen-rune-select" class="screen">
+        <h2 id="rune-select-title">选择印记</h2>
+        <p id="rune-select-desc">选择一个印记刻在卡牌上</p>
+        <div class="rune-options" id="rune-options"></div>
+    </div>
+
+    <!-- CARD ENGRAVE -->
+    <div id="screen-rune-engrave" class="screen">
+        <h2 id="rune-engrave-title">选择卡牌</h2>
+        <p id="rune-engrave-desc"></p>
+        <div class="card-engrave-options" id="card-engrave-options"></div>
+    </div>
+
     <!-- GAME OVER -->
     <div id="screen-gameover" class="screen">
         <h2>💀 游戏结束</h2>
@@ -320,32 +379,49 @@ const T = {
     msgEnemyDeath: (name) => `${name} 被击败了！`,
     msgNoEnergy: '精力不足！',
     deckInfo: (draw, discard) => `📦 抽牌堆 ${draw} 张 ｜ 🗑️ 弃牌堆 ${discard} 张`,
+    // Runes
+    runeSelectTitle: '选择印记',
+    runeSelectDesc: '选择一个印记刻在卡牌上',
+    runeEngraveTitle: '选择卡牌',
+    runeEngraveDesc: (runeName) => `将「${runeName}」刻在哪张卡牌上？`,
+    runeTypeAttack: '攻击印记',
+    runeTypeDefense: '防御印记',
+    runeTypeUniversal: '通用印记',
+    runeEngraved: (runeName, cardName) => `「${runeName}」已刻在${cardName}卡上！`,
+    cardHasRune: '该卡已有印记',
+    cardIncompatible: '卡牌类型不匹配',
+    victoryV2: '🎉 通关V0.2！',
+    victoryV2Desc: '你击败了50层的楼层主，成功突破！',
 };
 
 // =====================================================================
 // GAME BALANCE CONFIG
 // =====================================================================
 const BALANCE = {
-    totalFloors: 25,
-    bossFloor: 25,
+    totalFloors: 50,
+    bossFloors: [25, 50],
     player: {
         initial: { level: 1, maxHp: 100, hp: 100, attack: 5, defense: 5, exp: 0 },
         maxEnergy: 3,
         drawPerTurn: 4,
         levelUpBonus: { maxHp: 10, attack: 1, defense: 1 },
+        initialCards: [
+            { id: 'attack', icon: '⚔️', type: 'atk', cost: 1, effect: 'dealDamage', rune: null, runeData: {} },
+            { id: 'attack', icon: '⚔️', type: 'atk', cost: 1, effect: 'dealDamage', rune: null, runeData: {} },
+            { id: 'defense', icon: '🛡️', type: 'def', cost: 1, effect: 'gainShield', rune: null, runeData: {} },
+            { id: 'defense', icon: '🛡️', type: 'def', cost: 1, effect: 'gainShield', rune: null, runeData: {} },
+        ],
     },
     monster: {
-        hpMin: 20,
-        hpMax: 80,
-        attackMin: 0,
-        attackMax: 10,
+        early: { hpMin: 20, hpMax: 80, attackMin: 0, attackMax: 10 },
+        late: { hpMin: 80, hpMax: 160, attackMin: 10, attackMax: 20 },
     },
-    boss: {
-        name: '楼层主',  // overridden from T for i18n
-        hp: 160,
-        attack: 20,
+    bosses: {
+        25: { hp: 160, attack: 20 },
+        50: { hp: 320, attack: 40 },
     },
     healPercent: 0.1,
+    runesPerSelection: 3,
 };
 
 // =====================================================================
@@ -376,6 +452,151 @@ const INITIAL_DECK = [
 ];
 
 // =====================================================================
+// RUNE DEFINITIONS (data-driven — add new runes here)
+// =====================================================================
+const RUNE_DEFS = {
+    bloodthirst: {
+        id: 'bloodthirst',
+        name: '渴血',
+        type: 'attack',
+        tag: 'attack',
+        desc: '攻击卡每次造成伤害后，回复玩家最大生命值的2.5%',
+        hooks: {
+            onDamage(state, card, damageDealt) {
+                const heal = Math.max(1, Math.ceil(state.player.maxHp * 0.025));
+                state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
+                addMessage(`🩸 渴血：回复 ${heal} 点生命`, 'heal');
+            },
+        },
+    },
+    doubleStrike: {
+        id: 'doubleStrike',
+        name: '连击',
+        type: 'attack',
+        tag: 'attack',
+        desc: '使用该攻击卡时，攻击两次',
+        hooks: {
+            onPlay(state, card) {
+                return { extraAttacks: 1 };
+            },
+        },
+    },
+    freeEnergy: {
+        id: 'freeEnergy',
+        name: '白嫖',
+        type: 'universal',
+        tag: 'universal',
+        desc: '该卡牌使用时不消耗精力',
+        hooks: {
+            onPlay(state, card) {
+                return { energyRefund: card.cost };
+            },
+        },
+    },
+    elder: {
+        id: 'elder',
+        name: '长者',
+        type: 'attack',
+        tag: 'attack',
+        desc: '该卡造成的伤害根据玩家等级增加。每提升1级，该卡伤害增加10%',
+        hooks: {
+            modifyDamage(state, card, baseDamage) {
+                const bonus = Math.floor(baseDamage * (state.player.level - 1) * 0.1);
+                return baseDamage + bonus;
+            },
+        },
+    },
+    dominator: {
+        id: 'dominator',
+        name: '主宰',
+        type: 'attack',
+        tag: 'attack',
+        desc: '该卡每击杀一个怪物后，该卡造成的伤害增加15%',
+        hooks: {
+            modifyDamage(state, card, baseDamage) {
+                const kills = (card.runeData && card.runeData.kills) || 0;
+                const bonus = Math.floor(baseDamage * kills * 0.15);
+                return baseDamage + bonus;
+            },
+            onKill(state, card) {
+                if (!card.runeData) card.runeData = {};
+                card.runeData.kills = (card.runeData.kills || 0) + 1;
+                // Also update the persistent card
+                const persistentCard = state.player.cards.find(
+                    c => c.id === card.id && c.type === card.type && c.rune === card.rune
+                );
+                if (persistentCard && persistentCard.runeData) {
+                    persistentCard.runeData.kills = card.runeData.kills;
+                }
+                addMessage(`💀 主宰：击杀计数 +1（当前 ${card.runeData.kills}）`, 'damage');
+            },
+        },
+    },
+    shieldMaster: {
+        id: 'shieldMaster',
+        name: '护盾大师',
+        type: 'defense',
+        tag: 'defense',
+        desc: '该防御卡获得的护盾值翻倍',
+        hooks: {
+            modifyShield(state, card, baseShield) {
+                return baseShield * 2;
+            },
+        },
+    },
+    counterAttack: {
+        id: 'counterAttack',
+        name: '防御反击',
+        type: 'defense',
+        tag: 'defense',
+        desc: '使用该防御卡获得护盾后，如果敌人进行攻击，使敌人受到其本次攻击伤害50%的反伤',
+        hooks: {
+            onDefensePlayed(state, card) {
+                state.turnFlags.counterAttack = true;
+                state.turnFlags.counterAttackCard = card;
+                addMessage('🛡️ 防御反击：本回合敌人攻击时将受到反伤', 'info');
+            },
+            onEnemyAttack(state, card, enemyRawDamage) {
+                const reflect = Math.floor(enemyRawDamage * 0.5);
+                if (state.enemy && reflect > 0) {
+                    state.enemy.hp -= reflect;
+                    addMessage(`⚔️ 防御反击：反弹 ${reflect} 点伤害！`, 'damage');
+                    animateDamage('enemy-panel', reflect, 'damage');
+                }
+            },
+        },
+    },
+    damageReduction: {
+        id: 'damageReduction',
+        name: '伤害减免',
+        type: 'defense',
+        tag: 'defense',
+        desc: '使用该防御卡的当前回合，玩家受到的伤害降低50%',
+        hooks: {
+            onDefensePlayed(state, card) {
+                state.turnFlags.damageReduction = true;
+                state.turnFlags.damageReductionCard = card;
+                addMessage('🛡️ 伤害减免：本回合受到伤害降低50%', 'info');
+            },
+            modifyIncomingDamage(state, card, incomingDamage) {
+                const reduced = Math.floor(incomingDamage * 0.5);
+                addMessage(`🛡️ 伤害减免：${incomingDamage} → ${reduced}`, 'info');
+                return reduced;
+            },
+        },
+    },
+};
+
+// Helper: get all rune IDs
+const ALL_RUNE_IDS = Object.keys(RUNE_DEFS);
+
+// Helper: pick random unique runes
+function pickRandomRunes(count) {
+    const shuffled = shuffle([...ALL_RUNE_IDS]);
+    return shuffled.slice(0, count).map(id => RUNE_DEFS[id]);
+}
+
+// =====================================================================
 // GAME STATE
 // =====================================================================
 let state = {};
@@ -384,14 +605,28 @@ function freshState() {
     return {
         screen: 'menu',
         floor: 1,
-        player: { ...BALANCE.player.initial },
+        player: {
+            ...BALANCE.player.initial,
+            cards: BALANCE.player.initialCards.map(c => ({
+                ...c,
+                runeData: {},
+            })),
+        },
         enemy: null,
         deck: { draw: [], hand: [], discard: [] },
         energy: 0,
         maxEnergy: BALANCE.player.maxEnergy,
         shield: 0,
         messages: [],
-        battlePhase: 'player', // 'player' | 'enemy' | 'over'
+        battlePhase: 'player',
+        turnFlags: {
+            damageReduction: false,
+            damageReductionCard: null,
+            counterAttack: false,
+            counterAttackCard: null,
+        },
+        pendingRuneId: null,
+        pendingRuneChoices: null,
     };
 }
 
@@ -419,17 +654,19 @@ function clamp(v, lo, hi) {
 // ENEMY GENERATION
 // =====================================================================
 function generateEnemy(floor) {
-    if (floor === BALANCE.bossFloor) {
+    if (BALANCE.bossFloors.includes(floor)) {
+        const bossCfg = BALANCE.bosses[floor];
         return {
             name: T.enemyBoss,
-            maxHp: BALANCE.boss.hp,
-            hp: BALANCE.boss.hp,
-            attack: BALANCE.boss.attack,
+            maxHp: bossCfg.hp,
+            hp: bossCfg.hp,
+            attack: bossCfg.attack,
             isBoss: true,
         };
     }
-    const hp = randInt(BALANCE.monster.hpMin, BALANCE.monster.hpMax);
-    const atk = randInt(BALANCE.monster.attackMin, BALANCE.monster.attackMax);
+    const range = floor <= 25 ? BALANCE.monster.early : BALANCE.monster.late;
+    const hp = randInt(range.hpMin, range.hpMax);
+    const atk = randInt(range.attackMin, range.attackMax);
     return {
         name: T.enemyMonster,
         maxHp: hp,
@@ -443,7 +680,11 @@ function generateEnemy(floor) {
 // DECK MANAGEMENT
 // =====================================================================
 function createDeck() {
-    return shuffle(INITIAL_DECK.map(c => ({ ...c })));
+    // Clone player's persistent cards (with runes) for this battle
+    return shuffle(state.player.cards.map(c => ({
+        ...c,
+        runeData: c.runeData ? { ...c.runeData } : {},
+    })));
 }
 
 function drawCards(count) {
@@ -478,6 +719,7 @@ function discardCard(card) {
 function startTurn() {
     if (state.screen !== 'battle') return; // Guard: don't start turn if we left battle
     state.battlePhase = 'player';
+    state.turnFlags = { damageReduction: false, damageReductionCard: null, counterAttack: false, counterAttackCard: null };
     state.energy = state.maxEnergy;
     const drawn = drawCards(BALANCE.player.drawPerTurn);
     if (drawn.length > 0) {
@@ -486,44 +728,103 @@ function startTurn() {
     updateBattleUI();
 }
 
+function getCardHooks(card) {
+    if (!card || !card.rune || !RUNE_DEFS[card.rune]) return {};
+    return RUNE_DEFS[card.rune].hooks || {};
+}
+
 function playCard(handIndex) {
     if (state.battlePhase !== 'player') return;
     const card = state.deck.hand[handIndex];
     if (!card) return;
-    if (state.energy < card.cost) {
+
+    const hooks = getCardHooks(card);
+
+    // Check onPlay hooks (free energy, double strike info)
+    let onPlayResult = {};
+    if (hooks.onPlay) {
+        onPlayResult = hooks.onPlay(state, card) || {};
+    }
+
+    // Calculate actual energy cost
+    const actualCost = onPlayResult.energyRefund ? 0 : card.cost;
+    if (state.energy < actualCost) {
         addMessage(T.msgNoEnergy, 'damage');
         return;
     }
+    state.energy -= actualCost;
 
-    state.energy -= card.cost;
-
-    // Remove from hand
+    // Remove from hand, add to discard
     state.deck.hand.splice(handIndex, 1);
     discardCard(card);
 
-    // Apply effect
+    // Apply card effect
     if (card.effect === 'dealDamage') {
-        const dmg = state.player.attack;
+        let dmg = state.player.attack;
+        if (hooks.modifyDamage) {
+            dmg = hooks.modifyDamage(state, card, dmg);
+        }
+
+        // Deal damage
         state.enemy.hp -= dmg;
         addMessage(`${T.player} 使用${T.cardAttack}，造成 ${dmg} 点伤害！`, 'damage');
         animateDamage('enemy-panel', dmg, 'damage');
         shakeElement('enemy-panel');
+
+        // On-damage hook (e.g. bloodthirst)
+        if (hooks.onDamage) {
+            hooks.onDamage(state, card, dmg);
+        }
+
+        // Check enemy death
+        if (state.enemy.hp <= 0) {
+            state.enemy.hp = 0;
+            state.battlePhase = 'over';
+            if (hooks.onKill) hooks.onKill(state, card);
+            updateBattleUI();
+            setTimeout(() => onEnemyDefeated(), 400);
+            return;
+        }
+
+        // Extra attacks (double strike)
+        const extraAttacks = onPlayResult.extraAttacks || 0;
+        for (let i = 0; i < extraAttacks; i++) {
+            if (state.enemy.hp <= 0) break;
+            let extraDmg = state.player.attack;
+            if (hooks.modifyDamage) {
+                extraDmg = hooks.modifyDamage(state, card, extraDmg);
+            }
+            state.enemy.hp -= extraDmg;
+            addMessage(`⚔️ 连击：额外造成 ${extraDmg} 点伤害！`, 'damage');
+            animateDamage('enemy-panel', extraDmg, 'damage');
+            shakeElement('enemy-panel');
+            if (hooks.onDamage) hooks.onDamage(state, card, extraDmg);
+
+            if (state.enemy.hp <= 0) {
+                state.enemy.hp = 0;
+                state.battlePhase = 'over';
+                if (hooks.onKill) hooks.onKill(state, card);
+                updateBattleUI();
+                setTimeout(() => onEnemyDefeated(), 400);
+                return;
+            }
+        }
+
     } else if (card.effect === 'gainShield') {
-        const shieldAmt = state.player.defense;
+        let shieldAmt = state.player.defense;
+        if (hooks.modifyShield) {
+            shieldAmt = hooks.modifyShield(state, card, shieldAmt);
+        }
         state.shield += shieldAmt;
         addMessage(`${T.player} 使用${T.cardDefense}，获得 ${shieldAmt} 点护盾！`, 'info');
+
+        // On-defense-played hooks
+        if (hooks.onDefensePlayed) {
+            hooks.onDefensePlayed(state, card);
+        }
     }
 
     updateBattleUI();
-
-    // Check if enemy died
-    if (state.enemy.hp <= 0) {
-        state.enemy.hp = 0;
-        state.battlePhase = 'over';
-        updateBattleUI();
-        setTimeout(() => onEnemyDefeated(), 400);
-        return;
-    }
 }
 
 function endPlayerTurn() {
@@ -536,24 +837,44 @@ function endPlayerTurn() {
 
 function enemyAttack() {
     const enemy = state.enemy;
-    let rawDmg = enemy.attack;
-    let blocked = 0;
+    const rawEnemyDmg = enemy.attack;
+    let netDmg = rawEnemyDmg;
 
+    // Apply damage reduction if a defense card with that rune was played
+    if (state.turnFlags.damageReduction && state.turnFlags.damageReductionCard) {
+        const drHooks = getCardHooks(state.turnFlags.damageReductionCard);
+        if (drHooks.modifyIncomingDamage) {
+            netDmg = drHooks.modifyIncomingDamage(state, state.turnFlags.damageReductionCard, netDmg);
+        }
+    }
+
+    // Apply shield
+    let blocked = 0;
     if (state.shield > 0) {
-        blocked = Math.min(state.shield, rawDmg);
+        blocked = Math.min(state.shield, netDmg);
         state.shield -= blocked;
-        rawDmg -= blocked;
+        netDmg -= blocked;
         if (blocked > 0) {
             addMessage(T.msgShieldBlock(blocked), 'info');
         }
     }
 
-    state.player.hp -= rawDmg;
-    addMessage(T.msgEnemyAttack(enemy.name, enemy.attack), 'damage');
-
-    if (rawDmg > 0) {
-        animateDamage('player-panel', rawDmg, 'damage');
+    // Apply damage to player
+    state.player.hp -= netDmg;
+    if (netDmg > 0 || rawEnemyDmg > 0) {
+        addMessage(T.msgEnemyAttack(enemy.name, rawEnemyDmg), 'damage');
+    }
+    if (netDmg > 0) {
+        animateDamage('player-panel', netDmg, 'damage');
         shakeElement('player-panel');
+    }
+
+    // Apply counter attack if active
+    if (state.turnFlags.counterAttack && state.turnFlags.counterAttackCard && state.enemy) {
+        const caHooks = getCardHooks(state.turnFlags.counterAttackCard);
+        if (caHooks.onEnemyAttack) {
+            caHooks.onEnemyAttack(state, state.turnFlags.counterAttackCard, rawEnemyDmg);
+        }
     }
 
     updateBattleUI();
@@ -566,6 +887,15 @@ function enemyAttack() {
         return;
     }
 
+    // Check if enemy died from counter attack
+    if (state.enemy && state.enemy.hp <= 0) {
+        state.enemy.hp = 0;
+        state.battlePhase = 'over';
+        updateBattleUI();
+        setTimeout(() => onEnemyDefeated(), 400);
+        return;
+    }
+
     // Next turn
     setTimeout(() => startTurn(), 600);
 }
@@ -575,7 +905,13 @@ function onEnemyDefeated() {
     state.battlePhase = 'over';
     addMessage(T.msgEnemyDeath(state.enemy.name), 'info');
     updateBattleUI();
-    setTimeout(() => showReward(), 600);
+
+    // Boss floors trigger rune selection
+    if (BALANCE.bossFloors.includes(state.floor)) {
+        setTimeout(() => showRuneSelection(), 600);
+    } else {
+        setTimeout(() => showReward(), 600);
+    }
 }
 
 function onPlayerDeath() {
@@ -635,6 +971,117 @@ function advanceFloor() {
     render();
     startTurn();
 }
+
+// =====================================================================
+// RUNE SELECTION & ENGRAVING
+// =====================================================================
+
+function showRuneSelection() {
+    state.screen = 'rune-select';
+    const choices = pickRandomRunes(BALANCE.runesPerSelection);
+    state.pendingRuneChoices = choices;
+
+    $('rune-select-title').textContent = T.runeSelectTitle;
+    $('rune-select-desc').textContent = T.runeSelectDesc;
+
+    $('rune-options').innerHTML = choices.map(rune => {
+        const tagClass = rune.tag;
+        const tagText = rune.tag === 'attack' ? T.runeTypeAttack :
+                        rune.tag === 'defense' ? T.runeTypeDefense :
+                        T.runeTypeUniversal;
+        return `
+            <div class="rune-card" onclick="selectRune('${rune.id}')">
+                <div class="rune-icon">🔮</div>
+                <div class="rune-name">${rune.name}</div>
+                <div class="rune-tag ${tagClass}">${tagText}</div>
+                <div class="rune-desc">${rune.desc}</div>
+            </div>
+        `;
+    }).join('');
+
+    showScreen('rune-select');
+}
+
+function selectRune(runeId) {
+    const rune = RUNE_DEFS[runeId];
+    if (!rune) return;
+    state.pendingRuneId = runeId;
+    showCardEngrave(rune);
+}
+
+function showCardEngrave(rune) {
+    state.screen = 'rune-engrave';
+
+    // Check if any compatible, unengraved cards exist
+    const hasCompatibleCard = state.player.cards.some(card => {
+        const compatible = rune.tag === 'universal' ||
+                          (rune.tag === 'attack' && card.type === 'atk') ||
+                          (rune.tag === 'defense' && card.type === 'def');
+        return compatible && !card.rune;
+    });
+
+    // If no compatible cards, skip to reward
+    if (!hasCompatibleCard) {
+        addMessage('没有符合条件的卡牌可刻印，印记已丢弃', 'damage');
+        state.pendingRuneId = null;
+        showReward();
+        return;
+    }
+
+    $('rune-engrave-title').textContent = T.runeEngraveTitle;
+    $('rune-engrave-desc').textContent = T.runeEngraveDesc(rune.name);
+
+    $('card-engrave-options').innerHTML = state.player.cards.map((card, i) => {
+        const compatible = rune.tag === 'universal' ||
+                          (rune.tag === 'attack' && card.type === 'atk') ||
+                          (rune.tag === 'defense' && card.type === 'def');
+        const hasRune = !!card.rune;
+        const disabled = !compatible || hasRune;
+        const cardName = card.id === 'attack' ? T.cardAttack : T.cardDefense;
+        let hint = '';
+        if (hasRune) hint = `🔒 ${T.cardHasRune}`;
+        else if (!compatible) hint = `🚫 ${T.cardIncompatible}`;
+        else hint = '👆 点击刻印';
+
+        return `
+            <div class="engrave-card ${disabled ? 'disabled' : ''} ${hasRune ? 'hasRune' : ''}"
+                 ${!disabled ? `onclick="engraveRuneOnCard(${i})"` : ''}>
+                <div class="engrave-icon">${card.icon}</div>
+                <div class="engrave-name">${cardName}</div>
+                ${hasRune ? `<div class="engrave-rune">🔮 ${RUNE_DEFS[card.rune]?.name || card.rune}</div>` : ''}
+                <div class="engrave-hint">${hint}</div>
+            </div>
+        `;
+    }).join('');
+
+    showScreen('rune-engrave');
+}
+
+function engraveRuneOnCard(cardIndex) {
+    const rune = RUNE_DEFS[state.pendingRuneId];
+    const card = state.player.cards[cardIndex];
+    if (!rune || !card) return;
+
+    const compatible = rune.tag === 'universal' ||
+                      (rune.tag === 'attack' && card.type === 'atk') ||
+                      (rune.tag === 'defense' && card.type === 'def');
+    if (!compatible || card.rune) return;
+
+    // Engrave the rune
+    card.rune = rune.id;
+    card.runeData = {};
+
+    const cardName = card.id === 'attack' ? T.cardAttack : T.cardDefense;
+    addMessage(T.runeEngraved(rune.name, cardName), 'heal');
+
+    // Proceed to normal reward screen
+    state.pendingRuneId = null;
+    showReward();
+}
+
+// Make functions globally accessible for onclick handlers
+window.selectRune = selectRune;
+window.engraveRuneOnCard = engraveRuneOnCard;
 
 // =====================================================================
 // UI RENDERING
@@ -819,12 +1266,16 @@ function renderHand() {
         const desc = card.id === 'attack'
             ? T.cardAttackDesc(state.player.attack)
             : T.cardDefenseDesc(state.player.defense);
+        const runeIndicator = card.rune
+            ? `<div class="card-rune" title="${RUNE_DEFS[card.rune]?.name || ''}">🔮 ${RUNE_DEFS[card.rune]?.name || card.rune}</div>`
+            : '';
         return `
             <div class="card ${typeClass} ${disabled}" onclick="playCard(${i})">
                 <div class="card-cost">⚡${card.cost}</div>
                 <div class="card-icon">${card.icon}</div>
                 <div class="card-title">${name}</div>
                 <div class="card-desc">${desc}</div>
+                ${runeIndicator}
                 <div class="card-type-label ${typeLabelClass}">${typeLabel}</div>
             </div>
         `;
@@ -852,8 +1303,19 @@ function render() {
         case 'reward':
             showReward();
             break;
+        case 'rune-select':
+            showScreen('rune-select');
+            break;
+        case 'rune-engrave':
+            showScreen('rune-engrave');
+            break;
         case 'victory':
             showScreen('victory');
+            // Dynamic victory text: V0.1 (25 floors) vs V0.2 (50 floors)
+            const vicTitle = state.floor > 30 ? T.victoryV2 : T.victory;
+            const vicDesc = state.floor > 30 ? T.victoryV2Desc : T.victoryDesc;
+            document.querySelector('#screen-victory h2').textContent = vicTitle;
+            document.querySelector('#screen-victory p').textContent = vicDesc;
             $('victory-stats').innerHTML = `
                 <div class="stat-row"><span class="label">最终等级</span><span class="value">${state.player.level}</span></div>
                 <div class="stat-row"><span class="label">最大生命</span><span class="value">${state.player.maxHp}</span></div>
