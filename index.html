@@ -52,6 +52,33 @@ body {
 .hud-hp { color: var(--hp-green); }
 .hud-floor { color: var(--gold); }
 .hud-gold { color: var(--energy); }
+.hud-effects-btn { padding: 3px 10px; font-size: 12px; }
+
+/* ==================== MODAL ==================== */
+.modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+}
+.modal-content {
+    background: var(--panel); border: 2px solid var(--gold); border-radius: 12px;
+    padding: 20px 24px; max-width: 560px; width: 90%; max-height: 80vh;
+    overflow-y: auto; text-align: center;
+}
+.modal-content h2 { color: var(--gold); font-size: 20px; margin-bottom: 12px; }
+.effects-list { display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.effect-entry {
+    padding: 10px 14px; background: var(--panel-light); border-radius: 8px;
+    border-left: 3px solid #ce93d8;
+}
+.effect-entry .eff-name { font-weight: 700; color: #ce93d8; font-size: 14px; }
+.effect-entry .eff-tag {
+    font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-left: 6px;
+    font-weight: 700;
+}
+.eff-tag.attack { background: rgba(239,83,80,0.2); color: var(--card-atk); }
+.eff-tag.defense { background: rgba(66,165,245,0.2); color: var(--card-def); }
+.eff-tag.universal { background: rgba(255,215,0,0.2); color: var(--gold); }
+.effect-entry .eff-desc { font-size: 12px; color: #bbb; margin-top: 2px; line-height: 1.5; }
 
 /* ==================== SCREENS ==================== */
 .screen { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
@@ -59,8 +86,16 @@ body {
 
 /* ==================== MAIN MENU ==================== */
 #screen-menu { gap: 16px; }
-#screen-menu .title { font-size: 48px; font-weight: 900; color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.4), 2px 2px 0 var(--gold-dark); letter-spacing: 4px; }
-#screen-menu .subtitle { font-size: 16px; color: var(--text-dim); margin-bottom: 24px; letter-spacing: 2px; }
+#screen-menu .title { font-size: 38px; font-weight: 900; color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.4), 2px 2px 0 var(--gold-dark); letter-spacing: 4px; }
+#screen-menu .subtitle { font-size: 16px; color: var(--text-dim); margin-bottom: 12px; letter-spacing: 2px; }
+.menu-instructions {
+    max-width: 580px; max-height: 280px; overflow-y: auto; text-align: left;
+    font-size: 13px; color: #aaa; line-height: 1.7; margin-bottom: 16px;
+    padding: 12px 16px; background: rgba(255,255,255,0.03); border-radius: 8px;
+    border: 1px solid #2a2a4a;
+}
+.menu-instructions p { margin-bottom: 6px; }
+.menu-instructions b { color: var(--text); }
 
 /* ==================== BUTTONS ==================== */
 .btn {
@@ -76,42 +111,69 @@ body {
 .btn-danger:hover { box-shadow: 0 4px 16px rgba(239,83,80,0.3); }
 
 /* ==================== BATTLE SCREEN ==================== */
-#screen-battle { justify-content: space-between; padding: 12px 16px; }
+#screen-battle { justify-content: space-between; padding: 6px 10px; gap: 0; }
 .battle-header { width: 100%; display: flex; justify-content: space-between; align-items: center; }
-.battle-header .floor { font-size: 20px; font-weight: 700; color: var(--gold); }
-.battle-header .btn { padding: 6px 16px; font-size: 13px; }
+.battle-header .floor { font-size: 16px; font-weight: 700; color: var(--gold); }
+.battle-header .header-gold { font-size: 13px; font-weight: 700; color: var(--energy); }
+.battle-header .btn { padding: 4px 10px; font-size: 11px; }
 
-.battle-arena { width: 100%; flex: 1; display: flex; align-items: center; justify-content: space-around; gap: 20px; }
+.battle-main { display: flex; gap: 6px; flex: 2 0 auto; align-items: center; }
+.battle-left { width: 110px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; }
+.battle-center { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.battle-right { width: 110px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; }
 
-/* ==================== CHARACTER PANELS ==================== */
-.char-panel { display: flex; flex-direction: column; align-items: center; gap: 8px; min-width: 160px; }
-.char-name { font-size: 16px; font-weight: 700; }
-.char-panel.player .char-name { color: var(--player); }
-.char-panel.enemy .char-name { color: var(--enemy); }
+.char-sprite { width: 75px; height: 115px; }
+#enemy-sprite { width: 75px; height: 115px; }
+.boss #enemy-sprite { width: 95px; height: 135px; }
+.chars-row { display: flex; align-items: flex-end; gap: 10px; margin: 4px 0; }
+.shield-big { font-size: 22px; font-weight: 900; top: -8px; }
+.vs-text { font-size: 18px; }
+.enemy-info-center { width: 150px; }
+.enemy-info-center .hp-bar-wrap { width: 150px; }
 
-.char-sprite { width: 80px; height: 120px; }
-.char-panel.enemy .char-sprite { width: 90px; height: 130px; }
-.char-panel.boss .char-sprite { width: 110px; height: 150px; }
-.char-panel.boss .char-name { font-size: 20px; color: #ff5722; text-shadow: 0 0 10px rgba(255,87,34,0.5); }
+.char-name { font-size: 14px; font-weight: 700; }
+.player-name { color: var(--player); }
+.enemy-name { color: var(--enemy); }
 
-/* Stats */
-.stats { width: 100%; display: flex; flex-direction: column; gap: 3px; font-size: 12px; }
+.chars-row { display: flex; align-items: flex-end; gap: 12px; }
+.char-box { display: flex; flex-direction: column; align-items: center; position: relative; }
+.char-box .hp-bar-wrap { width: 90px; margin-top: 2px; }
+.char-box .hp-text { font-size: 10px; }
+.vs-text { font-size: 18px; font-weight: 900; color: var(--gold); text-shadow: 0 0 8px rgba(255,215,0,0.3); align-self: flex-end; margin-bottom: 30px; }
+
+.char-sprite { width: 70px; height: 105px; }
+#enemy-sprite { width: 70px; height: 105px; }
+.boss #enemy-sprite { width: 90px; height: 130px; }
+
+.shield-big {
+    font-size: 22px; font-weight: 900; color: var(--shield);
+    position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+    text-shadow: 0 0 8px rgba(66,165,245,0.5); white-space: nowrap;
+}
+
+.enemy-info-center { display: flex; flex-direction: column; align-items: center; gap: 1px; width: 160px; }
+
+.stats { display: flex; flex-direction: column; gap: 1px; font-size: 11px; width: 100%; }
 .stat-row { display: flex; justify-content: space-between; }
 .stat-row .label { color: var(--text-dim); }
 .stat-row .value { font-weight: 700; }
 
-.hp-bar-wrap { width: 100%; height: 10px; background: #333; border-radius: 5px; overflow: hidden; }
-.hp-bar { height: 100%; transition: width 0.4s ease; border-radius: 5px; }
+.hp-bar-wrap { width: 100%; height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
+.hp-bar { height: 100%; transition: width 0.4s ease; border-radius: 4px; }
 .hp-bar.player-hp { background: var(--hp-green); }
 .hp-bar.enemy-hp { background: var(--hp-red); }
-.hp-text { font-size: 12px; font-weight: 700; text-align: center; }
+.hp-text { font-size: 11px; font-weight: 700; text-align: center; }
 
-.extra-info { display: flex; gap: 12px; font-size: 13px; font-weight: 700; }
-.extra-info .shield-info { color: var(--shield); }
-.extra-info .energy-info { color: var(--energy); }
+/* Card row at bottom */
+.card-row { display: flex; align-items: center; gap: 8px; }
+.energy-big {
+    font-size: 24px; font-weight: 900; color: var(--energy);
+    text-shadow: 0 0 8px rgba(255,235,59,0.4); white-space: nowrap;
+    min-width: 60px; text-align: center;
+}
 
 /* ==================== MESSAGE LOG ==================== */
-.message-log { width: 100%; max-height: 60px; overflow-y: auto; font-size: 13px; color: var(--text-dim); text-align: center; padding: 4px 0; }
+.message-log { width: 100%; min-height: 40px; max-height: 80px; overflow-y: auto; font-size: 12px; color: var(--text-dim); text-align: center; padding: 4px 0; flex: 1; }
 .message-log .msg { padding: 2px 0; animation: fadeInMsg 0.3s ease; }
 .message-log .msg.damage { color: var(--enemy); }
 .message-log .msg.heal { color: var(--hp-green); }
@@ -120,7 +182,8 @@ body {
 
 /* ==================== CARD HAND ==================== */
 .card-area { width: 100%; }
-.card-hand { display: flex; justify-content: center; gap: 12px; flex-wrap: wrap; padding: 8px 0; }
+.card-hand { display: flex; justify-content: flex-start; gap: 12px; padding: 8px 0; }
+.card-slot { width: 130px; min-height: 170px; }
 .card {
     width: 130px; min-height: 170px; border-radius: 10px; padding: 12px;
     background: var(--card-bg); border: 2px solid #333;
@@ -290,7 +353,7 @@ body {
 .rune-tag.attack { background: rgba(239,83,80,0.2); color: var(--card-atk); }
 .rune-tag.defense { background: rgba(66,165,245,0.2); color: var(--card-def); }
 .rune-tag.universal { background: rgba(255,215,0,0.2); color: var(--gold); }
-.rune-card .rune-desc { font-size: 12px; color: var(--text-dim); line-height: 1.5; }
+.rune-card .rune-desc { font-size: 13px; color: #ccc; line-height: 1.6; font-weight: 500; margin-top: 4px; }
 
 .engrave-card .engrave-icon { font-size: 32px; margin-bottom: 4px; }
 .engrave-card .engrave-name { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
@@ -324,50 +387,79 @@ body {
         <span class="hud-hp">❤️ <span id="hud-hp">100/100</span></span>
         <span class="hud-floor" id="hud-floor">第 1 层</span>
         <span class="hud-gold">💰 <span id="hud-gold">0</span></span>
+        <button class="btn btn-small hud-effects-btn" id="btn-effects">效果</button>
+    </div>
+
+    <!-- EFFECTS GLOSSARY MODAL -->
+    <div id="modal-effects" class="modal-overlay" style="display:none;" onclick="closeEffects(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2>🔮 印记图鉴</h2>
+            <div class="effects-list" id="effects-list"></div>
+            <button class="btn btn-small" onclick="closeEffects()">关闭</button>
+        </div>
     </div>
 
     <!-- MAIN MENU -->
     <div id="screen-menu" class="screen active">
         <div class="title">无尽杀戮</div>
         <div class="subtitle">组建卡组，击杀怪物</div>
+        <div class="menu-instructions">
+            <p><b>⚔️ 战斗：</b>回合制卡牌对战。每回合抽4张牌、恢复3点精力。使用攻击卡造成伤害，防御卡获得护盾。护盾优先抵挡伤害。怪物可能进攻或防御——防御时你的伤害会减少。</p>
+            <p><b>🗺️ 路线：</b>每层在地图上选择房间。⚔️战斗 · ❓神秘遭遇 · 🛒商店 · 💀楼层主。只能沿连线移动到相邻路线的房间。</p>
+            <p><b>❓ 问号房：</b>遭遇未知怪物，取胜后获得经验/回血奖励。</p>
+            <p><b>🛒 商店：</b>花费金币购买生命回复。金币从战斗中获取（楼层×2）。</p>
+            <p><b>🔮 印记：</b>击败每20层的楼层主（20/40/60/80层）后获得印记，刻在卡牌上获得永久特殊效果。</p>
+            <p><b>📈 升级：</b>获得经验提升等级，经验公式：等级×10+20。升级增加HP、攻击、防御。</p>
+            <p><b>🏆 目标：</b>击败第100层最终Boss通关！</p>
+        </div>
         <button class="btn" id="btn-start">开始游戏</button>
+        <button class="btn" id="btn-continue" style="display:none;">继续游戏</button>
     </div>
 
     <!-- BATTLE -->
     <div id="screen-battle" class="screen">
         <div class="battle-header">
             <span class="floor" id="battle-floor">第 1 层</span>
+            <span class="header-gold" id="header-gold">💰 0</span>
             <button class="btn btn-small" id="btn-quit-battle">返回主界面</button>
         </div>
-        <div class="battle-arena">
-            <!-- Player -->
-            <div class="char-panel player" id="player-panel">
-                <div class="char-name">玩家</div>
-                <div class="char-sprite" id="player-sprite"></div>
-                <div class="hp-bar-wrap"><div class="hp-bar player-hp" id="player-hp-bar" style="width:100%"></div></div>
-                <div class="hp-text" id="player-hp-text">100 / 100</div>
+        <div class="battle-main">
+            <!-- Player Stats (left) -->
+            <div class="battle-left">
+                <div class="char-name player-name">玩家</div>
                 <div class="stats" id="player-stats"></div>
-                <div class="extra-info">
-                    <span class="shield-info" id="shield-display">🛡️ 0</span>
-                    <span class="energy-info" id="energy-display">⚡ 3 / 3</span>
+            </div>
+            <!-- Center: Characters + Shield -->
+            <div class="battle-center">
+                <div class="chars-row">
+                    <div class="char-box">
+                        <div class="shield-big" id="shield-display">🛡️ 0</div>
+                        <div class="char-sprite" id="player-sprite"></div>
+                        <div class="hp-bar-wrap"><div class="hp-bar player-hp" id="player-hp-bar" style="width:100%"></div></div>
+                        <div class="hp-text" id="player-hp-text">100 / 100</div>
+                    </div>
+                    <div class="vs-text">VS</div>
+                    <div class="char-box">
+                        <div class="char-name enemy-name" id="enemy-name">怪物</div>
+                        <div class="char-sprite" id="enemy-sprite"></div>
+                        <div class="hp-bar-wrap"><div class="hp-bar enemy-hp" id="enemy-hp-bar" style="width:100%"></div></div>
+                        <div class="hp-text" id="enemy-hp-text"></div>
+                    </div>
                 </div>
             </div>
-            <!-- Enemy -->
-            <div class="char-panel enemy" id="enemy-panel">
-                <div class="char-name" id="enemy-name">怪物</div>
-                <div class="char-sprite" id="enemy-sprite"></div>
-                <div class="hp-bar-wrap"><div class="hp-bar enemy-hp" id="enemy-hp-bar" style="width:100%"></div></div>
-                <div class="hp-text" id="enemy-hp-text"></div>
+            <!-- Enemy Stats (right) -->
+            <div class="battle-right">
                 <div class="stats" id="enemy-stats"></div>
             </div>
         </div>
         <div class="message-log" id="message-log"></div>
         <div class="card-area">
-            <div class="card-hand" id="card-hand"></div>
+            <div class="card-row">
+                <div class="energy-big" id="energy-display">⚡ 3 / 3</div>
+                <div class="card-hand" id="card-hand"></div>
+                <button class="btn" id="btn-end-turn">结束回合</button>
+            </div>
             <div class="deck-info" id="deck-info"></div>
-        </div>
-        <div class="end-turn-wrap">
-            <button class="btn" id="btn-end-turn">结束回合</button>
         </div>
     </div>
 
@@ -507,18 +599,18 @@ const T = {
     runeEngraved: (runeName, cardName) => `「${runeName}」已刻在${cardName}卡上！`,
     cardHasRune: '该卡已有印记',
     cardIncompatible: '卡牌类型不匹配',
-    victoryV2: '🎉 通关V0.2！',
-    victoryV2Desc: '你击败了50层的楼层主，成功突破！',
+    victoryV2: '🎉 恭喜通关！',
+    victoryV2Desc: '你击败了第100层的最终Boss！',
 };
 
 // =====================================================================
 // GAME BALANCE CONFIG
 // =====================================================================
 const BALANCE = {
-    totalFloors: 50,
-    bossFloors: [25, 50],
+    totalFloors: 100,
+    bossFloors: [20, 40, 60, 80, 100],
     player: {
-        initial: { level: 1, maxHp: 100, hp: 100, attack: 5, defense: 5, exp: 0, gold: 0 },
+        initial: { level: 1, maxHp: 50, hp: 50, attack: 5, defense: 5, exp: 0, gold: 0 },
         maxEnergy: 3,
         drawPerTurn: 4,
         levelUpBonus: { maxHp: 10, attack: 1, defense: 1 },
@@ -530,12 +622,15 @@ const BALANCE = {
         ],
     },
     monster: {
-        early: { hpMin: 20, hpMax: 80, attackMin: 0, attackMax: 10 },
-        late: { hpMin: 80, hpMax: 160, attackMin: 10, attackMax: 20 },
+        early: { hpMin: 10, hpMax: 35, attackMin: 1, attackMax: 8 },
+        late: { hpMin: 35, hpMax: 75, attackMin: 7, attackMax: 16 },
     },
     bosses: {
-        25: { hp: 160, attack: 20 },
-        50: { hp: 320, attack: 40 },
+        20: { hp: 80, attack: 14 },
+        40: { hp: 120, attack: 22 },
+        60: { hp: 170, attack: 30 },
+        80: { hp: 220, attack: 38 },
+        100: { hp: 300, attack: 50 },
     },
     healPercent: 0.1,
     runesPerSelection: 3,
@@ -602,7 +697,7 @@ const RUNE_DEFS = {
         name: '渴血',
         type: 'attack',
         tag: 'attack',
-        desc: '攻击卡每次造成伤害后，回复玩家最大生命值的2.5%',
+        desc: '每次攻击造成伤害后，回复最大HP的2.5%（最少1点）。越战越勇，适合持久战。',
         hooks: {
             onDamage(state, card, damageDealt) {
                 const heal = Math.max(1, Math.ceil(state.player.maxHp * 0.025));
@@ -616,7 +711,7 @@ const RUNE_DEFS = {
         name: '连击',
         type: 'attack',
         tag: 'attack',
-        desc: '使用该攻击卡时，攻击两次',
+        desc: '使用该攻击卡时自动攻击两次。每次攻击独立计算伤害和印记效果（如渴血），伤害翻倍！',
         hooks: {
             onPlay(state, card) {
                 return { extraAttacks: 1 };
@@ -628,7 +723,7 @@ const RUNE_DEFS = {
         name: '白嫖',
         type: 'universal',
         tag: 'universal',
-        desc: '该卡牌使用时不消耗精力',
+        desc: '使用该卡牌时不消耗精力。最适合刻在你想每回合都用的那张卡上。',
         hooks: {
             onPlay(state, card) {
                 return { energyRefund: card.cost };
@@ -640,7 +735,7 @@ const RUNE_DEFS = {
         name: '长者',
         type: 'attack',
         tag: 'attack',
-        desc: '该卡造成的伤害根据玩家等级增加。每提升1级，该卡伤害增加10%',
+        desc: '伤害随等级成长：每级+10%伤害。例如Lv.10时伤害为基础值的190%。后期最强攻击印记。',
         hooks: {
             modifyDamage(state, card, baseDamage) {
                 const bonus = Math.floor(baseDamage * (state.player.level - 1) * 0.1);
@@ -653,7 +748,7 @@ const RUNE_DEFS = {
         name: '主宰',
         type: 'attack',
         tag: 'attack',
-        desc: '该卡每击杀一个怪物后，该卡造成的伤害增加15%',
+        desc: '每用此卡击杀一个怪物，永久+15%伤害（跨战斗累积）。清怪越多越强，滚雪球型印记。',
         hooks: {
             modifyDamage(state, card, baseDamage) {
                 const kills = (card.runeData && card.runeData.kills) || 0;
@@ -679,7 +774,7 @@ const RUNE_DEFS = {
         name: '护盾大师',
         type: 'defense',
         tag: 'defense',
-        desc: '该防御卡获得的护盾值翻倍',
+        desc: '护盾值×2。例如防御力5时获得10点护盾。简单粗暴的生存增强。',
         hooks: {
             modifyShield(state, card, baseShield) {
                 return baseShield * 2;
@@ -691,7 +786,7 @@ const RUNE_DEFS = {
         name: '防御反击',
         type: 'defense',
         tag: 'defense',
-        desc: '使用该防御卡获得护盾后，如果敌人进行攻击，使敌人受到其本次攻击伤害50%的反伤',
+        desc: '使用后本回合内若敌人攻击你，反弹其50%攻击伤害给敌人。攻防一体的强力印记。',
         hooks: {
             onDefensePlayed(state, card) {
                 state.turnFlags.counterAttack = true;
@@ -703,7 +798,7 @@ const RUNE_DEFS = {
                 if (state.enemy && reflect > 0) {
                     state.enemy.hp -= reflect;
                     addMessage(`⚔️ 防御反击：反弹 ${reflect} 点伤害！`, 'damage');
-                    animateDamage('enemy-panel', reflect, 'damage');
+                    animateDamage('enemy-sprite', reflect, 'damage');
                 }
             },
         },
@@ -713,7 +808,7 @@ const RUNE_DEFS = {
         name: '伤害减免',
         type: 'defense',
         tag: 'defense',
-        desc: '使用该防御卡的当前回合，玩家受到的伤害降低50%',
+        desc: '使用后本回合受到的所有伤害减半（含护盾前）。面对高攻Boss时的最佳保命印记。',
         hooks: {
             onDefensePlayed(state, card) {
                 state.turnFlags.damageReduction = true;
@@ -877,10 +972,10 @@ const SHOP_ITEMS = [
         id: 'heal',
         name: '回复生命',
         icon: '💚',
-        desc: '回复最大HP的10%',
-        price: 15,
+        desc: '回复最大HP的15%',
+        price: 12,
         apply(state) {
-            const heal = Math.ceil(state.player.maxHp * 0.1);
+            const heal = Math.ceil(state.player.maxHp * 0.15);
             state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
             return `回复了 ${heal} 点生命`;
         },
@@ -889,12 +984,9 @@ const SHOP_ITEMS = [
         id: 'randomRune',
         name: '随机印记',
         icon: '🔮',
-        desc: '获得一个随机印记',
+        desc: '获得一个随机印记并刻印',
         price: 20,
-        apply(state) {
-            // Random rune selection handled in buyShopItem
-            return null; // special handling
-        },
+        apply(state) { return null; },
     },
 ];
 
@@ -983,6 +1075,7 @@ function freshState() {
         shield: 0,
         messages: [],
         battlePhase: 'player',
+        enemyCurrentDef: 0,   // This turn's varied defense value
         turnFlags: {
             damageReduction: false,
             damageReductionCard: null,
@@ -1003,6 +1096,56 @@ function freshState() {
         pendingReward: true,
     };
 }
+
+// =====================================================================
+// SOUND SYSTEM (Web Audio API — synthesized, no external files)
+// =====================================================================
+const SFX = {
+    ctx: null,
+    enabled: true,
+
+    init() {
+        try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { this.enabled = false; }
+    },
+
+    // Resume audio context on first user interaction
+    resume() {
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    },
+
+    play(type) {
+        if (!this.enabled || !this.ctx) return;
+        this.resume();
+        try {
+            const t = this.ctx.currentTime;
+            const g = (v, d, o) => { const n = this.ctx.createGain(); n.gain.setValueAtTime(v, t); n.gain.exponentialRampToValueAtTime(0.001, t+d); n.connect(o || this.ctx.destination); return n; };
+            const osc = (freq, type, dur) => { const o = this.ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(freq, t); o.start(t); o.stop(t+dur); return o; };
+            const noise = (dur) => { const buf = this.ctx.createBuffer(1, this.ctx.sampleRate*dur, this.ctx.sampleRate); const d = buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; const s = this.ctx.createBufferSource(); s.buffer=buf; s.start(t); s.stop(t+dur); return s; };
+
+            switch(type) {
+                case 'click': { const o=osc(800,'sine',0.06); o.connect(g(0.15,0.06)); break; }
+                case 'draw': { for(let i=0;i<4;i++){ const o=osc(400+i*120,'sine',0.08); o.connect(g(0.08,0.1)); o.start(t+i*0.04); o.stop(t+i*0.04+0.08); } break; }
+                case 'play_card': { const o=osc(500,'triangle',0.12); o.connect(g(0.2,0.12)); break; }
+                case 'attack': { const o=osc(120,'sawtooth',0.15); o.connect(g(0.25,0.15)); break; }
+                case 'hit': { const n=noise(0.08); n.connect(g(0.2,0.08)); const o=osc(90,'square',0.08); o.connect(g(0.15,0.08)); break; }
+                case 'shield': { const o=osc(600,'sine',0.2); o.connect(g(0.15,0.2)); const o2=osc(900,'sine',0.15); o2.connect(g(0.1,0.2)); break; }
+                case 'enemy_attack': { const o=osc(80,'sawtooth',0.2); o.connect(g(0.2,0.2)); break; }
+                case 'enemy_death': { const o=osc(200,'sawtooth',0.3); o.frequency.exponentialRampToValueAtTime(40,t+0.3); o.connect(g(0.2,0.35)); break; }
+                case 'level_up': { [523,659,784,1047].forEach((f,i)=>{ const o=osc(f,'sine',0.2); o.connect(g(0.15,0.3)); o.start(t+i*0.1); o.stop(t+i*0.1+0.2); }); break; }
+                case 'reward': { const o=osc(660,'sine',0.15); o.connect(g(0.15,0.2)); const o2=osc(880,'sine',0.1); o2.connect(g(0.1,0.2)); break; }
+                case 'floor_enter': { const o=osc(220,'triangle',0.12); o.connect(g(0.1,0.15)); break; }
+                case 'boss_appear': { [80,100,120].forEach((f,i)=>{ const o=osc(f,'sawtooth',0.3); o.connect(g(0.2,0.4)); o.start(t+i*0.15); o.stop(t+i*0.15+0.3); }); break; }
+                case 'boss_defeat': { [262,330,392,523,659,784].forEach((f,i)=>{ const o=osc(f,'sine',0.25); o.connect(g(0.12,0.35)); o.start(t+i*0.1); o.stop(t+i*0.1+0.25); }); break; }
+                case 'question': { const o=osc(350,'sine',0.3); o.connect(g(0.12,0.35)); const o2=osc(520,'sine',0.25); o2.connect(g(0.08,0.3)); break; }
+                case 'chest': { [440,554,660].forEach((f,i)=>{ const o=osc(f,'triangle',0.15); o.connect(g(0.1,0.2)); o.start(t+i*0.08); o.stop(t+i*0.08+0.15); }); break; }
+                case 'rune': { const o=osc(800,'sine',0.3); o.connect(g(0.1,0.35)); const o2=osc(1200,'sine',0.2); o2.connect(g(0.06,0.25)); break; }
+                case 'shop': { [520,660,784].forEach((f,i)=>{ const o=osc(f,'sine',0.1); o.connect(g(0.1,0.15)); o.start(t+i*0.06); o.stop(t+i*0.06+0.1); }); break; }
+                case 'game_over': { const o=osc(200,'sawtooth',0.5); o.frequency.exponentialRampToValueAtTime(50,t+0.5); o.connect(g(0.2,0.6)); break; }
+                case 'victory': { [392,440,494,523,587,659,784,880,1047].forEach((f,i)=>{ const o=osc(f,'sine',0.2); o.connect(g(0.08,0.3)); o.start(t+i*0.08); o.stop(t+i*0.08+0.2); }); break; }
+            }
+        } catch(e){ /*silently ignore audio errors*/ }
+    }
+};
 
 // =====================================================================
 // UTILITY FUNCTIONS
@@ -1035,17 +1178,20 @@ function generateEnemy(floor) {
             maxHp: bossCfg.hp,
             hp: bossCfg.hp,
             attack: bossCfg.attack,
+            defense: Math.floor(floor * 3),
             isBoss: true,
         };
     }
-    const range = floor <= 25 ? BALANCE.monster.early : BALANCE.monster.late;
+    const range = floor <= 50 ? BALANCE.monster.early : BALANCE.monster.late;
     const hp = randInt(range.hpMin, range.hpMax);
     const atk = randInt(range.attackMin, range.attackMax);
+    const def = Math.floor(floor * 2) + randInt(-2, 3);
     return {
         name: T.enemyMonster,
         maxHp: hp,
         hp: hp,
         attack: atk,
+        defense: Math.max(1, def),
         isBoss: false,
     };
 }
@@ -1091,12 +1237,14 @@ function discardCard(card) {
 // BATTLE LOGIC
 // =====================================================================
 function startTurn() {
-    if (state.screen !== 'battle') return; // Guard: don't start turn if we left battle
+    if (state.screen !== 'battle' || state.battlePhase === 'over') return;
     state.battlePhase = 'player';
+    state.shield = 0; // Shield resets each turn
     state.turnFlags = { damageReduction: false, damageReductionCard: null, counterAttack: false, counterAttackCard: null };
     state.energy = state.maxEnergy;
     const drawn = drawCards(BALANCE.player.drawPerTurn);
     if (drawn.length > 0) {
+        SFX.play('draw');
         addMessage(T.msgDraw, 'info');
     }
     updateBattleUI();
@@ -1127,6 +1275,7 @@ function playCard(handIndex) {
         return;
     }
     state.energy -= actualCost;
+    SFX.play('play_card');
 
     // Remove from hand, add to discard
     state.deck.hand.splice(handIndex, 1);
@@ -1139,11 +1288,19 @@ function playCard(handIndex) {
             dmg = hooks.modifyDamage(state, card, dmg);
         }
 
-        // Deal damage
-        state.enemy.hp -= dmg;
-        addMessage(`${T.player} 使用${T.cardAttack}，造成 ${dmg} 点伤害！`, 'damage');
-        animateDamage('enemy-panel', dmg, 'damage');
-        shakeElement('enemy-panel');
+        // Deal damage reduced by enemy defense
+        let actualDmg = dmg;
+        if (state.enemy) {
+            actualDmg = Math.max(1, dmg - state.enemyCurrentDef);
+            if (actualDmg < dmg) {
+                addMessage(`🛡️ 怪物防御 ${state.enemyCurrentDef}：伤害 ${dmg} → ${actualDmg}`, 'info');
+            }
+        }
+        state.enemy.hp -= actualDmg;
+        addMessage(`${T.player} 使用${T.cardAttack}，造成 ${actualDmg} 点伤害！`, 'damage');
+        animateDamage('enemy-sprite', actualDmg, 'damage');
+        shakeElement('enemy-sprite');
+        SFX.play('attack');
 
         // On-damage hook (e.g. bloodthirst)
         if (hooks.onDamage) {
@@ -1155,6 +1312,7 @@ function playCard(handIndex) {
             state.enemy.hp = 0;
             state.battlePhase = 'over';
             if (hooks.onKill) hooks.onKill(state, card);
+            SFX.play('enemy_death');
             updateBattleUI();
             setTimeout(() => onEnemyDefeated(), 400);
             return;
@@ -1168,10 +1326,17 @@ function playCard(handIndex) {
             if (hooks.modifyDamage) {
                 extraDmg = hooks.modifyDamage(state, card, extraDmg);
             }
-            state.enemy.hp -= extraDmg;
-            addMessage(`⚔️ 连击：额外造成 ${extraDmg} 点伤害！`, 'damage');
-            animateDamage('enemy-panel', extraDmg, 'damage');
-            shakeElement('enemy-panel');
+            let actualExtraDmg = extraDmg;
+            if (state.enemy) {
+                actualExtraDmg = Math.max(1, extraDmg - state.enemyCurrentDef);
+                if (actualExtraDmg < extraDmg) {
+                    addMessage(`🛡️ 怪物防御 ${state.enemyCurrentDef}：伤害 ${extraDmg} → ${actualExtraDmg}`, 'info');
+                }
+            }
+            state.enemy.hp -= actualExtraDmg;
+            addMessage(`⚔️ 连击：额外造成 ${actualExtraDmg} 点伤害！`, 'damage');
+            animateDamage('enemy-sprite', actualExtraDmg, 'damage');
+            shakeElement('enemy-sprite');
             if (hooks.onDamage) hooks.onDamage(state, card, extraDmg);
 
             if (state.enemy.hp <= 0) {
@@ -1191,6 +1356,7 @@ function playCard(handIndex) {
         }
         state.shield += shieldAmt;
         addMessage(`${T.player} 使用${T.cardDefense}，获得 ${shieldAmt} 点护盾！`, 'info');
+        SFX.play('shield');
 
         // On-defense-played hooks
         if (hooks.onDefensePlayed) {
@@ -1204,6 +1370,11 @@ function playCard(handIndex) {
 function endPlayerTurn() {
     if (state.battlePhase !== 'player') return;
     state.battlePhase = 'enemy';
+
+    // Vary enemy defense for next player turn (±30%)
+    const baseDef = state.enemy.defense;
+    state.enemyCurrentDef = Math.floor(baseDef * (0.7 + Math.random() * 0.6));
+
     updateBattleUI();
     discardHand();
     enemyAttack();
@@ -1211,7 +1382,8 @@ function endPlayerTurn() {
 
 function enemyAttack() {
     const enemy = state.enemy;
-    const rawEnemyDmg = enemy.attack;
+    // Attack varies ±30% each turn
+    const rawEnemyDmg = Math.floor(enemy.attack * (0.7 + Math.random() * 0.6));
     let netDmg = rawEnemyDmg;
 
     // Apply damage reduction if a defense card with that rune was played
@@ -1239,8 +1411,11 @@ function enemyAttack() {
         addMessage(T.msgEnemyAttack(enemy.name, rawEnemyDmg), 'damage');
     }
     if (netDmg > 0) {
-        animateDamage('player-panel', netDmg, 'damage');
-        shakeElement('player-panel');
+        animateDamage('player-sprite', netDmg, 'damage');
+        shakeElement('player-sprite');
+        SFX.play('hit');
+    } else {
+        SFX.play('enemy_attack');
     }
 
     // Apply counter attack if active
@@ -1287,6 +1462,7 @@ function onEnemyDefeated() {
 
     // Boss floors trigger rune selection
     if (BALANCE.bossFloors.includes(state.floor)) {
+        SFX.play('boss_defeat');
         setTimeout(() => showRuneSelection(), 600);
     } else {
         setTimeout(() => showReward(), 600);
@@ -1295,6 +1471,8 @@ function onEnemyDefeated() {
 
 function onPlayerDeath() {
     if (state.screen !== 'battle') return;
+    SFX.play('game_over');
+    clearSave();
     state.battlePhase = 'over';
     addMessage(T.msgPlayerDeath, 'damage');
     state.screen = 'gameover';
@@ -1326,6 +1504,7 @@ function checkLevelUp() {
         state.player.attack += BALANCE.player.levelUpBonus.attack;
         state.player.defense += BALANCE.player.levelUpBonus.defense;
         leveled = true;
+        SFX.play('level_up');
         addMessage(`${T.levelUp} 等级 ${state.player.level}！`, 'heal');
     }
     return leveled;
@@ -1335,10 +1514,47 @@ function expToNextLevel() {
     return state.player.level * 10 + 20;
 }
 
+// =====================================================================
+// SAVE / LOAD
+// =====================================================================
+const SAVE_KEY = 'endless_slaughter_save';
+
+function saveGame() {
+    try {
+        const data = {
+            floor: state.floor, player: state.player,
+            mapStartFloor: state.mapStartFloor, currentMap: state.currentMap,
+            mapCursorFloor: state.mapCursorFloor, mapCursorPath: state.mapCursorPath,
+            mapHistory: state.mapHistory,
+        };
+        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    } catch (e) {}
+}
+
+function loadGame() {
+    try { const raw = localStorage.getItem(SAVE_KEY); return raw ? JSON.parse(raw) : null; }
+    catch (e) { return null; }
+}
+
+function clearSave() {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+}
+
+function continueGame() {
+    const data = loadGame();
+    if (!data) return;
+    state = freshState();
+    Object.assign(state, data);
+    state.screen = 'map';
+    render();
+}
+
 function advanceFloor() {
     state.floor++;
     // Check victory
     if (state.floor > BALANCE.totalFloors) {
+        clearSave();
+        SFX.play('victory');
         state.screen = 'victory';
         render();
         return;
@@ -1348,12 +1564,15 @@ function advanceFloor() {
     const currentAreaEnd = getAreaEnd(state.mapStartFloor);
     if (state.floor > currentAreaEnd) {
         startNewArea(state.floor);
+        saveGame();
         return;
     }
 
     // Show map for next floor selection
     state.screen = 'map';
+    saveGame();
     render();
+    SFX.play('floor_enter');
 }
 
 function getAreaEnd(startFloor) {
@@ -1552,6 +1771,7 @@ function resolveRoom(cell) {
     state.shield = 0;
     // Only battle rooms get the EXP/HP reward screen
     state.pendingReward = (cell.type === 'battle' || cell.type === 'boss');
+    state.enemyCurrentDef = 0;
 
     switch (cell.type) {
         case 'battle':
@@ -1564,6 +1784,7 @@ function resolveRoom(cell) {
             break;
 
         case 'boss':
+            SFX.play('boss_appear');
             state.enemy = generateEnemy(state.floor);
             state.screen = 'battle';
             render();
@@ -1700,6 +1921,7 @@ function engraveRuneOnCard(cardIndex) {
     // Engrave the rune
     card.rune = rune.id;
     card.runeData = {};
+    SFX.play('rune');
 
     const cardName = card.id === 'attack' ? T.cardAttack : T.cardDefense;
     addMessage(T.runeEngraved(rune.name, cardName), 'heal');
@@ -1726,19 +1948,69 @@ function engraveRuneOnCard(cardIndex) {
 // =====================================================================
 
 function showQuestionRoom() {
-    $('question-room-options').innerHTML = `
-        <div class="reward-card" onclick="enterShop()">
-            <div class="reward-icon">🛒</div>
-            <div class="reward-title">商店</div>
-            <div class="reward-desc">使用金币购买生命和印记</div>
-        </div>
-        <div class="reward-card" onclick="openChest()">
-            <div class="reward-icon">📦</div>
-            <div class="reward-title">随机宝箱</div>
-            <div class="reward-desc">打开宝箱，随机获得奖励</div>
-        </div>
-    `;
-    showScreen('question-room');
+    SFX.play('question');
+    // Auto-resolve: 50% monster, 50% chest
+    const isMonster = Math.random() < 0.5;
+    if (isMonster) {
+        // Show monster reveal then enter battle
+        $('question-room-options').innerHTML = `
+            <div class="reward-card">
+                <div class="reward-icon">👾</div>
+                <div class="reward-title">遭遇怪物！</div>
+                <div class="reward-desc">前方出现了未知敌人…</div>
+            </div>
+        `;
+        showScreen('question-room');
+        setTimeout(() => enterQuestionBattle(), 1000);
+    } else {
+        // Chest
+        const reward = pickChestReward();
+        if (reward.id === 'randomRune') {
+            const runeIds = ALL_RUNE_IDS;
+            const randomId = runeIds[Math.floor(Math.random() * runeIds.length)];
+            const rune = RUNE_DEFS[randomId];
+            state.pendingRuneId = randomId;
+            state.engraveOrigin = 'chest';
+            $('question-room-options').innerHTML = `
+                <div class="reward-card">
+                    <div class="reward-icon">📦</div>
+                    <div class="reward-title">发现宝箱！</div>
+                    <div class="reward-desc">获得了印记「${rune.name}」</div>
+                </div>
+            `;
+            showScreen('question-room');
+            setTimeout(() => showCardEngrave(rune), 1000);
+        } else {
+            const result = reward.apply(state);
+            $('question-room-options').innerHTML = `
+                <div class="reward-card">
+                    <div class="reward-icon">${result.icon}</div>
+                    <div class="reward-title">发现宝箱！</div>
+                    <div class="reward-desc">${result.msg}</div>
+                </div>
+            `;
+            showScreen('question-room');
+            setTimeout(() => {
+                state.questionRoomEvent = null;
+                state.engraveOrigin = 'boss';
+                proceedAfterRoom();
+            }, 1500);
+        }
+    }
+}
+
+function enterQuestionBattle() {
+    state.enemy = generateEnemy(state.floor);
+    state.deck = { draw: createDeck(), hand: [], discard: [] };
+    state.shield = 0;
+    state.messages = [];
+    state.pendingReward = true;
+    state.enemyCurrentDef = 0;
+    state.screen = 'battle';
+    render();
+    renderStickFigure('player-sprite', 'var(--player)', false, false);
+    renderStickFigure('enemy-sprite', 'var(--enemy)', true, state.enemy.isBoss);
+    startTurn();
 }
 
 // =====================================================================
@@ -1746,6 +2018,7 @@ function showQuestionRoom() {
 // =====================================================================
 
 function enterShop() {
+    SFX.play('shop');
     state.screen = 'shop';
     renderShop();
 }
@@ -1859,6 +2132,27 @@ function showScreen(name) {
     $('hud-bar').style.display = gameScreens.includes(name) ? 'flex' : 'none';
     if (gameScreens.includes(name)) updateHUD();
 }
+
+function showEffects() {
+    $('effects-list').innerHTML = ALL_RUNE_IDS.map(id => {
+        const r = RUNE_DEFS[id];
+        const tagText = r.tag === 'attack' ? '攻击' : r.tag === 'defense' ? '防御' : '通用';
+        return `
+            <div class="effect-entry">
+                <div class="eff-name">${r.name} <span class="eff-tag ${r.tag}">${tagText}</span></div>
+                <div class="eff-desc">${r.desc}</div>
+            </div>
+        `;
+    }).join('');
+    $('modal-effects').style.display = 'flex';
+}
+
+function closeEffects(e) {
+    $('modal-effects').style.display = 'none';
+}
+
+window.showEffects = showEffects;
+window.closeEffects = closeEffects;
 
 function updateHUD() {
     const p = state.player;
@@ -1980,11 +2274,12 @@ function updateBattleUI() {
         <div class="stat-row"><span class="label">等级</span><span class="value">${p.level}</span></div>
         <div class="stat-row"><span class="label">攻击</span><span class="value">${p.attack}</span></div>
         <div class="stat-row"><span class="label">防御</span><span class="value">${p.defense}</span></div>
-        <div class="stat-row"><span class="label">经验</span><span class="value">${p.exp} / ${expToNextLevel()}</span></div>
-        <div class="stat-row"><span class="label">金币</span><span class="value">💰 ${p.gold}</span></div>
+        <div class="stat-row"><span class="label">经验</span><span class="value">${p.exp}/${expToNextLevel()}</span></div>
+        <div class="stat-row"><span class="label">金币</span><span class="value">${p.gold}</span></div>
     `;
+    $('header-gold').textContent = `💰 ${p.gold}`;
     $('shield-display').textContent = `🛡️ ${state.shield}`;
-    $('energy-display').textContent = `⚡ ${state.energy} / ${state.maxEnergy}`;
+    $('energy-display').textContent = `⚡ ${state.energy}/${state.maxEnergy}`;
 
     // Enemy
     if (state.enemy) {
@@ -1994,11 +2289,9 @@ function updateBattleUI() {
         $('enemy-hp-text').textContent = `${e.hp} / ${e.maxHp}`;
         $('enemy-stats').innerHTML = `
             <div class="stat-row"><span class="label">攻击</span><span class="value">${e.attack}</span></div>
+            <div class="stat-row"><span class="label">防御</span><span class="value">${e.defense}</span></div>
+            <div class="stat-row"><span class="label">本回合</span><span class="value">${state.enemyCurrentDef || e.defense}</span></div>
         `;
-        // Update enemy class for boss
-        const enemyPanel = $('enemy-panel');
-        enemyPanel.classList.remove('boss');
-        if (e.isBoss) enemyPanel.classList.add('boss');
     }
 
     // Cards
@@ -2031,32 +2324,41 @@ function updateEndTurnButton() {
 function renderHand() {
     const handEl = $('card-hand');
     const cards = state.deck.hand;
-    handEl.innerHTML = cards.map((card, i) => {
-        const disabled = state.energy < card.cost ? 'disabled' : '';
-        const typeClass = card.type === 'atk' ? 'atk-card' : 'def-card';
-        const typeLabel = card.type === 'atk' ? 'ATTACK' : 'DEFENSE';
-        const typeLabelClass = card.type === 'atk' ? 'atk' : 'def';
-        const name = card.id === 'attack' ? T.cardAttack : T.cardDefense;
-        const desc = card.id === 'attack'
-            ? T.cardAttackDesc(state.player.attack)
-            : T.cardDefenseDesc(state.player.defense);
-        const runeIndicator = card.rune
-            ? `<div class="card-rune" title="${RUNE_DEFS[card.rune]?.name || ''}">🔮 ${RUNE_DEFS[card.rune]?.name || card.rune}</div>`
-            : '';
-        return `
-            <div class="card ${typeClass} ${disabled}" onclick="playCard(${i})">
-                <div class="card-cost">⚡${card.cost}</div>
-                <div class="card-icon">${card.icon}</div>
-                <div class="card-title">${name}</div>
-                <div class="card-desc">${desc}</div>
-                ${runeIndicator}
-                <div class="card-type-label ${typeLabelClass}">${typeLabel}</div>
-            </div>
-        `;
-    }).join('');
+    const maxSlots = 4;
+    let html = '';
+    for (let i = 0; i < maxSlots; i++) {
+        if (i < cards.length) {
+            const card = cards[i];
+            const disabled = state.energy < card.cost ? 'disabled' : '';
+            const typeClass = card.type === 'atk' ? 'atk-card' : 'def-card';
+            const typeLabel = card.type === 'atk' ? 'ATTACK' : 'DEFENSE';
+            const typeLabelClass = card.type === 'atk' ? 'atk' : 'def';
+            const name = card.id === 'attack' ? T.cardAttack : T.cardDefense;
+            const desc = card.id === 'attack'
+                ? T.cardAttackDesc(state.player.attack)
+                : T.cardDefenseDesc(state.player.defense);
+            const runeIndicator = card.rune
+                ? `<div class="card-rune" title="${RUNE_DEFS[card.rune]?.name || ''}">🔮 ${RUNE_DEFS[card.rune]?.name || card.rune}</div>`
+                : '';
+            html += `
+                <div class="card-slot"><div class="card ${typeClass} ${disabled}" onclick="playCard(${i})">
+                    <div class="card-cost">⚡${card.cost}</div>
+                    <div class="card-icon">${card.icon}</div>
+                    <div class="card-title">${name}</div>
+                    <div class="card-desc">${desc}</div>
+                    ${runeIndicator}
+                    <div class="card-type-label ${typeLabelClass}">${typeLabel}</div>
+                </div></div>
+            `;
+        } else {
+            html += '<div class="card-slot"></div>';
+        }
+    }
+    handEl.innerHTML = html;
 }
 
 function showReward() {
+    SFX.play('reward');
     state.screen = 'reward';
     $('reward-floor-text').textContent = T.floor(state.floor);
     $('reward-exp-desc').textContent = T.rewardExpDesc(state.floor);
@@ -2068,6 +2370,7 @@ function render() {
     switch (state.screen) {
         case 'menu':
             showScreen('menu');
+            $('btn-continue').style.display = loadGame() ? '' : 'none';
             break;
         case 'battle':
             showScreen('battle');
@@ -2124,7 +2427,8 @@ function render() {
 // EVENT HANDLERS & INITIALIZATION
 // =====================================================================
 function bindEvents() {
-    $('btn-start').addEventListener('click', startGame);
+    $('btn-start').addEventListener('click', () => { clearSave(); startGame(); });
+    $('btn-continue').addEventListener('click', continueGame);
     $('btn-quit-battle').addEventListener('click', backToMenu);
     $('btn-end-turn').addEventListener('click', endPlayerTurn);
     $('btn-victory-menu').addEventListener('click', backToMenu);
@@ -2133,10 +2437,12 @@ function bindEvents() {
     $('reward-heal').addEventListener('click', () => selectReward('heal'));
     $('btn-leave-shop').addEventListener('click', leaveShop);
     $('btn-chest-continue').addEventListener('click', continueAfterChest);
+    $('btn-effects').addEventListener('click', showEffects);
 }
 
 function startGame() {
     try {
+        SFX.play('click');
         state = freshState();
         startNewArea(1);
     } catch (e) {
@@ -2164,6 +2470,7 @@ window.playCard = playCard;
 // =====================================================================
 document.addEventListener('DOMContentLoaded', () => {
     try {
+        SFX.init();
         bindEvents();
         state = freshState();
         render();
