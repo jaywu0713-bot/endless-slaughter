@@ -1882,8 +1882,11 @@ function loadRecords() {
 
 function renderRecords() {
     const records = loadRecords();
-    if (records.length === 0) return '';
     let html = '<div class="records-container"><h3>📜 历史记录</h3>';
+    if (records.length === 0) {
+        html += '<p style="text-align:center;color:#555;font-size:12px;">暂无记录，开始游戏吧！</p>';
+        return html + '</div>';
+    }
     for (const r of records) {
         const icon = r.outcome === 'victory' ? '🏆' : '💀';
         const label = r.outcome === 'victory' ? '通关' : `止步第 ${r.floor} 层`;
