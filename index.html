@@ -2730,7 +2730,7 @@ function showQuestionRoom() {
     if (_questionRoomTimer !== null) return;
     SFX.play('question');
     // Auto-resolve: 50% monster, 50% chest
-    const isMonster = Math.random() < 0.5;
+    const isMonster = Math.random() < 0.25;
     if (isMonster) {
         // Show monster reveal then enter battle
         $('question-room-options').innerHTML = `
