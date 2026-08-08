@@ -847,17 +847,17 @@ const BOSS_DEFS = {
         intro: '「世界毁灭，再重塑——这才是我最享受的戏法。」',
         skillName: '变化',
         skillIcon: '🎭',
-        skillDesc: '使玩家所有手牌的精力消耗随机变为0–3点，持续1回合。',
+        skillDesc: '使玩家所有卡牌的精力消耗随机变为0–3点，持续1回合。',
         floorRange: [1, 35],
         skillEffect(state) {
-            for (const card of state.deck.hand) {
+            for (const card of [...state.deck.hand, ...state.deck.draw, ...state.deck.discard]) {
                 card._savedCost = card.cost;
                 card.cost = randInt(0, 3);
             }
-            addMessage('🎭 万变魔君使用了「变化」：手牌消耗被随机改变！', 'damage');
+            addMessage('🎭 万变魔君使用了「变化」：所有卡牌消耗被随机改变！', 'damage');
         },
         skillCleanup(state) {
-            for (const card of state.deck.hand) {
+            for (const card of [...state.deck.hand, ...state.deck.draw, ...state.deck.discard]) {
                 if (card._savedCost !== undefined) { card.cost = card._savedCost; delete card._savedCost; }
             }
         },
@@ -868,7 +868,7 @@ const BOSS_DEFS = {
         intro: '「杀！杀！杀！」',
         skillName: '鲜血暴怒',
         skillIcon: '🩸',
-        skillDesc: 'Boss当前HP降低30%，随后对玩家造成自身攻击力×2的伤害（无视护盾）。',
+        skillDesc: 'Boss当前HP降低30%，随后对玩家造成自身攻击力×2的伤害（可被护盾抵挡）。',
         floorRange: [25, 60],
         skillEffect(state) {
             const selfDmg = Math.floor(state.enemy.hp * 0.3);
@@ -1943,8 +1943,8 @@ function endPlayerTurn() {
     if (state.battlePhase !== 'player') return;
     state.battlePhase = 'enemy';
 
-    // Clean up shapeshifter skill (player's turn is over, restore costs in hand + discard)
-    for (const card of [...state.deck.hand, ...state.deck.discard]) {
+    // Clean up shapeshifter skill (restore costs in all card piles)
+    for (const card of [...state.deck.hand, ...state.deck.draw, ...state.deck.discard]) {
         if (card._savedCost !== undefined) { card.cost = card._savedCost; delete card._savedCost; }
     }
 
