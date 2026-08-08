@@ -812,8 +812,8 @@ const BALANCE = {
         ],
     },
     monster: {
-        early: { hpMin: 10, hpMax: 35, attackMin: 1, attackMax: 8 },
-        late: { hpMin: 35, hpMax: 75, attackMin: 7, attackMax: 16 },
+        early: { hpMin: 15, hpMax: 52, attackMin: 1, attackMax: 8 },
+        late: { hpMin: 52, hpMax: 112, attackMin: 7, attackMax: 16 },
     },
     bosses: {
         25: { hp: 95, attack: 17 },
@@ -1900,28 +1900,42 @@ function endPlayerTurn() {
     if (state.battlePhase !== 'player') return;
     state.battlePhase = 'enemy';
 
-    // Increment turn counter and determine boss intent
     if (state.enemy && state.enemy.isBoss) {
+        // Boss: random attack / defense / skill
         state.enemyTurnCounter++;
-        // Skill cycle: turns 3, 6, 9, ... are skill turns (every 3rd turn)
-        if (state.enemyTurnCounter % 3 === 0) {
+        const roll = Math.random();
+        if (roll < 0.2) {
+            // Defense (20% chance)
+            state.enemyIntentType = 'defense';
+            state.enemyIntentLabel = '🛡️ 防御';
+            state.enemyCurrentAtk = 0;
+            state.enemyCurrentDef = Math.floor(state.enemy.defense * 1.5);
+        } else if (roll < 0.5) {
+            // Skill (30% chance)
             state.enemyIntentType = 'skill';
             state.enemyIntentLabel = `${state.enemy.skillIcon} ${state.enemy.skillName}`;
         } else {
+            // Attack (50% chance)
             state.enemyIntentType = 'attack';
             state.enemyIntentLabel = '';
-            // Roll attack/defense for next turn
             const enemyRoll = Math.random();
             state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + enemyRoll * 0.6));
             state.enemyCurrentDef = Math.floor(state.enemy.defense * (1.3 - enemyRoll * 0.6));
         }
     } else {
-        // Normal enemy
-        state.enemyIntentType = 'attack';
-        state.enemyIntentLabel = '';
-        const enemyRoll = Math.random();
-        state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + enemyRoll * 0.6));
-        state.enemyCurrentDef = Math.floor(state.enemy.defense * (1.3 - enemyRoll * 0.6));
+        // Normal enemy: random attack (60%) or defense (40%)
+        if (Math.random() < 0.4) {
+            state.enemyIntentType = 'defense';
+            state.enemyIntentLabel = '🛡️ 防御';
+            state.enemyCurrentAtk = 0;
+            state.enemyCurrentDef = Math.floor(state.enemy.defense * 1.5);
+        } else {
+            state.enemyIntentType = 'attack';
+            state.enemyIntentLabel = '⚔️ 攻击';
+            const enemyRoll = Math.random();
+            state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + enemyRoll * 0.6));
+            state.enemyCurrentDef = Math.floor(state.enemy.defense * (1.3 - enemyRoll * 0.6));
+        }
     }
 
     updateBattleUI();
@@ -1931,6 +1945,22 @@ function endPlayerTurn() {
 
 function enemyAttack() {
     const enemy = state.enemy;
+
+    // Defense intent — monster gains defense, no attack
+    if (state.enemyIntentType === 'defense') {
+        addMessage(`🛡️ ${enemy.name} 进入防御姿态！（防御 ${state.enemyCurrentDef}）`, 'info');
+        SFX.play('shield');
+        updateBattleUI();
+        if (state.enemy && state.enemy.hp <= 0) {
+            state.enemy.hp = 0;
+            state.battlePhase = 'over';
+            updateBattleUI();
+            setTimeout(() => onEnemyDefeated(), 400);
+            return;
+        }
+        setTimeout(() => startTurn(), 600);
+        return;
+    }
 
     // Boss skill turn — execute skill instead of normal attack
     if (enemy.isBoss && state.enemyIntentType === 'skill') {
@@ -3148,14 +3178,19 @@ function updateBattleUI() {
     if (state.enemy) {
         const e = state.enemy;
         $('enemy-name').textContent = e.name;
-        // Show intended damage when it's player's turn, hide during enemy turn
-        // Intent display: skill intent for bosses, attack intent for everyone
-        if (state.enemyIntentType === 'skill') {
+        // Intent display: defense / skill / attack
+        if (state.enemyIntentType === 'defense') {
+            $('enemy-intent').textContent = state.enemyIntentLabel;
+            $('enemy-intent').classList.remove('skill-intent');
+            $('enemy-intent').style.color = 'var(--shield)';
+        } else if (state.enemyIntentType === 'skill') {
             $('enemy-intent').textContent = state.enemyIntentLabel;
             $('enemy-intent').classList.add('skill-intent');
+            $('enemy-intent').style.color = '';
         } else {
-            $('enemy-intent').textContent = `⚔️ ${state.enemyCurrentAtk || 0}`;
+            $('enemy-intent').textContent = `${state.enemyIntentLabel || '⚔️'} ${state.enemyCurrentAtk || 0}`;
             $('enemy-intent').classList.remove('skill-intent');
+            $('enemy-intent').style.color = '';
         }
         $('enemy-intent').style.display = state.battlePhase === 'player' ? '' : 'none';
         // Show view-skill button only for boss battles
