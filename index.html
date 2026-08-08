@@ -2055,7 +2055,9 @@ function onEnemyDefeated() {
     state.battlePhase = 'over';
 
     // Gold drop: 2 for normal, 10 for boss
-    const goldDrop = isBossFloor(state.floor) ? 15 : 4;
+    const goldDrop = isBossFloor(state.floor)
+        ? Math.floor(10 + state.floor)
+        : Math.floor(3 + state.floor * 0.5);
     state.player.gold += goldDrop;
     addMessage(`${T.msgEnemyDeath(state.enemy.name)}`, 'info');
     addMessage(`💰 获得 ${goldDrop} 金币！`, 'heal');
