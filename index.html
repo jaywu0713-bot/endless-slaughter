@@ -282,11 +282,12 @@ body {
 
 /* ==================== MAP SCREEN ==================== */
 #screen-map { justify-content: flex-start; padding: 16px 20px; gap: 8px; overflow-y: auto; }
-.map-header { display: flex; align-items: baseline; gap: 12px; }
-.map-header h2 { font-size: 22px; color: var(--gold); }
+.map-layout { display: flex; gap: 16px; width: 100%; flex: 1; }
+.map-sidebar { display: flex; flex-direction: column; gap: 8px; min-width: 130px; max-width: 160px; padding-top: 40px; }
+.map-sidebar h2 { font-size: 18px; color: var(--gold); }
 .map-area { font-size: 14px; color: var(--text-dim); }
-.map-legend { display: flex; gap: 16px; font-size: 12px; color: var(--text-dim); }
-.map-grid-wrap { flex: 1; overflow: auto; width: 100%; max-height: 470px; }
+.map-legend { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-dim); }
+.map-grid-wrap { flex: 1; overflow: auto; max-height: 470px; }
 .map-grid { min-width: 100%; display: flex; justify-content: center; }
 .map-row { display: flex; gap: 8px; justify-content: center; }
 .map-cell {
@@ -424,8 +425,12 @@ body {
     .btn-view-skill { font-size: 9px; padding: 2px 4px; }
 
     /* Map */
-    .map-grid { transform: scale(0.75); transform-origin: top center; }
-    #map-area-text { font-size: 13px; }
+    .map-layout { flex-direction: column; }
+    .map-sidebar { flex-direction: row; flex-wrap: wrap; gap: 8px; max-width: none; min-width: 0; }
+    .map-sidebar h2 { font-size: 14px; }
+    .map-legend { flex-direction: row; gap: 8px; }
+    .map-grid { transform: scale(0.7); transform-origin: top center; }
+    #map-area-text { font-size: 12px; }
 
     /* Modals */
     .modal-content { padding: 14px 16px; max-width: 95vw; }
@@ -656,15 +661,17 @@ body {
 
     <!-- MAP / ROAD SELECTION -->
     <div id="screen-map" class="screen">
-        <div class="map-header">
-            <h2>🗺️ 选择路线</h2>
-            <span class="map-area" id="map-area-text"></span>
-        </div>
-        <div class="map-legend">
-            <span>⚔️ 战斗</span><span>❓ 问号</span><span>🛒 商店</span><span>💀 Boss</span>
-        </div>
-        <div class="map-grid-wrap">
-            <div class="map-grid" id="map-grid"></div>
+        <div class="map-layout">
+            <div class="map-grid-wrap">
+                <div class="map-grid" id="map-grid"></div>
+            </div>
+            <div class="map-sidebar">
+                <h2>🗺️ 选择路线</h2>
+                <span class="map-area" id="map-area-text"></span>
+                <div class="map-legend" id="map-legend">
+                    <span>⚔️ 战斗</span><span>❓ 问号</span><span>🛒 商店</span><span>💀 Boss</span>
+                </div>
+            </div>
         </div>
         <p class="map-hint" id="map-hint">点击上方可选房间继续</p>
     </div>
@@ -683,7 +690,12 @@ body {
             <span class="shop-gold" id="shop-gold">💰 0</span>
         </div>
         <div id="shop-items"></div>
-        <button class="btn" id="btn-leave-shop">离开商店</button>
+        <div class="shop-pages" style="display:flex;gap:12px;align-items:center;justify-content:center;margin-top:8px;">
+            <button class="btn btn-small" id="btn-shop-prev" onclick="shopPage(-1)" style="display:none;">◀ 上一页</button>
+            <span id="shop-page-num" style="font-size:12px;color:var(--text-dim);"></span>
+            <button class="btn btn-small" id="btn-shop-next" onclick="shopPage(1)">下一页 ▶</button>
+        </div>
+        <button class="btn" id="btn-leave-shop" style="margin-top:8px;">离开商店</button>
     </div>
 
     <!-- CHEST RESULT -->
@@ -790,6 +802,8 @@ const BALANCE = {
         maxEnergy: 2,
         drawPerTurn: 2,
         levelUpBonus: { maxHp: 10 },
+        shopExtraEnergyBought: false,
+        shopExtraDrawCount: 0,
         initialCards: [
             { id: 'attack', icon: '⚔️', type: 'atk', cost: 1, effect: 'dealDamage', rune: null, runeData: {} },
             { id: 'attack', icon: '⚔️', type: 'atk', cost: 1, effect: 'dealDamage', rune: null, runeData: {} },
@@ -1339,6 +1353,48 @@ const SHOP_ITEMS = [
         price: 20,
         apply(state) { return null; },
     },
+    {
+        id: 'extraEnergy',
+        name: '额外精力值',
+        icon: '⚡',
+        desc: '每回合永久+1精力（限购1次）',
+        price: 67,
+        maxPurchases: 1,
+        apply(state) { return null; },
+    },
+    {
+        id: 'extraDraw',
+        name: '额外抽卡',
+        icon: '🃏',
+        desc: '每回合永久多抽1张牌（限购2次）',
+        price: 67,
+        maxPurchases: 2,
+        apply(state) { return null; },
+    },
+    {
+        id: 'buyAtk',
+        name: '攻击力 +1',
+        icon: '⚔️',
+        desc: '永久增加1点攻击力',
+        price: 10,
+        apply(state) { return null; },
+    },
+    {
+        id: 'buyDef',
+        name: '防御力 +1',
+        icon: '🛡️',
+        desc: '永久增加1点防御力',
+        price: 10,
+        apply(state) { return null; },
+    },
+    {
+        id: 'buyMaxHp',
+        name: '生命上限 +5',
+        icon: '❤️',
+        desc: '永久增加5点最大生命值',
+        price: 10,
+        apply(state) { return null; },
+    },
 ];
 
 // =====================================================================
@@ -1652,8 +1708,9 @@ function startTurn() {
         state.battlePhase = 'player';
         state.shield = 0;
         state.turnFlags = { damageReduction: false, damageReductionCard: null, counterAttack: false, counterAttackCard: null };
-        state.energy = state.maxEnergy;
-        const drawn = drawCards(BALANCE.player.drawPerTurn);
+        state.energy = state.maxEnergy + (state.player.shopExtraEnergyBought ? 1 : 0);
+        const drawCount = BALANCE.player.drawPerTurn + (state.player.shopExtraDrawCount || 0);
+        const drawn = drawCards(drawCount);
         if (drawn.length > 0) {
             SFX.play('draw');
             addMessage(T.msgDraw, 'info');
@@ -1667,8 +1724,9 @@ function startTurn() {
     state.battlePhase = 'player';
     state.shield = 0; // Shield resets each turn
     state.turnFlags = { damageReduction: false, damageReductionCard: null, counterAttack: false, counterAttackCard: null };
-    state.energy = state.maxEnergy;
-    const drawn = drawCards(BALANCE.player.drawPerTurn);
+    state.energy = state.maxEnergy + (state.player.shopExtraEnergyBought ? 1 : 0);
+    const drawCount = BALANCE.player.drawPerTurn + (state.player.shopExtraDrawCount || 0);
+    const drawn = drawCards(drawCount);
     if (drawn.length > 0) {
         SFX.play('draw');
         addMessage(T.msgDraw, 'info');
@@ -1967,7 +2025,7 @@ function onEnemyDefeated() {
     state.battlePhase = 'over';
 
     // Gold drop: 2 for normal, 10 for boss
-    const goldDrop = isBossFloor(state.floor) ? 10 : 2;
+    const goldDrop = isBossFloor(state.floor) ? 15 : 4;
     state.player.gold += goldDrop;
     addMessage(`${T.msgEnemyDeath(state.enemy.name)}`, 'info');
     addMessage(`💰 获得 ${goldDrop} 金币！`, 'heal');
@@ -2221,6 +2279,12 @@ function showMap() {
     const GAP = MAP_CONFIG.rowGap;
 
     $('map-area-text').textContent = `第 ${mapStart}-${areaEnd} 层`;
+    // Build legend from ROOM_TYPES
+    let legendHTML = '';
+    for (const r of Object.values(ROOM_TYPES)) {
+        legendHTML += `<span>${r.icon} ${r.name}</span>`;
+    }
+    $('map-legend').innerHTML = legendHTML;
 
     const totalRows = map.length;
     const showFrom = Math.max(0, cursorFloor >= mapStart ? cursorFloor - mapStart - 1 : 0);
@@ -2706,18 +2770,43 @@ function enterQuestionBattle() {
 
 function enterShop() {
     SFX.play('shop');
+    _shopPage = 0;
     state.screen = 'shop';
+    renderShop();
+}
+
+const ITEMS_PER_PAGE = 4;
+let _shopPage = 0;
+
+function shopPage(dir) {
+    _shopPage += dir;
     renderShop();
 }
 
 function renderShop() {
     $('shop-gold').textContent = `💰 ${state.player.gold}`;
-    $('shop-items').innerHTML = SHOP_ITEMS.map(item => {
-        const canAfford = state.player.gold >= item.price;
+    const totalPages = Math.ceil(SHOP_ITEMS.length / ITEMS_PER_PAGE);
+    if (_shopPage < 0) _shopPage = 0;
+    if (_shopPage >= totalPages) _shopPage = totalPages - 1;
+    const start = _shopPage * ITEMS_PER_PAGE;
+    const pageItems = SHOP_ITEMS.slice(start, start + ITEMS_PER_PAGE);
+
+    $('shop-items').innerHTML = pageItems.map(item => {
+        let remainText = '';
+        let disabled = false;
+        if (item.maxPurchases) {
+            let bought = 0;
+            if (item.id === 'extraEnergy') bought = state.player.shopExtraEnergyBought ? 1 : 0;
+            if (item.id === 'extraDraw') bought = state.player.shopExtraDrawCount || 0;
+            const remain = item.maxPurchases - bought;
+            remainText = ` <span style="color:#888;font-size:11px;">(剩余${remain}次)</span>`;
+            if (remain <= 0) disabled = true;
+        }
+        const canAfford = state.player.gold >= item.price && !disabled;
         return `
             <div class="shop-item">
                 <div class="shop-item-icon">${item.icon}</div>
-                <div class="shop-item-name">${item.name}</div>
+                <div class="shop-item-name">${item.name}${remainText}</div>
                 <div class="shop-item-desc">${item.desc}</div>
                 <div class="shop-item-price">💰 ${item.price}</div>
                 <button class="btn btn-small" ${!canAfford ? 'disabled' : ''}
@@ -2725,6 +2814,11 @@ function renderShop() {
             </div>
         `;
     }).join('');
+
+    // Page navigation
+    $('shop-page-num').textContent = `${_shopPage + 1} / ${totalPages}`;
+    $('btn-shop-prev').style.display = _shopPage > 0 ? '' : 'none';
+    $('btn-shop-next').style.display = _shopPage < totalPages - 1 ? '' : 'none';
     showScreen('shop');
 }
 
@@ -2769,6 +2863,51 @@ function buyShopItem(itemId) {
         const newCard = { id: 'defense', icon: '🛡️', type: 'def', cost: 1, effect: 'gainShield', rune: null, runeData: {} };
         state.player.cards.push(newCard);
         addMessage('🛡️ 获得了一张防御卡牌！', 'heal');
+        SFX.play('play_card');
+        renderShop();
+        return;
+    }
+
+    // Stats / permanent upgrades
+    if (item.id === 'extraEnergy') {
+        if (state.player.shopExtraEnergyBought) { addMessage('已经购买过了！', 'damage'); return; }
+        state.player.gold -= item.price;
+        state.player.shopExtraEnergyBought = true;
+        addMessage('⚡ 每回合精力永久+1！', 'heal');
+        SFX.play('play_card');
+        renderShop();
+        return;
+    }
+    if (item.id === 'extraDraw') {
+        const count = state.player.shopExtraDrawCount || 0;
+        if (count >= 2) { addMessage('最多购买2次！', 'damage'); return; }
+        state.player.gold -= item.price;
+        state.player.shopExtraDrawCount = count + 1;
+        addMessage('🃏 每回合抽牌数永久+1！（当前额外+' + (count + 1) + '）', 'heal');
+        SFX.play('play_card');
+        renderShop();
+        return;
+    }
+    if (item.id === 'buyAtk') {
+        state.player.gold -= item.price;
+        state.player.attack += 1;
+        addMessage('⚔️ 攻击力永久+1！（当前 ' + state.player.attack + '）', 'heal');
+        SFX.play('play_card');
+        renderShop();
+        return;
+    }
+    if (item.id === 'buyDef') {
+        state.player.gold -= item.price;
+        state.player.defense += 1;
+        addMessage('🛡️ 防御力永久+1！（当前 ' + state.player.defense + '）', 'heal');
+        SFX.play('play_card');
+        renderShop();
+        return;
+    }
+    if (item.id === 'buyMaxHp') {
+        state.player.gold -= item.price;
+        state.player.maxHp += 5;
+        addMessage('❤️ 最大生命值永久+5！（当前 ' + state.player.maxHp + '）', 'heal');
         SFX.play('play_card');
         renderShop();
         return;
@@ -3002,7 +3141,8 @@ function updateBattleUI() {
     `;
     $('header-gold').textContent = `💰 ${p.gold}`;
     $('shield-display').textContent = `🛡️ ${state.shield}`;
-    $('energy-display').textContent = `⚡ ${state.energy}/${state.maxEnergy}`;
+    const maxEnergy = state.maxEnergy + (state.player.shopExtraEnergyBought ? 1 : 0);
+    $('energy-display').textContent = `⚡ ${state.energy}/${maxEnergy}`;
 
     // Enemy
     if (state.enemy) {
