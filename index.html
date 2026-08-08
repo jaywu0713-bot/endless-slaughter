@@ -42,6 +42,17 @@ body {
 }
 #app { width: 100%; max-width: 800px; height: 100vh; max-height: 700px; position: relative; }
 
+/* ==================== HUD BAR ==================== */
+#hud-bar {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 16px; background: rgba(10,10,26,0.92);
+    border-bottom: 1px solid #333; font-size: 14px; font-weight: 700;
+}
+.hud-hp { color: var(--hp-green); }
+.hud-floor { color: var(--gold); }
+.hud-gold { color: var(--energy); }
+
 /* ==================== SCREENS ==================== */
 .screen { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
 .screen.active { display: flex; }
@@ -191,6 +202,35 @@ body {
     100% { opacity: 0; transform: translateY(-50px); }
 }
 
+/* ==================== MAP SCREEN ==================== */
+#screen-map { justify-content: flex-start; padding: 16px 20px; gap: 8px; overflow-y: auto; }
+.map-header { display: flex; align-items: baseline; gap: 12px; }
+.map-header h2 { font-size: 22px; color: var(--gold); }
+.map-area { font-size: 14px; color: var(--text-dim); }
+.map-legend { display: flex; gap: 16px; font-size: 12px; color: var(--text-dim); }
+.map-grid-wrap { flex: 1; overflow: auto; width: 100%; max-height: 470px; }
+.map-grid { min-width: 100%; display: flex; justify-content: center; }
+.map-row { display: flex; gap: 8px; justify-content: center; }
+.map-cell {
+    width: 72px; min-height: 62px; border-radius: 10px; flex-shrink: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    font-size: 11px; font-weight: 700; cursor: default; transition: all 0.2s;
+    border: 2px solid transparent; background: var(--panel);
+}
+.map-cell.empty { background: transparent; border: none; pointer-events: none; }
+.map-cell.past { opacity: 0.28; border-color: #444; }
+.map-cell.current { border-color: #fff; box-shadow: 0 0 14px rgba(255,255,255,0.4); background: var(--panel-light); animation: pulse-current 1.5s ease-in-out infinite; }
+.map-cell.future { border-color: #333; opacity: 0.5; }
+.map-cell.next { border-color: var(--gold); cursor: pointer; animation: pulse-next 2s ease-in-out infinite; opacity: 1; }
+.map-cell.next:hover { transform: scale(1.1); box-shadow: 0 0 20px rgba(255,215,0,0.6); z-index: 2; }
+.map-cell .cell-icon { font-size: 24px; line-height: 1; }
+.map-cell .cell-type { font-size: 10px; line-height: 1; }
+
+@keyframes pulse-current { 0%,100% { box-shadow: 0 0 8px rgba(255,255,255,0.2); } 50% { box-shadow: 0 0 18px rgba(255,255,255,0.5); } }
+@keyframes pulse-next { 0%,100% { box-shadow: 0 0 4px rgba(255,215,0,0.2); } 50% { box-shadow: 0 0 14px rgba(255,215,0,0.5); } }
+
+.map-hint { font-size: 13px; color: var(--gold); text-align: center; }
+
 /* ==================== QUESTION ROOM ==================== */
 #screen-question-room h2 { font-size: 28px; color: var(--gold); margin-bottom: 4px; }
 #screen-question-room p { color: var(--text-dim); margin-bottom: 20px; font-size: 15px; }
@@ -279,6 +319,13 @@ body {
 <body>
 <div id="app">
 
+    <!-- HUD (shown on game screens) -->
+    <div id="hud-bar" style="display:none;">
+        <span class="hud-hp">❤️ <span id="hud-hp">100/100</span></span>
+        <span class="hud-floor" id="hud-floor">第 1 层</span>
+        <span class="hud-gold">💰 <span id="hud-gold">0</span></span>
+    </div>
+
     <!-- MAIN MENU -->
     <div id="screen-menu" class="screen active">
         <div class="title">无尽杀戮</div>
@@ -348,6 +395,21 @@ body {
         <p>你击败了所有敌人，成功突破25层！</p>
         <div class="stats" id="victory-stats"></div>
         <button class="btn" id="btn-victory-menu">返回主界面</button>
+    </div>
+
+    <!-- MAP / ROAD SELECTION -->
+    <div id="screen-map" class="screen">
+        <div class="map-header">
+            <h2>🗺️ 选择路线</h2>
+            <span class="map-area" id="map-area-text"></span>
+        </div>
+        <div class="map-legend">
+            <span>⚔️ 战斗</span><span>❓ 问号</span><span>🛒 商店</span><span>💀 Boss</span>
+        </div>
+        <div class="map-grid-wrap">
+            <div class="map-grid" id="map-grid"></div>
+        </div>
+        <p class="map-hint" id="map-hint">点击上方可选房间继续</p>
     </div>
 
     <!-- QUESTION ROOM -->
@@ -477,7 +539,31 @@ const BALANCE = {
     },
     healPercent: 0.1,
     runesPerSelection: 3,
-    questionRoomChance: 0.1, // 10% chance for normal floors
+};
+
+// =====================================================================
+// MAP / ROAD SYSTEM CONFIG
+// =====================================================================
+const MAP_CONFIG = {
+    cols: 7,              // Wide grid for branching
+    previewRows: 8,       // How many upcoming floors to show
+    iconSize: 24,         // Icon font size
+    cellW: 72,            // Cell width
+    cellH: 62,            // Cell height
+    rowGap: 44,           // Vertical gap between rows
+    connectorReach: 2,    // Max column distance for connections
+    roomWeights: {
+        battle: 50,
+        question: 30,
+        shop: 20,
+    },
+};
+
+const ROOM_TYPES = {
+    battle: { id: 'battle', name: '战斗', icon: '⚔️', color: '#ef5350', desc: '普通怪物' },
+    boss:   { id: 'boss', name: '楼层主', icon: '💀', color: '#ff5722', desc: '强力敌人' },
+    question: { id: 'question', name: '问号房', icon: '❓', color: '#ffd700', desc: '商店或宝箱' },
+    shop:   { id: 'shop', name: '商店', icon: '🛒', color: '#4caf50', desc: '购买物品' },
 };
 
 // =====================================================================
@@ -653,6 +739,103 @@ function pickRandomRunes(count) {
 }
 
 // =====================================================================
+// MAP GENERATION
+// =====================================================================
+
+function randomRoomType() {
+    const w = MAP_CONFIG.roomWeights;
+    const total = w.battle + w.question + w.shop;
+    let roll = Math.random() * total;
+    if ((roll -= w.battle) <= 0) return 'battle';
+    if ((roll -= w.question) <= 0) return 'question';
+    return 'shop';
+}
+
+// Pick N spread-out column positions from [0, cols-1]
+function pickPositions(cols, count) {
+    if (count >= cols) return [...Array(cols).keys()];
+    // Ensure coverage: at least one room in left third, one in right third
+    const positions = new Set();
+    const leftThird = Math.floor(cols / 3);
+    const rightThird = cols - leftThird - 1;
+    // Force at least one in left and right regions
+    positions.add(randInt(0, leftThird));
+    positions.add(randInt(rightThird, cols - 1));
+    // Fill remaining
+    while (positions.size < count) {
+        positions.add(randInt(0, cols - 1));
+    }
+    return [...positions].sort((a, b) => a - b);
+}
+
+// Ensure new row's rooms connect to at least one previous room
+function pickConnectedPositions(cols, count, prevPositions) {
+    if (prevPositions.length === 0) return pickPositions(cols, count);
+    const reach = MAP_CONFIG.connectorReach;
+    const positions = new Set();
+    // First, place one room reachable from each edge of the previous row
+    const prevMin = Math.min(...prevPositions);
+    const prevMax = Math.max(...prevPositions);
+    positions.add(randInt(Math.max(0, prevMin - reach), Math.min(cols - 1, prevMin + reach)));
+    positions.add(randInt(Math.max(0, prevMax - reach), Math.min(cols - 1, prevMax + reach)));
+    // Fill remaining
+    while (positions.size < count) {
+        // Pick a position reachable from at least one previous position
+        const refPrev = prevPositions[randInt(0, prevPositions.length - 1)];
+        positions.add(randInt(Math.max(0, refPrev - reach), Math.min(cols - 1, refPrev + reach)));
+    }
+    return [...positions].sort((a, b) => a - b);
+}
+
+// Check if two columns are connected
+function columnsConnected(c1, c2) {
+    return Math.abs(c1 - c2) <= MAP_CONFIG.connectorReach;
+}
+
+function generateMap(startFloor, endFloor) {
+    const numFloors = endFloor - startFloor + 1;
+    const cols = MAP_CONFIG.cols;
+    const map = []; // array of rows, each row is array of length `cols` (null or room obj)
+
+    for (let f = 0; f < numFloors; f++) {
+        const floorNum = startFloor + f;
+        const isBoss = BALANCE.bossFloors.includes(floorNum);
+
+        if (isBoss) {
+            // Boss: single room in center column
+            const row = new Array(cols).fill(null);
+            row[Math.floor(cols / 2)] = { type: 'boss', floor: floorNum, col: Math.floor(cols / 2) };
+            map.push(row);
+        } else if (f === 0) {
+            // First floor: 2-4 rooms spread out
+            const row = new Array(cols).fill(null);
+            const count = randInt(2, 4);
+            const pos = pickPositions(cols, count);
+            for (const c of pos) {
+                row[c] = { type: randomRoomType(), floor: floorNum, col: c };
+            }
+            map.push(row);
+        } else {
+            // Normal floor: rooms that connect to previous floor
+            const prevRow = map[f - 1];
+            const prevPositions = [];
+            for (let c = 0; c < cols; c++) {
+                if (prevRow[c]) prevPositions.push(c);
+            }
+
+            const row = new Array(cols).fill(null);
+            const count = randInt(2, 4);
+            const pos = pickConnectedPositions(cols, count, prevPositions);
+            for (const c of pos) {
+                row[c] = { type: randomRoomType(), floor: floorNum, col: c };
+            }
+            map.push(row);
+        }
+    }
+    return map;
+}
+
+// =====================================================================
 // QUESTION ROOM EVENTS (data-driven — add new events here)
 // =====================================================================
 const QUESTION_ROOM_EVENTS = [
@@ -811,6 +994,13 @@ function freshState() {
         questionRoomEvent: null,
         engraveOrigin: 'boss',  // 'boss' | 'shop' | 'chest'
         chestResult: null,
+        // Map / road system
+        currentMap: null,
+        mapStartFloor: 1,
+        mapCursorFloor: 1,
+        mapCursorPath: 0,
+        mapHistory: [],
+        pendingReward: true,
     };
 }
 
@@ -1147,32 +1337,270 @@ function expToNextLevel() {
 
 function advanceFloor() {
     state.floor++;
+    // Check victory
     if (state.floor > BALANCE.totalFloors) {
         state.screen = 'victory';
         render();
         return;
     }
 
-    // Check for question mark room (only non-boss floors)
-    if (!BALANCE.bossFloors.includes(state.floor) && Math.random() < BALANCE.questionRoomChance) {
-        state.screen = 'question-room';
-        state.questionRoomEvent = pickQuestionRoomEvent();
-        state.messages = [];
-        render();
+    // If entering a new area (past current area's boss), generate new map
+    const currentAreaEnd = getAreaEnd(state.mapStartFloor);
+    if (state.floor > currentAreaEnd) {
+        startNewArea(state.floor);
         return;
     }
 
-    // Normal battle
-    state.enemy = generateEnemy(state.floor);
+    // Show map for next floor selection
+    state.screen = 'map';
+    render();
+}
+
+function getAreaEnd(startFloor) {
+    // Find the next boss floor after startFloor
+    for (const bossFloor of BALANCE.bossFloors) {
+        if (bossFloor >= startFloor) return bossFloor;
+    }
+    return BALANCE.totalFloors;
+}
+
+function startNewArea(startFloor) {
+    const endFloor = getAreaEnd(startFloor);
+    state.mapStartFloor = startFloor;
+    state.currentMap = generateMap(startFloor, endFloor);
+    state.mapCursorFloor = startFloor - 1; // Before first floor → floor 1 rooms are clickable
+    state.mapCursorPath = -1;               // No current path yet
+    state.mapHistory = [];
+    state.floor = startFloor - 1;
+    state.screen = 'map';
+    render();
+}
+
+// =====================================================================
+// MAP DISPLAY & INTERACTION
+// =====================================================================
+
+// Helper: which columns on the next floor are reachable from the current column?
+function getReachableCols(currentCol) {
+    if (currentCol < 0) {
+        // Start of area: all columns that have a room on floor 1 are reachable
+        const firstRow = state.currentMap[0];
+        const cols = [];
+        for (let c = 0; c < MAP_CONFIG.cols; c++) {
+            if (firstRow[c]) cols.push(c);
+        }
+        return cols;
+    }
+    const cols = [];
+    for (let c = 0; c < MAP_CONFIG.cols; c++) {
+        if (Math.abs(c - currentCol) <= MAP_CONFIG.connectorReach) cols.push(c);
+    }
+    return cols;
+}
+
+function showMap() {
+    const map = state.currentMap;
+    if (!map) return;
+
+    const cursorFloor = state.mapCursorFloor;
+    const cursorCol = state.mapCursorPath;
+    const areaEnd = getAreaEnd(state.mapStartFloor);
+    const mapStart = state.mapStartFloor;
+    const cols = MAP_CONFIG.cols;
+    const CW = MAP_CONFIG.cellW;
+    const CH = MAP_CONFIG.cellH;
+    const GAP = MAP_CONFIG.rowGap;
+
+    $('map-area-text').textContent = `第 ${mapStart}-${areaEnd} 层`;
+
+    const totalRows = map.length;
+    const showFrom = Math.max(0, cursorFloor >= mapStart ? cursorFloor - mapStart - 1 : 0);
+    const showTo = Math.min(totalRows, Math.max(cursorFloor - mapStart + MAP_CONFIG.previewRows, 4));
+    const visibleRows = showTo - showFrom;
+    const reachableCols = getReachableCols(cursorCol);
+
+    let nodes = '';
+    let svgLines = '';
+    const totalW = cols * (CW + 8); // 8px gap between col slots
+
+    for (let vr = 0; vr < visibleRows; vr++) {
+        const r = showFrom + vr;
+        const row = map[r];
+        const floorNum = mapStart + r;
+        // Bottom-to-top: vr=0 is lowest floor → placed at bottom (max y)
+        const yTop = (visibleRows - 1 - vr) * (CH + GAP);
+
+        // Room cells
+        nodes += `<div class="map-row" style="position:absolute;top:${yTop}px;left:0;right:0;gap:8px;">`;
+        for (let c = 0; c < cols; c++) {
+            const cell = row[c];
+            if (!cell) {
+                nodes += '<div class="map-cell empty"></div>';
+                continue;
+            }
+
+            let stateClass = 'future';
+            let clickable = false;
+
+            if (floorNum < cursorFloor || (floorNum === cursorFloor && cursorFloor >= mapStart)) {
+                stateClass = 'past';
+                if (floorNum === cursorFloor && c === cursorCol) stateClass = 'current';
+            } else if (floorNum === cursorFloor + 1) {
+                if (reachableCols.includes(c)) {
+                    stateClass = 'next';
+                    clickable = true;
+                }
+            }
+
+            const room = ROOM_TYPES[cell.type];
+            const onClick = clickable ? `onclick="selectRoom(${floorNum},${c})"` : '';
+
+            nodes += `
+                <div class="map-cell ${stateClass}" ${onClick}>
+                    <div class="cell-icon">${room.icon}</div>
+                    <div class="cell-type">${room.name}</div>
+                </div>
+            `;
+        }
+        nodes += '</div>';
+
+        // Connector lines from this row (lower) → next row (upper, above on screen)
+        if (r + 1 < totalRows && r + 1 < showTo) {
+            const nextRow = map[r + 1];
+            const yTopUpper = (visibleRows - 2 - vr) * (CH + GAP); // row above
+            for (let c = 0; c < cols; c++) {
+                if (!row[c]) continue;
+                for (let nc = 0; nc < cols; nc++) {
+                    if (!nextRow[nc]) continue;
+                    if (!columnsConnected(c, nc)) continue;
+
+                    const slotW = CW + 8;
+                    const x1 = c * slotW + CW / 2;
+                    const y1 = yTop + CH;        // bottom of lower cell
+                    const x2 = nc * slotW + CW / 2;
+                    const y2 = yTopUpper;         // top of upper cell (smaller y = higher on screen)
+
+                    const isActive = (cursorFloor >= mapStart && floorNum === cursorFloor
+                                    && c === cursorCol && reachableCols.includes(nc));
+                    const stroke = isActive ? 'var(--gold)' : '#3a3a5a';
+                    const sw = isActive ? 3 : 1.5;
+                    const op = isActive ? 0.9 : 0.4;
+                    svgLines += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" opacity="${op}"/>`;
+                }
+            }
+        }
+    }
+
+    const totalH = Math.max(200, visibleRows * (CH + GAP) - GAP);
+    $('map-grid').innerHTML = `
+        <div style="position:relative;width:${totalW}px;height:${totalH}px;margin:0 auto;">
+            <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;">${svgLines}</svg>
+            <div style="position:relative;z-index:1;">${nodes}</div>
+        </div>
+    `;
+
+    if (cursorFloor < mapStart) {
+        $('map-hint').textContent = '👆 点击第1层的房间开始冒险';
+    } else if (cursorFloor >= areaEnd) {
+        $('map-hint').textContent = '⚔️ 迎战楼层主！';
+    } else {
+        $('map-hint').textContent = '沿金色连线选择下一个房间';
+    }
+
+    showScreen('map');
+    setTimeout(() => {
+        const wrap = $('map-grid-wrap');
+        if (wrap) {
+            // Current position in flipped coordinates (bottom-to-top)
+            const curRowIdx = cursorFloor >= mapStart ? cursorFloor - mapStart : 0;
+            const curY = (visibleRows - 1 - curRowIdx) * (CH + GAP);
+            // Scroll so current position is near the bottom of viewport
+            wrap.scrollTop = Math.max(0, curY - 300);
+        }
+    }, 50);
+}
+
+function selectRoom(targetFloor, targetCol) {
+    if (targetFloor !== state.mapCursorFloor + 1) return;
+    if (!getReachableCols(state.mapCursorPath).includes(targetCol)) return;
+
+    const map = state.currentMap;
+    const rowIndex = targetFloor - state.mapStartFloor;
+    const cell = map[rowIndex][targetCol];
+    if (!cell) return;
+
+    // Record history
+    state.mapHistory.push({
+        floor: state.mapCursorFloor >= state.mapStartFloor ? state.mapCursorFloor : 0,
+        col: state.mapCursorPath,
+        type: state.mapCursorFloor >= state.mapStartFloor
+            ? (map[state.mapCursorFloor - state.mapStartFloor]?.[state.mapCursorPath]?.type || 'unknown')
+            : 'start'
+    });
+
+    // Move cursor
+    state.mapCursorFloor = targetFloor;
+    state.mapCursorPath = targetCol;
+    state.floor = targetFloor;
+
+    resolveRoom(cell);
+}
+
+function resolveRoom(cell) {
+    state.messages = [];
     state.deck = { draw: createDeck(), hand: [], discard: [] };
     state.shield = 0;
-    state.messages = [];
-    state.screen = 'battle';
-    render();
-    renderStickFigure('player-sprite', 'var(--player)', false, false);
-    renderStickFigure('enemy-sprite', 'var(--enemy)', true, state.enemy.isBoss);
-    startTurn();
+    // Only battle rooms get the EXP/HP reward screen
+    state.pendingReward = (cell.type === 'battle' || cell.type === 'boss');
+
+    switch (cell.type) {
+        case 'battle':
+            state.enemy = generateEnemy(state.floor);
+            state.screen = 'battle';
+            render();
+            renderStickFigure('player-sprite', 'var(--player)', false, false);
+            renderStickFigure('enemy-sprite', 'var(--enemy)', true, state.enemy ? state.enemy.isBoss : false);
+            startTurn();
+            break;
+
+        case 'boss':
+            state.enemy = generateEnemy(state.floor);
+            state.screen = 'battle';
+            render();
+            renderStickFigure('player-sprite', 'var(--player)', false, false);
+            renderStickFigure('enemy-sprite', 'var(--enemy)', true, true);
+            startTurn();
+            break;
+
+        case 'question':
+            state.screen = 'question-room';
+            state.questionRoomEvent = { type: 'question' };
+            render();
+            break;
+
+        case 'shop':
+            state.screen = 'shop';
+            state.questionRoomEvent = null;
+            state.engraveOrigin = 'boss';
+            render();
+            break;
+
+        default:
+            advanceFloor();
+    }
 }
+
+// Helper: go to next phase (reward if battle, otherwise advance directly)
+function proceedAfterRoom() {
+    if (state.pendingReward) {
+        showReward();
+    } else {
+        advanceFloor();
+    }
+}
+
+// Make selectRoom globally accessible
+window.selectRoom = selectRoom;
 
 // =====================================================================
 // RUNE SELECTION & ENGRAVING
@@ -1283,10 +1711,10 @@ function engraveRuneOnCard(cardIndex) {
         state.screen = 'shop';
         renderShop();
     } else if (state.engraveOrigin === 'chest') {
-        // Continue to reward after chest rune
+        // Continue after chest rune
         state.questionRoomEvent = null;
         state.engraveOrigin = 'boss';
-        showReward();
+        proceedAfterRoom();
     } else {
         // Boss rune → normal reward
         showReward();
@@ -1368,7 +1796,7 @@ function buyShopItem(itemId) {
 function leaveShop() {
     state.questionRoomEvent = null;
     state.engraveOrigin = 'boss';
-    showReward();
+    proceedAfterRoom();
 }
 
 // =====================================================================
@@ -1405,13 +1833,12 @@ function continueAfterChest() {
     state.chestResult = null;
     state.questionRoomEvent = null;
     state.engraveOrigin = 'boss';
-    showReward();
+    proceedAfterRoom();
 }
 
 // Make functions globally accessible for onclick handlers
 window.selectRune = selectRune;
 window.engraveRuneOnCard = engraveRuneOnCard;
-window.resolveQuestionRoom = resolveQuestionRoom;
 window.enterShop = enterShop;
 window.openChest = openChest;
 window.buyShopItem = buyShopItem;
@@ -1427,6 +1854,17 @@ function showScreen(name) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     const el = $(`screen-${name}`);
     if (el) el.classList.add('active');
+    // Show HUD on game screens, hide on menu/victory/gameover
+    const gameScreens = ['map', 'battle', 'question-room', 'shop', 'chest-result', 'rune-select', 'rune-engrave', 'reward'];
+    $('hud-bar').style.display = gameScreens.includes(name) ? 'flex' : 'none';
+    if (gameScreens.includes(name)) updateHUD();
+}
+
+function updateHUD() {
+    const p = state.player;
+    $('hud-hp').textContent = `${p.hp} / ${p.maxHp}`;
+    $('hud-gold').textContent = `${p.gold}`;
+    $('hud-floor').textContent = T.floor(state.floor);
 }
 
 function addMessage(text, cls = '') {
@@ -1635,6 +2073,9 @@ function render() {
             showScreen('battle');
             updateBattleUI();
             break;
+        case 'map':
+            showMap();
+            break;
         case 'question-room':
             showQuestionRoom();
             break;
@@ -1697,14 +2138,7 @@ function bindEvents() {
 function startGame() {
     try {
         state = freshState();
-        state.floor = 1;
-        state.enemy = generateEnemy(1);
-        state.deck = { draw: createDeck(), hand: [], discard: [] };
-        state.screen = 'battle';
-        render();
-        renderStickFigure('player-sprite', 'var(--player)', false, false);
-        renderStickFigure('enemy-sprite', 'var(--enemy)', true, false);
-        startTurn();
+        startNewArea(1);
     } catch (e) {
         console.error('startGame error:', e.message, e.stack);
         alert('游戏启动失败：' + e.message);
@@ -1714,11 +2148,6 @@ function startGame() {
 function selectReward(type) {
     applyReward(type);
     advanceFloor();
-    // Re-render enemy sprite for new floor
-    if (state.screen === 'battle') {
-        renderStickFigure('player-sprite', 'var(--player)', false, false);
-        renderStickFigure('enemy-sprite', 'var(--enemy)', true, state.enemy.isBoss);
-    }
 }
 
 function backToMenu() {
