@@ -97,6 +97,15 @@ body {
 .menu-instructions p { margin-bottom: 6px; }
 .menu-instructions b { color: var(--text); }
 
+/* ==================== RECORDS ==================== */
+.records-container { max-width: 440px; width: 90%; margin: 0 auto; }
+.records-container h3 { font-size: 14px; color: var(--gold); text-align: center; margin-bottom: 8px; }
+.record-item { display: flex; align-items: center; gap: 8px; padding: 5px 10px; background: var(--panel); border-radius: 6px; margin-bottom: 4px; font-size: 12px; }
+.record-icon { font-size: 16px; min-width: 24px; text-align: center; }
+.record-label { color: var(--text); font-weight: 700; min-width: 80px; }
+.record-stats { color: var(--text-dim); flex: 1; }
+.record-date { color: #555; font-size: 10px; white-space: nowrap; }
+
 /* ==================== BUTTONS ==================== */
 .btn {
     padding: 14px 40px; font-size: 18px; font-weight: 700;
@@ -135,6 +144,11 @@ body {
 .player-name { color: var(--player); }
 .enemy-name { color: var(--enemy); }
 .intent-display { font-size: 15px; font-weight: 900; color: var(--enemy); text-align: center; padding: 2px 0; text-shadow: 0 0 8px rgba(239,83,80,0.4); }
+.intent-display.skill-intent { color: var(--gold); text-shadow: 0 0 8px rgba(255,215,0,0.5); animation: pulseIntent 0.8s ease-in-out infinite; }
+@keyframes pulseIntent { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+.btn-view-skill { font-size: 10px; padding: 2px 6px; background: var(--panel); border: 1px solid var(--gold); color: var(--gold); border-radius: 4px; cursor: pointer; margin-top: 2px; }
+.btn-view-skill:hover { background: var(--gold); color: #000; }
+.boss-intro-text { font-size: 22px; font-weight: 900; color: var(--gold); text-align: center; text-shadow: 0 0 16px rgba(255,215,0,0.6); padding: 40px; animation: fadeInMsg 0.5s ease; line-height: 1.5; }
 
 .chars-row { display: flex; align-items: flex-end; gap: 12px; }
 .char-box { display: flex; flex-direction: column; align-items: center; position: relative; }
@@ -401,6 +415,22 @@ body {
         </div>
     </div>
 
+    <!-- BOSS INTRO MODAL -->
+    <div id="modal-boss-intro" class="modal-overlay" style="display:none;">
+        <div class="modal-content" style="border-color:var(--enemy);">
+            <div class="boss-intro-text" id="boss-intro-text"></div>
+        </div>
+    </div>
+
+    <!-- BOSS SKILL MODAL -->
+    <div id="modal-boss-skill" class="modal-overlay" style="display:none;" onclick="closeBossSkill(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2 id="boss-skill-title" style="color:var(--gold);"></h2>
+            <p id="boss-skill-desc" style="font-size:15px;color:var(--text-dim);margin:12px 0;"></p>
+            <button class="btn btn-small" onclick="closeBossSkill()">关闭</button>
+        </div>
+    </div>
+
     <!-- MAIN MENU -->
     <div id="screen-menu" class="screen active">
         <div class="title">无尽杀戮</div>
@@ -410,10 +440,11 @@ body {
             <p><b>🗺️ 路线：</b>每层在地图上选择房间。⚔️战斗 · ❓神秘遭遇 · 🛒商店 · 💀楼层主。只能沿连线移动到相邻路线的房间。</p>
             <p><b>❓ 问号房：</b>遭遇未知怪物，取胜后获得经验/回血奖励。</p>
             <p><b>🛒 商店：</b>花费金币购买生命回复。金币从战斗中获取（楼层×2）。</p>
-            <p><b>🔮 印记：</b>击败每20层的楼层主（20/40/60/80层）后获得印记，刻在卡牌上获得永久特殊效果。</p>
-            <p><b>📈 升级：</b>获得经验提升等级，经验公式：等级×10+20。升级增加HP、攻击、防御。</p>
+            <p><b>🔮 印记：</b>击败楼层主（25/50/75层）后获得印记，刻在卡牌上获得永久特殊效果。</p>
+            <p><b>📈 升级：</b>获得经验提升等级。升级增加HP、攻击、防御。</p>
             <p><b>🏆 目标：</b>击败第100层最终Boss通关！</p>
         </div>
+        <div id="menu-records"></div>
         <button class="btn" id="btn-start">开始游戏</button>
         <button class="btn" id="btn-continue" style="display:none;">继续游戏</button>
     </div>
@@ -444,6 +475,7 @@ body {
                     <div class="char-box">
                         <div class="char-name enemy-name" id="enemy-name">怪物</div>
                         <div class="intent-display" id="enemy-intent">⚔️ 0</div>
+                        <button class="btn-view-skill" id="btn-view-skill" style="display:none;" onclick="viewBossSkill()">查看技能</button>
                         <div class="char-sprite" id="enemy-sprite"></div>
                         <div class="hp-bar-wrap"><div class="hp-bar enemy-hp" id="enemy-hp-bar" style="width:100%"></div></div>
                         <div class="hp-text" id="enemy-hp-text"></div>
@@ -611,7 +643,7 @@ const T = {
 // =====================================================================
 const BALANCE = {
     totalFloors: 100,
-    bossFloors: [20, 40, 60, 80, 100],
+    bossFloors: [25, 50, 75, 100],
     player: {
         initial: { level: 1, maxHp: 50, hp: 50, attack: 7, defense: 4, exp: 0, gold: 0 },
         maxEnergy: 3,
@@ -629,15 +661,116 @@ const BALANCE = {
         late: { hpMin: 35, hpMax: 75, attackMin: 7, attackMax: 16 },
     },
     bosses: {
-        20: { hp: 80, attack: 14 },
-        40: { hp: 120, attack: 22 },
-        60: { hp: 170, attack: 30 },
-        80: { hp: 220, attack: 38 },
-        100: { hp: 300, attack: 50 },
+        25: { hp: 95, attack: 17 },
+        50: { hp: 140, attack: 26 },
+        75: { hp: 200, attack: 35 },
+        100: { hp: 350, attack: 55 },
     },
     healPercent: 0.1,
     runesPerSelection: 3,
 };
+
+// =====================================================================
+// BOSS DEFINITIONS (data-driven — add new bosses here)
+// =====================================================================
+const BOSS_DEFS = {
+    shapeshifter: {
+        id: 'shapeshifter',
+        name: '万变魔君',
+        intro: '「世界毁灭，再重塑——这才是我最享受的戏法。」',
+        skillName: '变化',
+        skillIcon: '🎭',
+        skillDesc: '使玩家所有手牌的精力消耗随机变为0–3点，持续1回合。',
+        floorRange: [1, 35],
+        skillEffect(state) {
+            for (const card of state.deck.hand) {
+                card._savedCost = card.cost;
+                card.cost = randInt(0, 3);
+            }
+            addMessage('🎭 万变魔君使用了「变化」：手牌消耗被随机改变！', 'damage');
+        },
+        skillCleanup(state) {
+            for (const card of state.deck.hand) {
+                if (card._savedCost !== undefined) { card.cost = card._savedCost; delete card._savedCost; }
+            }
+        },
+    },
+    bloodrage: {
+        id: 'bloodrage',
+        name: '嗜血狂魔',
+        intro: '「杀！杀！杀！」',
+        skillName: '鲜血暴怒',
+        skillIcon: '🩸',
+        skillDesc: 'Boss当前HP降低30%，随后对玩家造成自身攻击力×2的伤害（无视护盾）。',
+        floorRange: [25, 60],
+        skillEffect(state) {
+            const selfDmg = Math.floor(state.enemy.hp * 0.3);
+            state.enemy.hp -= selfDmg;
+            const dmg = state.enemy.attack * 2;
+            state.player.hp -= dmg;
+            addMessage(`🩸 嗜血狂魔使用了「鲜血暴怒」：自损 ${selfDmg}，对你造成 ${dmg} 点伤害！`, 'damage');
+            animateDamage('player-sprite', dmg, 'damage');
+            shakeElement('player-sprite');
+            SFX.play('hit');
+        },
+    },
+    secretKeeper: {
+        id: 'secretKeeper',
+        name: '守秘者',
+        intro: '「我有如此景象可供你一睹！」',
+        skillName: '享乐',
+        skillIcon: '😵',
+        skillDesc: '玩家跳过下一次自己的回合（照常回能量和抽牌，但不能打出卡牌）。',
+        floorRange: [40, 80],
+        skillEffect(state) {
+            state.skipCardPlay = true;
+            addMessage('😵 守秘者使用了「享乐」：下回合无法出牌！', 'damage');
+        },
+    },
+    greatUnclean: {
+        id: 'greatUnclean',
+        name: '大不净者',
+        intro: '「瘟疫是生命的礼赞，腐烂是慈父的诗篇。」',
+        skillName: '瘟疫',
+        skillIcon: '☠️',
+        skillDesc: '玩家下一回合每使用一张卡牌，额外失去最大HP的5%。',
+        floorRange: [60, 100],
+        skillEffect(state) {
+            state.plagueTurns = 1;
+            addMessage('☠️ 大不净者使用了「瘟疫」：下回合每出一张卡扣5%最大HP！', 'damage');
+        },
+    },
+    fourGodsChosen: {
+        id: 'fourGodsChosen',
+        name: '四神共选',
+        intro: '「这里是终点吗？」',
+        skillName: '四神之力',
+        skillIcon: '👑',
+        skillDesc: '可使用万变魔君、嗜血狂魔、守秘者、大不净者的所有技能。',
+        floorRange: [100, 100],
+        allSkills: ['shapeshifter', 'bloodrage', 'secretKeeper', 'greatUnclean'],
+        _skillIndex: 0,
+        skillEffect(state) {
+            const skills = this.allSkills;
+            const skillId = skills[this._skillIndex % skills.length];
+            this._skillIndex++;
+            const skillBoss = BOSS_DEFS[skillId];
+            addMessage(`👑 四神共选释放了「${skillBoss.skillName}」！`, 'damage');
+            skillBoss.skillEffect(state);
+        },
+    },
+};
+
+// Helper: pick a random boss for the given floor range
+function pickBossForFloor(floor) {
+    if (floor === 100) return { ...BOSS_DEFS.fourGodsChosen };
+    const candidates = Object.values(BOSS_DEFS).filter(b => {
+        if (b.id === 'fourGodsChosen') return false;
+        return floor >= b.floorRange[0] && floor <= b.floorRange[1];
+    });
+    if (candidates.length === 0) return null;
+    return { ...candidates[Math.floor(Math.random() * candidates.length)] };
+}
 
 // =====================================================================
 // MAP / ROAD SYSTEM CONFIG
@@ -1129,6 +1262,11 @@ function freshState() {
         battlePhase: 'player',
         enemyCurrentDef: 0,   // This turn's varied defense value
         enemyCurrentAtk: 0,   // This turn's varied attack value (displayed as intent)
+        enemyTurnCounter: 0,   // Track turns for boss skill cycle
+        enemyIntentType: 'attack', // 'attack' | 'skill'
+        enemyIntentLabel: '',  // Intent display label for skills
+        skipCardPlay: false,   // Secret Keeper's pleasure skill
+        plagueTurns: 0,        // Great Unclean One's plague debuff
         turnFlags: {
             damageReduction: false,
             damageReductionCard: null,
@@ -1228,13 +1366,20 @@ function isRuneCompatible(rune, card) {
 function generateEnemy(floor) {
     if (isBossFloor(floor)) {
         const bossCfg = BALANCE.bosses[floor];
+        const bossData = pickBossForFloor(floor);
         return {
-            name: T.enemyBoss,
+            name: bossData ? bossData.name : T.enemyBoss,
             maxHp: bossCfg.hp,
             hp: bossCfg.hp,
             attack: bossCfg.attack,
             defense: Math.floor(floor * 3),
             isBoss: true,
+            bossId: bossData ? bossData.id : null,
+            skillName: bossData ? bossData.skillName : '',
+            skillDesc: bossData ? bossData.skillDesc : '',
+            skillIcon: bossData ? bossData.skillIcon : '',
+            intro: bossData ? bossData.intro : '',
+            allSkills: bossData ? (bossData.allSkills || null) : null,
         };
     }
     const range = floor <= 50 ? BALANCE.monster.early : BALANCE.monster.late;
@@ -1306,6 +1451,37 @@ function discardCard(card) {
 // =====================================================================
 function startTurn() {
     if (state.screen !== 'battle' || state.battlePhase === 'over') return;
+
+    // Clean up previous boss skill effects
+    if (state.enemy && state.enemy.isBoss && state.enemy.bossId && BOSS_DEFS[state.enemy.bossId]) {
+        const bossDef = BOSS_DEFS[state.enemy.bossId];
+        if (bossDef.skillCleanup) bossDef.skillCleanup(state);
+    }
+    // Clean up shapeshifter skill (saved costs) — applies even if boss already switched
+    for (const card of state.deck.hand) {
+        if (card._savedCost !== undefined) { card.cost = card._savedCost; delete card._savedCost; }
+    }
+    // Decrement plague turns
+    if (state.plagueTurns > 0) state.plagueTurns--;
+
+    // Handle skipCardPlay (守秘者享乐)
+    if (state.skipCardPlay) {
+        state.skipCardPlay = false;
+        state.battlePhase = 'player';
+        state.shield = 0;
+        state.turnFlags = { damageReduction: false, damageReductionCard: null, counterAttack: false, counterAttackCard: null };
+        state.energy = state.maxEnergy;
+        const drawn = drawCards(BALANCE.player.drawPerTurn);
+        if (drawn.length > 0) {
+            SFX.play('draw');
+            addMessage(T.msgDraw, 'info');
+        }
+        addMessage('😵 享乐效果：本回合无法出牌，请直接结束回合', 'info');
+        // Disable all cards automatically
+        updateBattleUI();
+        return;
+    }
+
     state.battlePhase = 'player';
     state.shield = 0; // Shield resets each turn
     state.turnFlags = { damageReduction: false, damageReductionCard: null, counterAttack: false, counterAttackCard: null };
@@ -1325,8 +1501,28 @@ function getCardHooks(card) {
 
 function playCard(handIndex) {
     if (state.battlePhase !== 'player') return;
+    // Skip card play if affected by Secret Keeper's pleasure
+    if (state.skipCardPlay) {
+        addMessage('😵 享乐效果：无法出牌！', 'damage');
+        return;
+    }
     const card = state.deck.hand[handIndex];
     if (!card) return;
+
+    // Plague debuff: lose 5% max HP per card played
+    if (state.plagueTurns > 0) {
+        const plagueDmg = Math.max(1, Math.ceil(state.player.maxHp * 0.05));
+        state.player.hp -= plagueDmg;
+        addMessage(`☠️ 瘟疫：失去 ${plagueDmg} 点生命！`, 'damage');
+        animateDamage('player-sprite', plagueDmg, 'damage');
+        if (state.player.hp <= 0) {
+            state.player.hp = 0;
+            state.battlePhase = 'over';
+            updateBattleUI();
+            setTimeout(() => onPlayerDeath(), 500);
+            return;
+        }
+    }
 
     const hooks = getCardHooks(card);
 
@@ -1450,10 +1646,29 @@ function endPlayerTurn() {
     if (state.battlePhase !== 'player') return;
     state.battlePhase = 'enemy';
 
-    // Vary enemy attack & defense with inverse correlation (shared roll)
-    const enemyRoll = Math.random();
-    state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + enemyRoll * 0.6));
-    state.enemyCurrentDef = Math.floor(state.enemy.defense * (1.3 - enemyRoll * 0.6));
+    // Increment turn counter and determine boss intent
+    if (state.enemy && state.enemy.isBoss) {
+        state.enemyTurnCounter++;
+        // Skill cycle: turns 3, 6, 9, ... are skill turns (every 3rd turn)
+        if (state.enemyTurnCounter % 3 === 0) {
+            state.enemyIntentType = 'skill';
+            state.enemyIntentLabel = `${state.enemy.skillIcon} ${state.enemy.skillName}`;
+        } else {
+            state.enemyIntentType = 'attack';
+            state.enemyIntentLabel = '';
+            // Roll attack/defense for next turn
+            const enemyRoll = Math.random();
+            state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + enemyRoll * 0.6));
+            state.enemyCurrentDef = Math.floor(state.enemy.defense * (1.3 - enemyRoll * 0.6));
+        }
+    } else {
+        // Normal enemy
+        state.enemyIntentType = 'attack';
+        state.enemyIntentLabel = '';
+        const enemyRoll = Math.random();
+        state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + enemyRoll * 0.6));
+        state.enemyCurrentDef = Math.floor(state.enemy.defense * (1.3 - enemyRoll * 0.6));
+    }
 
     updateBattleUI();
     discardHand();
@@ -1462,6 +1677,26 @@ function endPlayerTurn() {
 
 function enemyAttack() {
     const enemy = state.enemy;
+
+    // Boss skill turn — execute skill instead of normal attack
+    if (enemy.isBoss && state.enemyIntentType === 'skill') {
+        if (enemy.bossId && BOSS_DEFS[enemy.bossId]) {
+            const bossDef = BOSS_DEFS[enemy.bossId];
+            if (bossDef.skillEffect) bossDef.skillEffect(state);
+        }
+        updateBattleUI();
+        if (state.player.hp <= 0) {
+            state.player.hp = 0;
+            state.battlePhase = 'over';
+            updateBattleUI();
+            setTimeout(() => onPlayerDeath(), 500);
+            return;
+        }
+        // Next turn
+        setTimeout(() => startTurn(), 600);
+        return;
+    }
+
     // Use pre-calculated turn attack (shared roll with defense, inverse correlation)
     const rawEnemyDmg = state.enemyCurrentAtk;
     let netDmg = rawEnemyDmg;
@@ -1554,6 +1789,7 @@ function onEnemyDefeated() {
 function onPlayerDeath() {
     if (state.screen !== 'battle') return;
     SFX.play('game_over');
+    saveRecord('death');
     clearSave();
     state.battlePhase = 'over';
     addMessage(T.msgPlayerDeath, 'damage');
@@ -1566,8 +1802,9 @@ function onPlayerDeath() {
 // =====================================================================
 function applyReward(type) {
     if (type === 'exp') {
-        state.player.exp += state.floor;
-        addMessage(`获得 ${state.floor} 点经验！`, 'heal');
+        const expGain = Math.floor(5 + state.floor * 1.5);
+        state.player.exp += expGain;
+        addMessage(`获得 ${expGain} 点经验！`, 'heal');
         checkLevelUp();
     } else if (type === 'heal') {
         const healAmt = Math.ceil(state.player.maxHp * BALANCE.healPercent);
@@ -1612,6 +1849,55 @@ function saveGame() {
     } catch (e) {}
 }
 
+// =====================================================================
+// GAME RECORDS (persistent across sessions)
+// =====================================================================
+const RECORDS_KEY = 'endless_slaughter_records';
+const MAX_RECORDS = 10;
+
+function saveRecord(outcome) {
+    try {
+        const records = loadRecords();
+        const record = {
+            outcome,             // 'victory' | 'death'
+            floor: state.floor,
+            level: state.player.level,
+            attack: state.player.attack,
+            defense: state.player.defense,
+            maxHp: state.player.maxHp,
+            date: new Date().toLocaleString('zh-CN'),
+        };
+        records.unshift(record);
+        if (records.length > MAX_RECORDS) records.length = MAX_RECORDS;
+        localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+    } catch (e) {}
+}
+
+function loadRecords() {
+    try {
+        const raw = localStorage.getItem(RECORDS_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+}
+
+function renderRecords() {
+    const records = loadRecords();
+    if (records.length === 0) return '';
+    let html = '<div class="records-container"><h3>📜 历史记录</h3>';
+    for (const r of records) {
+        const icon = r.outcome === 'victory' ? '🏆' : '💀';
+        const label = r.outcome === 'victory' ? '通关' : `止步第 ${r.floor} 层`;
+        html += `<div class="record-item">
+            <span class="record-icon">${icon}</span>
+            <span class="record-label">${label}</span>
+            <span class="record-stats">Lv.${r.level} | ⚔${r.attack} 🛡${r.defense} ❤${r.maxHp}</span>
+            <span class="record-date">${r.date}</span>
+        </div>`;
+    }
+    html += '</div>';
+    return html;
+}
+
 function loadGame() {
     try { const raw = localStorage.getItem(SAVE_KEY); return raw ? JSON.parse(raw) : null; }
     catch (e) { return null; }
@@ -1634,6 +1920,7 @@ function advanceFloor() {
     state.floor++;
     // Check victory
     if (state.floor > BALANCE.totalFloors) {
+        saveRecord('victory');
         clearSave();
         SFX.play('victory');
         state.screen = 'victory';
@@ -1886,6 +2173,8 @@ function resolveRoom(cell) {
         case 'boss':
             SFX.play('boss_appear');
             state.enemy = generateEnemy(state.floor);
+            state.enemyTurnCounter = 0;
+            state.enemyIntentType = 'attack';
             // Roll turn-1 attack/defense immediately (shared roll for inverse correlation)
             const bossRoll = Math.random();
             state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + bossRoll * 0.6));
@@ -1894,7 +2183,8 @@ function resolveRoom(cell) {
             render();
             renderStickFigure('player-sprite', 'var(--player)', false, false);
             renderStickFigure('enemy-sprite', 'var(--enemy)', true, true);
-            startTurn();
+            // Show boss intro, then start turn
+            showBossIntro(() => { startTurn(); });
             break;
 
         case 'question':
@@ -2251,8 +2541,33 @@ function closeEffects(e) {
     $('modal-effects').style.display = 'none';
 }
 
+function showBossIntro(onComplete) {
+    const enemy = state.enemy;
+    if (!enemy || !enemy.intro) { onComplete(); return; }
+    $('boss-intro-text').textContent = `💀 ${enemy.name}\n\n${enemy.intro}`;
+    $('modal-boss-intro').style.display = 'flex';
+    setTimeout(() => {
+        $('modal-boss-intro').style.display = 'none';
+        onComplete();
+    }, 1800);
+}
+
+function viewBossSkill() {
+    const enemy = state.enemy;
+    if (!enemy || !enemy.isBoss) return;
+    $('boss-skill-title').textContent = `${enemy.skillIcon} ${enemy.skillName}`;
+    $('boss-skill-desc').textContent = enemy.skillDesc || '';
+    $('modal-boss-skill').style.display = 'flex';
+}
+
+function closeBossSkill(e) {
+    $('modal-boss-skill').style.display = 'none';
+}
+
 window.showEffects = showEffects;
 window.closeEffects = closeEffects;
+window.viewBossSkill = viewBossSkill;
+window.closeBossSkill = closeBossSkill;
 
 function updateHUD() {
     const p = state.player;
@@ -2386,8 +2701,17 @@ function updateBattleUI() {
         const e = state.enemy;
         $('enemy-name').textContent = e.name;
         // Show intended damage when it's player's turn, hide during enemy turn
-        $('enemy-intent').textContent = `⚔️ ${state.enemyCurrentAtk || 0}`;
+        // Intent display: skill intent for bosses, attack intent for everyone
+        if (state.enemyIntentType === 'skill') {
+            $('enemy-intent').textContent = state.enemyIntentLabel;
+            $('enemy-intent').classList.add('skill-intent');
+        } else {
+            $('enemy-intent').textContent = `⚔️ ${state.enemyCurrentAtk || 0}`;
+            $('enemy-intent').classList.remove('skill-intent');
+        }
         $('enemy-intent').style.display = state.battlePhase === 'player' ? '' : 'none';
+        // Show view-skill button only for boss battles
+        $('btn-view-skill').style.display = (e.isBoss) ? '' : 'none';
         $('enemy-hp-bar').style.width = (e.hp / e.maxHp * 100) + '%';
         $('enemy-hp-text').textContent = `${e.hp} / ${e.maxHp}`;
         $('enemy-stats').innerHTML = `
@@ -2471,7 +2795,8 @@ function showReward() {
     SFX.play('reward');
     state.screen = 'reward';
     $('reward-floor-text').textContent = T.floor(state.floor);
-    $('reward-exp-desc').textContent = T.rewardExpDesc(state.floor);
+    const expGain = Math.floor(5 + state.floor * 1.5);
+    $('reward-exp-desc').textContent = T.rewardExpDesc(expGain);
     $('reward-heal-desc').textContent = T.rewardHealDesc(Math.ceil(state.player.maxHp * BALANCE.healPercent));
     showScreen('reward');
 }
@@ -2481,6 +2806,7 @@ function render() {
         case 'menu':
             showScreen('menu');
             $('btn-continue').style.display = loadGame() ? '' : 'none';
+            $('menu-records').innerHTML = renderRecords();
             break;
         case 'battle':
             showScreen('battle');
