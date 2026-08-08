@@ -191,6 +191,37 @@ body {
     100% { opacity: 0; transform: translateY(-50px); }
 }
 
+/* ==================== QUESTION ROOM ==================== */
+#screen-question-room h2 { font-size: 28px; color: var(--gold); margin-bottom: 4px; }
+#screen-question-room p { color: var(--text-dim); margin-bottom: 20px; font-size: 15px; }
+#question-room-options { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+/* ==================== SHOP ==================== */
+#screen-shop { gap: 16px; }
+.shop-header { display: flex; align-items: center; gap: 16px; }
+.shop-header h2 { font-size: 28px; color: var(--gold); }
+.shop-gold { font-size: 18px; font-weight: 700; color: var(--energy); }
+#shop-items { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+.shop-item {
+    width: 200px; padding: 20px; border-radius: 12px;
+    border: 2px solid #555; background: var(--panel-light);
+    text-align: center; transition: all 0.2s;
+}
+.shop-item .shop-item-icon { font-size: 36px; margin-bottom: 6px; }
+.shop-item .shop-item-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.shop-item .shop-item-desc { font-size: 12px; color: var(--text-dim); margin-bottom: 10px; }
+.shop-item .shop-item-price { font-size: 16px; font-weight: 700; color: var(--energy); margin-bottom: 10px; }
+.shop-item .btn { padding: 8px 24px; font-size: 14px; }
+.shop-item .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ==================== CHEST RESULT ==================== */
+#screen-chest-result { gap: 16px; }
+#screen-chest-result h2 { font-size: 28px; color: var(--gold); }
+#chest-result-content { text-align: center; }
+#chest-result-content .chest-icon { font-size: 60px; margin-bottom: 12px; }
+#chest-result-content .chest-msg { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+#chest-result-content .chest-desc { font-size: 14px; color: var(--text-dim); }
+
 /* ==================== RUNE SELECTION ==================== */
 #screen-rune-select h2, #screen-rune-engrave h2 { font-size: 24px; color: var(--gold); margin-bottom: 4px; }
 #screen-rune-select p, #screen-rune-engrave p { color: var(--text-dim); margin-bottom: 16px; font-size: 14px; }
@@ -319,6 +350,30 @@ body {
         <button class="btn" id="btn-victory-menu">返回主界面</button>
     </div>
 
+    <!-- QUESTION ROOM -->
+    <div id="screen-question-room" class="screen">
+        <h2>❓ 问号房</h2>
+        <p>你发现了一个神秘房间…</p>
+        <div id="question-room-options"></div>
+    </div>
+
+    <!-- SHOP -->
+    <div id="screen-shop" class="screen">
+        <div class="shop-header">
+            <h2>🛒 商店</h2>
+            <span class="shop-gold" id="shop-gold">💰 0</span>
+        </div>
+        <div id="shop-items"></div>
+        <button class="btn" id="btn-leave-shop">离开商店</button>
+    </div>
+
+    <!-- CHEST RESULT -->
+    <div id="screen-chest-result" class="screen">
+        <h2>📦 随机宝箱</h2>
+        <div id="chest-result-content"></div>
+        <button class="btn" id="btn-chest-continue">继续</button>
+    </div>
+
     <!-- RUNE SELECTION -->
     <div id="screen-rune-select" class="screen">
         <h2 id="rune-select-title">选择印记</h2>
@@ -401,7 +456,7 @@ const BALANCE = {
     totalFloors: 50,
     bossFloors: [25, 50],
     player: {
-        initial: { level: 1, maxHp: 100, hp: 100, attack: 5, defense: 5, exp: 0 },
+        initial: { level: 1, maxHp: 100, hp: 100, attack: 5, defense: 5, exp: 0, gold: 0 },
         maxEnergy: 3,
         drawPerTurn: 4,
         levelUpBonus: { maxHp: 10, attack: 1, defense: 1 },
@@ -422,6 +477,7 @@ const BALANCE = {
     },
     healPercent: 0.1,
     runesPerSelection: 3,
+    questionRoomChance: 0.1, // 10% chance for normal floors
 };
 
 // =====================================================================
@@ -597,6 +653,131 @@ function pickRandomRunes(count) {
 }
 
 // =====================================================================
+// QUESTION ROOM EVENTS (data-driven — add new events here)
+// =====================================================================
+const QUESTION_ROOM_EVENTS = [
+    {
+        id: 'heal',
+        name: '回复生命',
+        icon: '💚',
+        desc: '回复最大HP的10%',
+        weight: 1,
+        apply(state) {
+            const heal = Math.ceil(state.player.maxHp * 0.1);
+            state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
+            return `${this.icon} 回复了 ${heal} 点生命！`;
+        },
+    },
+    // Future expansions — add new events here:
+    // { id: 'shop', name: '商店', icon: '🛒', desc: '购买道具', weight: 1, ... },
+    // { id: 'randomRune', name: '随机印记', icon: '🔮', desc: '获得随机印记', weight: 1, ... },
+    // { id: 'specialEvent', name: '特殊事件', icon: '✨', desc: '触发特殊事件', weight: 1, ... },
+];
+
+function pickQuestionRoomEvent() {
+    // Weighted random selection — currently only one event, so it always picks 'heal'
+    // When more events are added, weights control probability
+    const totalWeight = QUESTION_ROOM_EVENTS.reduce((sum, e) => sum + (e.weight || 1), 0);
+    let roll = Math.random() * totalWeight;
+    for (const event of QUESTION_ROOM_EVENTS) {
+        roll -= (event.weight || 1);
+        if (roll <= 0) return { ...event };
+    }
+    return { ...QUESTION_ROOM_EVENTS[0] };
+}
+
+// =====================================================================
+// SHOP ITEMS (data-driven — add new items here)
+// =====================================================================
+const SHOP_ITEMS = [
+    {
+        id: 'heal',
+        name: '回复生命',
+        icon: '💚',
+        desc: '回复最大HP的10%',
+        price: 15,
+        apply(state) {
+            const heal = Math.ceil(state.player.maxHp * 0.1);
+            state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
+            return `回复了 ${heal} 点生命`;
+        },
+    },
+    {
+        id: 'randomRune',
+        name: '随机印记',
+        icon: '🔮',
+        desc: '获得一个随机印记',
+        price: 20,
+        apply(state) {
+            // Random rune selection handled in buyShopItem
+            return null; // special handling
+        },
+    },
+];
+
+// =====================================================================
+// RANDOM CHEST REWARDS (data-driven — add new rewards here)
+// =====================================================================
+const CHEST_REWARDS = [
+    {
+        id: 'heal',
+        name: '回复血量',
+        icon: '💚',
+        desc: '回复最大HP的10%',
+        weight: 1,
+        apply(state) {
+            const heal = Math.ceil(state.player.maxHp * 0.1);
+            state.player.hp = Math.min(state.player.maxHp, state.player.hp + heal);
+            return { msg: `💚 回复了 ${heal} 点生命！`, icon: '💚' };
+        },
+    },
+    {
+        id: 'exp',
+        name: '获得经验值',
+        icon: '📈',
+        desc: '获得升级所需经验的20%',
+        weight: 1,
+        apply(state) {
+            const expGain = Math.ceil(expToNextLevel() * 0.2);
+            state.player.exp += expGain;
+            checkLevelUp();
+            return { msg: `📈 获得了 ${expGain} 点经验！`, icon: '📈' };
+        },
+    },
+    {
+        id: 'randomRune',
+        name: '随机印记',
+        icon: '🔮',
+        desc: '随机获得一个印记',
+        weight: 1,
+        apply(state) {
+            // Random rune handled in chest flow
+            return { msg: null, icon: '🔮' }; // special handling
+        },
+    },
+    {
+        id: 'empty',
+        name: '空宝箱',
+        icon: '📦',
+        desc: '真倒霉',
+        weight: 1,
+        apply(state) {
+            return { msg: '📦 真倒霉…空宝箱！', icon: '📦' };
+        },
+    },
+];
+
+function pickChestReward() {
+    const totalWeight = CHEST_REWARDS.reduce((sum, r) => sum + (r.weight || 1), 0);
+    let roll = Math.random() * totalWeight;
+    for (const reward of CHEST_REWARDS) {
+        roll -= (reward.weight || 1);
+        if (roll <= 0) return reward;
+    }
+    return CHEST_REWARDS[0];
+}
+
+// =====================================================================
 // GAME STATE
 // =====================================================================
 let state = {};
@@ -627,6 +808,9 @@ function freshState() {
         },
         pendingRuneId: null,
         pendingRuneChoices: null,
+        questionRoomEvent: null,
+        engraveOrigin: 'boss',  // 'boss' | 'shop' | 'chest'
+        chestResult: null,
     };
 }
 
@@ -903,7 +1087,12 @@ function enemyAttack() {
 function onEnemyDefeated() {
     if (state.screen !== 'battle') return;
     state.battlePhase = 'over';
-    addMessage(T.msgEnemyDeath(state.enemy.name), 'info');
+
+    // Gold drop: floor * 2
+    const goldDrop = state.floor * 2;
+    state.player.gold += goldDrop;
+    addMessage(`${T.msgEnemyDeath(state.enemy.name)}`, 'info');
+    addMessage(`💰 获得 ${goldDrop} 金币！`, 'heal');
     updateBattleUI();
 
     // Boss floors trigger rune selection
@@ -953,7 +1142,7 @@ function checkLevelUp() {
 }
 
 function expToNextLevel() {
-    return state.player.level + 1;
+    return state.player.level * 10 + 20;
 }
 
 function advanceFloor() {
@@ -963,12 +1152,25 @@ function advanceFloor() {
         render();
         return;
     }
+
+    // Check for question mark room (only non-boss floors)
+    if (!BALANCE.bossFloors.includes(state.floor) && Math.random() < BALANCE.questionRoomChance) {
+        state.screen = 'question-room';
+        state.questionRoomEvent = pickQuestionRoomEvent();
+        state.messages = [];
+        render();
+        return;
+    }
+
+    // Normal battle
     state.enemy = generateEnemy(state.floor);
     state.deck = { draw: createDeck(), hand: [], discard: [] };
     state.shield = 0;
     state.messages = [];
     state.screen = 'battle';
     render();
+    renderStickFigure('player-sprite', 'var(--player)', false, false);
+    renderStickFigure('enemy-sprite', 'var(--enemy)', true, state.enemy.isBoss);
     startTurn();
 }
 
@@ -1074,14 +1276,147 @@ function engraveRuneOnCard(cardIndex) {
     const cardName = card.id === 'attack' ? T.cardAttack : T.cardDefense;
     addMessage(T.runeEngraved(rune.name, cardName), 'heal');
 
-    // Proceed to normal reward screen
+    // Return to correct screen based on origin
     state.pendingRuneId = null;
+    if (state.engraveOrigin === 'shop') {
+        // Go back to shop after engraving
+        state.screen = 'shop';
+        renderShop();
+    } else if (state.engraveOrigin === 'chest') {
+        // Continue to reward after chest rune
+        state.questionRoomEvent = null;
+        state.engraveOrigin = 'boss';
+        showReward();
+    } else {
+        // Boss rune → normal reward
+        showReward();
+    }
+}
+
+// =====================================================================
+// QUESTION ROOM INTERACTION
+// =====================================================================
+
+function showQuestionRoom() {
+    $('question-room-options').innerHTML = `
+        <div class="reward-card" onclick="enterShop()">
+            <div class="reward-icon">🛒</div>
+            <div class="reward-title">商店</div>
+            <div class="reward-desc">使用金币购买生命和印记</div>
+        </div>
+        <div class="reward-card" onclick="openChest()">
+            <div class="reward-icon">📦</div>
+            <div class="reward-title">随机宝箱</div>
+            <div class="reward-desc">打开宝箱，随机获得奖励</div>
+        </div>
+    `;
+    showScreen('question-room');
+}
+
+// =====================================================================
+// SHOP
+// =====================================================================
+
+function enterShop() {
+    state.screen = 'shop';
+    renderShop();
+}
+
+function renderShop() {
+    $('shop-gold').textContent = `💰 ${state.player.gold}`;
+    $('shop-items').innerHTML = SHOP_ITEMS.map(item => {
+        const canAfford = state.player.gold >= item.price;
+        return `
+            <div class="shop-item">
+                <div class="shop-item-icon">${item.icon}</div>
+                <div class="shop-item-name">${item.name}</div>
+                <div class="shop-item-desc">${item.desc}</div>
+                <div class="shop-item-price">💰 ${item.price}</div>
+                <button class="btn btn-small" ${!canAfford ? 'disabled' : ''}
+                        onclick="buyShopItem('${item.id}')">购买</button>
+            </div>
+        `;
+    }).join('');
+    showScreen('shop');
+}
+
+function buyShopItem(itemId) {
+    const item = SHOP_ITEMS.find(i => i.id === itemId);
+    if (!item) return;
+    if (state.player.gold < item.price) return;
+
+    // Special handling for random rune
+    if (item.id === 'randomRune') {
+        state.player.gold -= item.price;
+        const runeIds = ALL_RUNE_IDS;
+        const randomId = runeIds[Math.floor(Math.random() * runeIds.length)];
+        const rune = RUNE_DEFS[randomId];
+        state.pendingRuneId = randomId;
+        state.engraveOrigin = 'shop';
+        addMessage(`🔮 获得了印记「${rune.name}」！选择一张卡牌刻印`, 'heal');
+        showCardEngrave(rune);
+        return;
+    }
+
+    // Apply item effect
+    state.player.gold -= item.price;
+    const msg = item.apply(state);
+    addMessage(msg, 'heal');
+    renderShop();
+}
+
+function leaveShop() {
+    state.questionRoomEvent = null;
+    state.engraveOrigin = 'boss';
+    showReward();
+}
+
+// =====================================================================
+// RANDOM CHEST
+// =====================================================================
+
+function openChest() {
+    const reward = pickChestReward();
+
+    // Special handling for random rune
+    if (reward.id === 'randomRune') {
+        const runeIds = ALL_RUNE_IDS;
+        const randomId = runeIds[Math.floor(Math.random() * runeIds.length)];
+        const rune = RUNE_DEFS[randomId];
+        state.pendingRuneId = randomId;
+        state.engraveOrigin = 'chest';
+        addMessage(`🔮 宝箱开出了印记「${rune.name}」！`, 'heal');
+        showCardEngrave(rune);
+        return;
+    }
+
+    // Apply reward and show result
+    const result = reward.apply(state);
+    state.chestResult = { icon: result.icon, msg: result.msg, desc: reward.desc };
+    state.screen = 'chest-result';
+    $('chest-result-content').innerHTML = `
+        <div class="chest-icon">${result.icon}</div>
+        <div class="chest-msg">${result.msg}</div>
+    `;
+    showScreen('chest-result');
+}
+
+function continueAfterChest() {
+    state.chestResult = null;
+    state.questionRoomEvent = null;
+    state.engraveOrigin = 'boss';
     showReward();
 }
 
 // Make functions globally accessible for onclick handlers
 window.selectRune = selectRune;
 window.engraveRuneOnCard = engraveRuneOnCard;
+window.resolveQuestionRoom = resolveQuestionRoom;
+window.enterShop = enterShop;
+window.openChest = openChest;
+window.buyShopItem = buyShopItem;
+window.leaveShop = leaveShop;
+window.continueAfterChest = continueAfterChest;
 
 // =====================================================================
 // UI RENDERING
@@ -1208,6 +1543,7 @@ function updateBattleUI() {
         <div class="stat-row"><span class="label">攻击</span><span class="value">${p.attack}</span></div>
         <div class="stat-row"><span class="label">防御</span><span class="value">${p.defense}</span></div>
         <div class="stat-row"><span class="label">经验</span><span class="value">${p.exp} / ${expToNextLevel()}</span></div>
+        <div class="stat-row"><span class="label">金币</span><span class="value">💰 ${p.gold}</span></div>
     `;
     $('shield-display').textContent = `🛡️ ${state.shield}`;
     $('energy-display').textContent = `⚡ ${state.energy} / ${state.maxEnergy}`;
@@ -1283,7 +1619,6 @@ function renderHand() {
 }
 
 function showReward() {
-    if (state.screen !== 'battle') return;
     state.screen = 'reward';
     $('reward-floor-text').textContent = T.floor(state.floor);
     $('reward-exp-desc').textContent = T.rewardExpDesc(state.floor);
@@ -1299,6 +1634,15 @@ function render() {
         case 'battle':
             showScreen('battle');
             updateBattleUI();
+            break;
+        case 'question-room':
+            showQuestionRoom();
+            break;
+        case 'shop':
+            renderShop();
+            break;
+        case 'chest-result':
+            showScreen('chest-result');
             break;
         case 'reward':
             showReward();
@@ -1346,6 +1690,8 @@ function bindEvents() {
     $('btn-gameover-menu').addEventListener('click', backToMenu);
     $('reward-exp').addEventListener('click', () => selectReward('exp'));
     $('reward-heal').addEventListener('click', () => selectReward('heal'));
+    $('btn-leave-shop').addEventListener('click', leaveShop);
+    $('btn-chest-continue').addEventListener('click', continueAfterChest);
 }
 
 function startGame() {
