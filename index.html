@@ -131,9 +131,6 @@ body {
 .side-relics { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
 .side-relic { font-size: 18px; cursor: pointer; padding: 2px; border-radius: 4px; transition: background 0.2s; }
 .side-relic:hover { background: rgba(255,215,0,0.2); }
-#screen-map .side-panel, #screen-shop .side-panel { position: absolute; left: 4px; top: 4px; z-index: 5; }
-#screen-battle { flex-direction: row; }
-#screen-battle .side-panel { order: -1; }
 .battle-header .floor { font-size: 16px; font-weight: 700; color: var(--gold); }
 .battle-header .header-gold { font-size: 13px; font-weight: 700; color: var(--energy); }
 .battle-header .btn { padding: 4px 10px; font-size: 11px; }
@@ -194,7 +191,7 @@ body {
 .hp-text { font-size: 11px; font-weight: 700; text-align: center; }
 
 /* Card row at bottom */
-.card-row { display: flex; align-items: center; gap: 8px; }
+.card-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
 .energy-big {
     font-size: 24px; font-weight: 900; color: var(--energy);
     text-shadow: 0 0 8px rgba(255,235,59,0.4); white-space: nowrap;
@@ -433,9 +430,9 @@ body {
 
     /* Energy & buttons - end turn in its own row */
     .energy-big { font-size: 18px; min-width: 45px; }
-    .card-row { flex-wrap: wrap; gap: 4px; }
+    .card-row { flex-wrap: nowrap; gap: 4px; justify-content: center; }
     .card-hand { flex: 1; }
-    #btn-end-turn { padding: 10px 16px; font-size: 14px; width: 100%; margin-top: 4px; }
+    #btn-end-turn { padding: 8px 10px; font-size: 13px; min-width: 80px; margin-left: 4px; }
     .btn-view-skill { font-size: 9px; padding: 2px 4px; }
 
     /* Map */
@@ -493,7 +490,7 @@ body {
     .boss #enemy-sprite { width: 52px; height: 78px; }
     .btn { padding: 10px 22px; font-size: 13px; }
     .energy-big { font-size: 16px; }
-    #btn-end-turn { padding: 8px 12px; font-size: 12px; width: 100%; }
+    #btn-end-turn { padding: 6px 8px; font-size: 11px; min-width: 60px; }
 }
 
 /* Landscape: tight vertical spacing */
@@ -612,13 +609,13 @@ body {
         <div class="title">无尽杀戮</div>
         <div class="subtitle">组建卡组，击杀怪物</div>
         <div class="menu-instructions">
-            <p><b>⚔️ 战斗：</b>回合制卡牌对战。每回合抽4张牌、恢复3点精力。使用攻击卡造成伤害，防御卡获得护盾。护盾优先抵挡伤害。怪物可能进攻或防御——防御时你的伤害会减少。</p>
-            <p><b>🗺️ 路线：</b>每层在地图上选择房间。⚔️战斗 · ❓神秘遭遇 · 🛒商店 · 💀楼层主。只能沿连线移动到相邻路线的房间。</p>
-            <p><b>❓ 问号房：</b>遭遇未知怪物，取胜后获得经验/回血奖励。</p>
-            <p><b>🛒 商店：</b>花费金币购买生命回复。金币从战斗中获取（楼层×2）。</p>
-            <p><b>🔮 印记：</b>击败楼层主（25/50/75层）后获得印记，刻在卡牌上获得永久特殊效果。</p>
-            <p><b>📈 升级：</b>获得经验提升等级。升级增加HP、攻击、防御。</p>
-            <p><b>🏆 目标：</b>击败第100层最终Boss通关！</p>
+            <p><b>⚔️ 战斗：</b>回合制卡牌对战。每回合抽2张牌、恢复2点精力。怪物有防御池——攻击优先消耗防御再扣HP。每回合可看到敌人的意图（攻击/防御/技能）。</p>
+            <p><b>🗺️ 路线：</b>每层在地图上选择房间。⚔️普通战斗 · ⭐精英怪 · ❓事件 · 🛒商店 · 💀楼层主。沿金色连线移动。</p>
+            <p><b>❓ 事件：</b>多样的剧情遭遇，做出选择获得不同结果。每个事件每局最多遇到一次。</p>
+            <p><b>🛒 商店：</b>购买卡牌、属性、遗物、印记缝合等服务。价格随楼层上涨。每局随机上架2个遗物。</p>
+            <p><b>🔮 印记：</b>击败楼层主（25/50/75层）获得印记，刻在卡牌上获得永久效果。商店100g可进行印记缝合转移。</p>
+            <p><b>📈 升级：</b>经验随楼层分档（1-25层:10EXP → 76-100层:3EXP）。升级增加最大HP，攻防通过战斗奖励提升。</p>
+            <p><b>🏆 目标：</b>击败第100层最终Boss「四神共选」通关！按 ` 键打开管理员面板调试。</p>
         </div>
         <div class="menu-buttons">
             <button class="btn" id="btn-start">开始游戏</button>
@@ -1122,15 +1119,24 @@ function generateElite(floor) {
 }
 
 function showEliteReward() {
-    state.player.exp += 5;
-    addMessage('获得 5 点经验！', 'heal');
-    // Show one random rune, player can accept or decline
-    const runeIds = ALL_RUNE_IDS;
-    const randomId = runeIds[Math.floor(Math.random() * runeIds.length)];
-    const rune = RUNE_DEFS[randomId];
-    state.pendingRuneId = randomId;
-    state.engraveOrigin = 'elite';
-    showRuneConfirm(rune);
+    state.screen = 'reward';
+    const relicName = state._lastRelicGain ? state._lastRelicGain.name : '';
+    const relicIcon = state._lastRelicGain ? state._lastRelicGain.icon : '';
+    $('reward-floor-text').textContent = '⭐ 精英奖励';
+    const opts = document.querySelector('#screen-reward .reward-options');
+    if (opts) opts.innerHTML = `
+        <div class="reward-card"><div class="reward-icon">${relicIcon || '🎁'}</div><div class="reward-title">${relicName || '遗物'}</div><div class="reward-desc">已获得</div></div>
+        <div class="reward-card"><div class="reward-icon">💰</div><div class="reward-title">印记</div><div class="reward-desc">点击获得随机印记</div></div>
+    `;
+    showScreen('reward');
+    setTimeout(() => {
+        const runeIds = ALL_RUNE_IDS;
+        const randomId = runeIds[Math.floor(Math.random() * runeIds.length)];
+        const rune = RUNE_DEFS[randomId];
+        state.pendingRuneId = randomId;
+        state.engraveOrigin = 'elite';
+        showRuneConfirm(rune);
+    }, 2500);
 }
 
 function showRelicSelection() {
@@ -2465,6 +2471,7 @@ function onEnemyDefeated() {
     addMessage(`${T.msgEnemyDeath(state.enemy.name)}`, 'info');
     addMessage(`💰 获得 ${goldDrop} 金币！`, 'heal');
     const prevExp = state.player.exp;
+    if (state._eventRelicReward) { giveRelic(state._eventRelicReward); addMessage('🎁 获得遗物「' + RELIC_DEFS[state._eventRelicReward].name + '」！', 'heal'); state._eventRelicReward = null; }
     grantBattleExp();
     state._lastExpGain = state.player.exp - prevExp;
     if (hasRelic('chaosMark')) {
@@ -2484,26 +2491,47 @@ function onEnemyDefeated() {
     }
     updateBattleUI();
 
-    // Boss: relic + rune selection. Normal: auto-advance
+    // Boss: show relic screen + double rewards
     if (isBossFloor(state.floor)) {
         SFX.play('boss_defeat');
-        // Give random relic if available
+        // Double gold and exp for boss
+        state.player.gold += state._lastGoldGain; // double (already added once)
+        state._lastGoldGain *= 2;
+        grantBattleExp(); // extra exp
+        state._lastExpGain *= 2;
+        // Give random relic
+        let bossRelic = null;
         const availableRelics = Object.values(RELIC_DEFS).filter(r => !hasRelic(r.id));
         if (availableRelics.length > 0) {
-            const relic = availableRelics[Math.floor(Math.random() * availableRelics.length)];
-            giveRelic(relic.id);
-            addMessage(`🎁 Boss遗物：「${relic.name}」！${relic.desc}`, 'heal');
+            bossRelic = availableRelics[Math.floor(Math.random() * availableRelics.length)];
+            giveRelic(bossRelic.id);
+            addMessage(`🎁 Boss遗物：「${bossRelic.name}」！`, 'heal');
         }
-        setTimeout(() => showRuneSelection(), 600);
+        state._lastRelicGain = bossRelic;
+        // Show boss reward screen then rune selection
+        state.screen = 'reward';
+        const rn = bossRelic ? bossRelic.name : '无';
+        const ri = bossRelic ? bossRelic.icon : '❓';
+        $('reward-floor-text').textContent = `💀 ${T.floor(state.floor)} 楼层主`;
+        const opts = document.querySelector('#screen-reward .reward-options');
+        if (opts) opts.innerHTML = `
+            <div class="reward-card"><div class="reward-icon">${ri}</div><div class="reward-title">遗物：${rn}</div><div class="reward-desc">已获得</div></div>
+            <div class="reward-card"><div class="reward-icon">💰</div><div class="reward-title">金币×2</div><div class="reward-desc">+${state._lastGoldGain}</div></div>
+            <div class="reward-card"><div class="reward-icon">📈</div><div class="reward-title">经验×2</div><div class="reward-desc">+${state._lastExpGain}</div></div>
+        `;
+        showScreen('reward');
+        setTimeout(() => showRuneSelection(), 3000);
     } else if (state.enemy && state.enemy.isElite) {
         // Elite: show rune selection (1 rune), then advance
         // Elite: give random relic
+        let eliteRelic = null;
         const eliteAvailable = Object.values(RELIC_DEFS).filter(r => !hasRelic(r.id));
         if (eliteAvailable.length > 0) {
-            const relic = eliteAvailable[Math.floor(Math.random() * eliteAvailable.length)];
-            giveRelic(relic.id);
-            addMessage(`🎁 精英遗物：「${relic.name}」！`, 'heal');
+            eliteRelic = eliteAvailable[Math.floor(Math.random() * eliteAvailable.length)];
+            giveRelic(eliteRelic.id);
+            addMessage(`🎁 精英遗物：「${eliteRelic.name}」！`, 'heal');
         }
+        state._lastRelicGain = eliteRelic;
         setTimeout(() => showEliteReward(), 600);
     } else {
         // Normal monster: show reward summary
@@ -3090,9 +3118,13 @@ function engraveRuneOnCard(cardIndex) {
         // Continue after chest rune
         state.engraveOrigin = 'boss';
         proceedAfterRoom();
+    } else if (state.engraveOrigin === 'elite') {
+        // Elite: rune chosen, advance
+        state.engraveOrigin = 'boss';
+        advanceFloor();
     } else {
-        // Boss rune → normal reward
-        showReward();
+        // Boss rune → advance (boss already gave relic earlier)
+        advanceFloor();
     }
 }
 
@@ -3194,60 +3226,61 @@ const EVENT_DEFS = [
         id: 'runeMage', name: '流浪的符文法师', floorMin: 3,
         desc: '流浪的符文法师正在寻找遗失的符文宝石。',
         options: [
-            { label: '给予宝石', condition: s => hasRelic('runeGem'), effect(s) { addMessage('符文法师感谢你，赠送了「符文法师的魔法书」！', 'heal'); state.player.cards.push({id:'magicBook',icon:'📖',type:'atk',cost:2,effect:'magicAttack',rune:null,runeData:{}}); }},
-            { label: '离开', effect(s) { addMessage('你离开了符文法师', 'info'); }},
+            { label: '给予宝石', condition: s => hasRelic('runeGem'), effect(s) { state.player.cards.push({id:'magicBook',icon:'📖',type:'atk',cost:2,effect:'magicAttack',rune:null,runeData:{}}); addMessage('符文法师赠送了魔法书', 'heal'); }, resultText: '符文法师感谢你的慷慨，将珍藏的「符文法师的魔法书」赠予了你。' },
+            { label: '离开', effect(s) {}, resultText: '你默默地离开了符文法师。' },
         ],
     },
     {
         id: 'fallenAngel', name: '逃避追捕的堕天使', floorMin: 1,
         desc: '黑暗天使正在追捕他们眼中的叛徒堕天使。',
         options: [
-            { label: '帮助逃避', effect(s) { state.player.gold += 15; grantBattleExp(); addMessage('堕天使感激地给了你金币', 'heal'); }},
-            { label: '协助追捕者', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '黑暗天使'; enterEventBattle(); }},
+            { label: '帮助逃避', effect(s) { state.player.gold += 15; if (state._eventRelicReward) { giveRelic(state._eventRelicReward); addMessage('🎁 获得遗物「' + RELIC_DEFS[state._eventRelicReward].name + '」！', 'heal'); state._eventRelicReward = null; }
+    grantBattleExp(); addMessage('堕天使给了你金币和经验', 'heal'); }, resultText: '堕天使感激你的帮助，将身上所有的金币赠予了你，并分享了自己的战斗经验。' },
+            { label: '协助追捕者', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '黑暗天使'; enterEventBattle(); }, startsBattle: true, resultText: '黑暗天使感谢你的付出，但在你离开之前他偷袭了你。与精英怪「黑暗天使」发生战斗！' },
         ],
     },
     {
         id: 'unitreeRobot', name: '宇树机器人', floorMin: 1,
         desc: '一个外形像人类的机器朝你挥手，说自己准备跳一支舞。',
         options: [
-            { label: '默默观看', effect(s) { state.player.hp = Math.max(1, Math.floor(state.player.hp * 0.9)); addMessage('舞蹈太过辣眼，你失去10%生命', 'damage'); }},
-            { label: '一脚踹倒', effect(s) { state.player.maxHp += 10; addMessage('宇树机器人倒下，你感觉神清气爽（最大HP+10）', 'heal'); }},
+            { label: '默默观看', effect(s) { state.player.hp = Math.max(1, Math.floor(state.player.hp * 0.9)); addMessage('舞蹈太过辣眼', 'damage'); }, resultText: '机器人的舞蹈太过辣眼，你感到身心受创，失去了10%的生命值。' },
+            { label: '一脚踹倒', effect(s) { state.player.maxHp += 10; addMessage('宇树机器人倒下', 'heal'); }, resultText: '宇树机器人轰然倒下，你感觉神清气爽。最大生命值永久+10。' },
         ],
     },
     {
         id: 'defectBot', name: '故障机器人寻找他的朋友', floorMin: 1,
         desc: '从某个高塔跑出来的故障机器人突然意识到他的朋友还在高塔里。',
         options: [
-            { label: '安慰', effect(s) { state.player.gold += 91; addMessage('机器人将91金币交给你', 'heal'); }},
-            { label: '朝它倒水', effect(s) { state.player.hp = Math.max(1, state.player.hp - 10); addMessage('机器人短路，你受到10点伤害', 'damage'); }},
-            { label: '支付67金币进行缝合', condition: s => state.player.gold >= 67, effect(s) { state.player.gold -= 67; state._pendingFusion = true; addMessage('支付67金币，可进行印记缝合（功能开发中）', 'heal'); }},
+            { label: '安慰', effect(s) { state.player.gold += 91; addMessage('获得91金币', 'heal'); }, resultText: '故障机器人接受你的安慰后重整旗鼓，准备回到高塔。启程前它将身上所有的91枚金币交给了你。' },
+            { label: '朝它倒水', effect(s) { state.player.hp = Math.max(1, state.player.hp - 10); addMessage('机器人揍了你一拳', 'damage'); }, resultText: '故障机器人感到莫名其妙，愤怒地揍了你一拳。你受到了10点伤害。' },
+            { label: '支付67金币进行缝合', condition: s => state.player.gold >= 67, effect(s) { state.player.gold -= 67; state._pendingFusion = true; state._fusionOrigin = 'event'; addMessage('支付67金币', 'heal'); showFusionScreen(); }, startsFusion: true, resultText: '' },
         ],
     },
     {
-        id: 'ironcladEvent', name: '失去自我的铁甲战士', floorMin: 1,
+        id: 'ironcladEvent', name: '失去自我而不断战斗的铁甲战士', floorMin: 1,
         desc: '被诅咒而失去理智的战士毁灭了自己的种族。',
         options: [
-            { label: '攻击', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '失去自我的铁甲战士'; state.enemy.eliteSpecial = 'berserk'; enterEventBattle(); }},
-            { label: '告密', effect(s) { giveRelic('burningBlood'); addMessage('战士将燃烧之血交给你', 'heal'); }},
-            { label: '离开', effect(s) { addMessage('离这个疯子远点吧', 'info'); }},
+            { label: '攻击', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '失去自我的铁甲战士'; state.enemy.eliteSpecial = 'berserk'; enterEventBattle(); }, startsBattle: true, resultText: '为了让他安息，你拔剑与他战斗！' },
+            { label: '告密', effect(s) { giveRelic('burningBlood'); addMessage('获得燃烧之血', 'heal'); }, resultText: '战士默默点了点头，将自己的鲜血给予了你。获得遗物「燃烧之血」。' },
+            { label: '离开', effect(s) {}, resultText: '你心想：离这个疯子远点吧。于是悄悄离开了。' },
         ],
     },
     {
         id: 'silentHunter', name: '追求极致的静默猎手', floorMin: 1,
         desc: '追求极致的猎手正在与两头怪物搏斗。',
         options: [
-            { label: '协助猎手', effect(s) { giveRelic('snakeRing'); addMessage('猎手将蛇之戒指赠与你', 'heal'); }},
-            { label: '攻击猎手', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '精英怪物'; enterEventBattle(); }},
-            { label: '离开', effect(s) { addMessage('君子不立危墙之下', 'info'); }},
+            { label: '协助猎手', effect(s) { state.enemy = generateEnemy(state.floor); state._eventRelicReward = 'snakeRing'; enterEventBattle(); }, startsBattle: true, resultText: '你协助猎手与其中一头怪物展开了战斗！' },
+            { label: '攻击猎手', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '精英怪物'; enterEventBattle(); }, startsBattle: true, resultText: '猎手感到棘手，在击败一只怪物后逃走了。你被迫与剩下的精英怪物战斗。' },
+            { label: '离开', effect(s) {}, resultText: '君子不立危墙之下——你选择不参与这场混战，继续前行。' },
         ],
     },
     {
         id: 'watcherEvent', name: '情绪飘忽不定的观者大人', floorMin: 1,
         desc: '来到另一个地方的观者仍旧保持着愤怒、平静和神格三种状态。',
         options: [
-            { label: '与愤怒形态对话', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '愤怒的观者'; state.enemy.eliteSpecial = 'wrath'; enterEventBattle(); }},
-            { label: '与平静形态对话', effect(s) { healPlayer(Math.ceil(state.player.maxHp * 0.2)); addMessage('观者道歉，回复20%生命', 'heal'); }},
-            { label: '与神格状态对话', effect(s) { for(let i=0;i<5;i++){ state.player.exp += expToNextLevel(); checkLevelUp(); } addMessage('观者认为你弱小，但你提升了5级！', 'heal'); }},
+            { label: '与愤怒形态对话', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '愤怒的观者'; state.enemy.eliteSpecial = 'wrath'; enterEventBattle(); }, startsBattle: true, resultText: '愤怒的观者向你发起了猛烈的攻击！' },
+            { label: '与平静形态对话', effect(s) { healPlayer(Math.ceil(state.player.maxHp * 0.2)); addMessage('回复20%HP', 'heal'); }, resultText: '观者解释了自己愤怒的原因——因为速通杀戮尖塔2之后不知为何来到了这里，感到有些不快。观者为失态道歉，并给予了你回复药水。回复20%生命值。' },
+            { label: '与神格状态对话', effect(s) { for(let i=0;i<5;i++){ state.player.exp += expToNextLevel(); checkLevelUp(); } addMessage('等级+5', 'heal'); }, resultText: '观者表示从未见过如此弱小之人，当场帮你提升了五级。你感到一股强大的力量涌入体内。等级+5。' },
         ],
     },
 ];
@@ -3328,13 +3361,20 @@ function showQuestionRoom() {
     }
 }
 
+function showEventResult(title, text, callback) {
+    $('question-room-options').innerHTML = `<div class="reward-card"><div class="reward-icon">📜</div><div class="reward-title">${title}</div><div class="reward-desc">${text}</div></div>`;
+    showScreen('question-room');
+    setTimeout(() => { callback(); }, 4000);
+}
+
 function showEvent(event) {
     let html = `<h3 style="color:var(--gold);margin-bottom:8px;">${event.name}</h3>`;
     html += `<p style="color:var(--text-dim);margin-bottom:16px;">${event.desc}</p>`;
     for (const opt of event.options) {
-        let disabled = '';
-        if (opt.condition && !opt.condition(state)) disabled = 'disabled';
-        html += `<button class="btn btn-small" style="display:block;width:100%;margin-bottom:8px;" ${disabled}
+        let cantDo = opt.condition && !opt.condition(state);
+        let style = 'display:block;width:100%;margin-bottom:8px;';
+        if (cantDo) style += 'opacity:0.35;cursor:not-allowed;filter:grayscale(60%);';
+        html += `<button class="btn btn-small" style="${style}" ${cantDo ? 'disabled' : ''}
             onclick="handleEventOption('${event.id}', ${event.options.indexOf(opt)})">${opt.label}</button>`;
     }
     $('question-room-options').innerHTML = html;
@@ -3347,10 +3387,24 @@ function handleEventOption(eventId, optIdx) {
     if (!event) return;
     const opt = event.options[optIdx];
     if (opt.condition && !opt.condition(state)) return;
-    opt.effect(state);
     state.engraveOrigin = 'boss';
-    if (state.screen === 'battle') return; // event started a battle
-    proceedAfterRoom();
+    // For battle/fusion options: show result text first, then trigger
+    if (opt.startsBattle || opt.startsFusion) {
+        if (opt.resultText) {
+            showEventResult(event.name, opt.resultText, () => { opt.effect(state); });
+        } else {
+            opt.effect(state);
+        }
+        return;
+    }
+    // Normal options: execute effect, then show result
+    opt.effect(state);
+    if (state.screen === 'battle' || state.screen === 'rune-engrave') return;
+    if (opt.resultText) {
+        showEventResult(event.name, opt.resultText, () => proceedAfterRoom());
+    } else {
+        proceedAfterRoom();
+    }
 }
 window.handleEventOption = handleEventOption;
 
@@ -3540,6 +3594,8 @@ function buyShopItem(itemId) {
     }
     if (item.id === 'fuseService') {
         state.player.gold -= itemPrice;
+        state._pendingFusion = true;
+        state._fusionOrigin = 'shop';
         addMessage('🪡 购买印记缝合服务！', 'info');
         showFusionScreen();
         return;
@@ -3602,15 +3658,26 @@ function showEffects() {
         <div class="effect-entry" style="border-left-color:var(--gold);">
             <div class="eff-name" style="color:var(--gold);">⚔️ 战斗系统</div>
             <div class="eff-desc">
-                <b>❤️ HP：</b>生命值，归零则游戏失败<br>
-                <b>⚔️ 攻击：</b>攻击卡造成的伤害值<br>
-                <b>🛡️ 防御：</b>防御卡获得的护盾值<br>
+                <b>⚡ 精力：</b>每回合2点（+商店/遗物加成），卡牌消耗1-3点<br>
+                <b>🃏 抽牌：</b>每回合2张（+商店/遗物加成）<br>
                 <b>🛡️ 护盾：</b>优先抵挡伤害，每回合开始清零<br>
-                <b>⚡ 精力：</b>每回合3点，使用卡牌消耗1点<br>
-                <b>📈 经验：</b>击败敌人获得（=楼层数），满则升级<br>
-                <b>💰 金币：</b>击败敌人获得（=楼层×2），用于商店<br>
-                <b>💀 怪物：</b>有攻击和防御属性，防御值浮动±30%<br>
-                <b>🗺️ 路线：</b>沿连线选相邻房间，只能向下一层移动
+                <b>🗡️ 攻击卡：</b>造成伤害，先消耗怪物防御池再扣HP<br>
+                <b>🛡️ 防御卡：</b>获得护盾值（=防御力±印记加成）<br>
+                <b>💀 怪物意图：</b>每回合显示敌人行动（⚔️攻击/🛡️防御/技能），第一回合防御=0<br>
+                <b>💀 防御池：</b>怪物防御是可消耗的池，攻击先消耗防御→余量扣HP<br>
+                <b>⭐ 精英怪：</b>更强怪物，特殊机制，击败获得遗物+印记<br>
+                <b>💀 楼层主：</b>25/50/75/100层，独特技能，击败获得遗物+印记<br>
+            </div>
+        </div>
+        <div class="effect-entry" style="border-left-color:var(--energy);">
+            <div class="eff-name" style="color:var(--energy);">📈 成长系统</div>
+            <div class="eff-desc">
+                <b>经验：</b>1-25层:10 / 26-50:7 / 51-75:5 / 76-100:3<br>
+                <b>升级：</b>最大HP+10，攻防通过战斗奖励提升<br>
+                <b>金币：</b>普通怪:3+层×0.5 / Boss:10+层数（商店价随楼层×1+层×0.02）<br>
+                <b>遗物：</b>15种遗物，击败精英/Boss获得，商店可购买2个随机遗物<br>
+                <b>印记缝合：</b>商店100g购买服务，将印记转移到另一张已有印记的卡牌<br>
+                <b>事件：</b>问号房70%概率触发，每局每个事件最多1次<br>
             </div>
         </div>
     `;
@@ -3703,7 +3770,8 @@ function renderCardBackpack() {
         const c = cards[i];
         const runeName = c.rune ? (RUNE_DEFS[c.rune]?.name || c.rune) : '';
         const fusedRunes = c._fusedRunes ? c._fusedRunes.map(r => RUNE_DEFS[r]?.name || r).join('+') : '';
-        html += `<div style="font-size:9px;color:var(--text-dim);padding:1px 0;">${c.icon} ${c.id==='attack'?'攻':'防'}${runeName?' 🔮'+runeName:''}${fusedRunes?' +'+fusedRunes:''} ⚡${c.cost}</div>`;
+        const allRunes = [runeName, ...(c._fusedRunes || []).map(r => RUNE_DEFS[r]?.name || r)].filter(Boolean).join('+');
+        html += `<div style="font-size:9px;color:var(--text-dim);padding:1px 0;">${c.icon} ${c.id==='attack'?'攻':c.id==='magicBook'?'书':'防'}${allRunes?' 🔮'+allRunes:''} ⚡${c.cost}</div>`;
     }
     return html;
 }
@@ -3717,41 +3785,46 @@ function showFusionScreen() {
     state.screen = 'rune-engrave';
     _fusionSource = null;
     const cards = state.player.cards;
-    let html = '<h2 style="color:var(--gold);">🪡 印记缝合</h2><p style="color:var(--text-dim);font-size:13px;">选择来源卡牌（将其印记转移走）</p><div class="card-engrave-options" style="display:flex;flex-wrap:wrap;gap:8px;">';
+    // Step 1: pick source card (one with a rune to move)
+    let html = '<h2 style="color:var(--gold);">🪡 印记缝合 - 第1步</h2><p style="color:var(--text-dim);font-size:13px;">选择要移走印记的卡牌：</p><div class="card-engrave-options" style="display:flex;flex-wrap:wrap;gap:8px;">';
     for (let i = 0; i < cards.length; i++) {
         const c = cards[i];
         const hasRune = c.rune || (c._fusedRunes && c._fusedRunes.length > 0);
+        if (!hasRune) continue;
         const cardName = c.id === 'attack' ? '攻击' : (c.id === 'magicBook' ? '魔法书' : '防御');
         const runeLabel = c.rune ? '🔮' + (RUNE_DEFS[c.rune]?.name || c.rune) : (c._fusedRunes ? c._fusedRunes.map(r => RUNE_DEFS[r]?.name || r).join('+') : '');
-        const sel = _fusionSource === i ? 'border:2px solid var(--gold);' : '';
-        html += `<div class="engrave-card" style="${sel}" onclick="selectFusionSource(${i})"><div>${c.icon} ${cardName}</div><div style="font-size:10px;">${runeLabel}</div></div>`;
+        html += `<div class="engrave-card" onclick="selectFusionSource(${i})"><div>${c.icon} ${cardName}</div><div style="font-size:10px;">${runeLabel}</div></div>`;
     }
-    html += '</div>';
-    if (_fusionSource !== null) {
-        const src = cards[_fusionSource];
-        html += '<p style="color:var(--gold);margin-top:8px;">选择目标卡牌（接收印记）</p><div class="card-engrave-options" style="display:flex;flex-wrap:wrap;gap:8px;">';
-        for (let i = 0; i < cards.length; i++) {
-            if (i === _fusionSource) continue;
-            const c = cards[i];
-            const hasRune = c.rune || (c._fusedRunes && c._fusedRunes.length > 0);
-            if (!hasRune) continue;
-            const srcRune = src.rune || (src._fusedRunes && src._fusedRunes[0]);
-            const cardName = c.id === 'attack' ? '攻击' : (c.id === 'magicBook' ? '魔法书' : '防御');
-            const srcRuneDef = RUNE_DEFS[srcRune];
-            const compatible = srcRuneDef ? isRuneCompatible(srcRuneDef, c) : true;
-            if (!compatible) continue;
-            html += `<div class="engrave-card" onclick="doFusion(${i})"><div>${c.icon} ${cardName}</div><div style="font-size:10px;">接收印记</div></div>`;
-        }
-        html += '</div>';
-    }
-    html += '<button class="btn btn-small" onclick="closeFusion()" style="margin-top:8px;">关闭</button>';
+    html += '</div><button class="btn btn-small" onclick="closeFusion()" style="margin-top:8px;">取消</button>';
     document.getElementById('card-engrave-options').innerHTML = html;
     showScreen('rune-engrave');
 }
 
 function selectFusionSource(idx) {
     _fusionSource = idx;
-    showFusionScreen();
+    const src = state.player.cards[idx];
+    const srcRune = src.rune || (src._fusedRunes && src._fusedRunes[src._fusedRunes.length - 1]);
+    const srcRuneDef = RUNE_DEFS[srcRune];
+    const srcRuneName = srcRuneDef ? srcRuneDef.name : (srcRune || '');
+    // Step 2: pick target card (must have a rune already, type compatible)
+    let html = `<h2 style="color:var(--gold);">🪡 印记缝合 - 第2步</h2>
+        <p style="color:var(--text-dim);font-size:13px;">将「${srcRuneName}」转移到哪张卡牌？</p>
+        <p style="color:var(--text-dim);font-size:11px;">（目标卡牌必须已有至少一个印记，且类型兼容）</p>
+        <div class="card-engrave-options" style="display:flex;flex-wrap:wrap;gap:8px;">`;
+    for (let i = 0; i < state.player.cards.length; i++) {
+        if (i === idx) continue;
+        const c = state.player.cards[i];
+        const hasRune = c.rune || (c._fusedRunes && c._fusedRunes.length > 0);
+        if (!hasRune) continue;
+        const compatible = srcRuneDef ? isRuneCompatible(srcRuneDef, c) : true;
+        if (!compatible) continue;
+        const cardName = c.id === 'attack' ? '攻击' : (c.id === 'magicBook' ? '魔法书' : '防御');
+        const tgtLabel = c.rune ? '🔮' + (RUNE_DEFS[c.rune]?.name || c.rune) : (c._fusedRunes ? c._fusedRunes.map(r => RUNE_DEFS[r]?.name || r).join('+') : '');
+        html += `<div class="engrave-card" onclick="doFusion(${i})"><div>${c.icon} ${cardName}</div><div style="font-size:10px;">${tgtLabel}</div><div style="font-size:9px;color:var(--gold);">接收「${srcRuneName}」</div></div>`;
+    }
+    html += '</div><button class="btn btn-small" onclick="showFusionScreen()" style="margin-top:8px;">返回上一步</button>';
+    document.getElementById('card-engrave-options').innerHTML = html;
+    showScreen('rune-engrave');
 }
 
 function doFusion(targetIdx) {
@@ -3759,23 +3832,32 @@ function doFusion(targetIdx) {
     const src = state.player.cards[_fusionSource];
     const tgt = state.player.cards[targetIdx];
     if (!src || !tgt) return;
-    const srcRune = src.rune || (src._fusedRunes && src._fusedRunes.pop());
-    if (!srcRune) return;
-    // Transfer rune
-    if (src.rune) { src.rune = null; src.runeData = {}; }
+    // Get the rune being moved
+    let srcRuneId = null;
+    if (src.rune) { srcRuneId = src.rune; src.rune = null; src.runeData = {}; }
+    else if (src._fusedRunes && src._fusedRunes.length > 0) { srcRuneId = src._fusedRunes.pop(); }
+    if (!srcRuneId) return;
+    // Add to target's fused runes
     if (!tgt._fusedRunes) tgt._fusedRunes = [];
-    tgt._fusedRunes.push(srcRune);
-    addMessage(`🪡 缝合完成！印记已转移`, 'heal');
+    tgt._fusedRunes.push(srcRuneId);
+    const runeName = RUNE_DEFS[srcRuneId]?.name || srcRuneId;
+    addMessage(`🪡 缝合完成！「${runeName}」已转移到目标卡牌`, 'heal');
     SFX.play('rune');
     _fusionSource = null;
-    if (state._pendingFusion) { state._pendingFusion = false; advanceFloor(); }
-    else { render(); }
+    if (state._pendingFusion) {
+        state._pendingFusion = false;
+        if (state._fusionOrigin === 'shop') { state._fusionOrigin = null; renderShop(); }
+        else { state._fusionOrigin = null; advanceFloor(); }
+    } else { render(); }
 }
 
 function closeFusion() {
     _fusionSource = null;
-    if (state._pendingFusion) { state._pendingFusion = false; advanceFloor(); }
-    else { render(); }
+    if (state._pendingFusion) {
+        state._pendingFusion = false;
+        if (state._fusionOrigin === 'shop') { state._fusionOrigin = null; renderShop(); }
+        else { state._fusionOrigin = null; advanceFloor(); }
+    } else { render(); }
 }
 window.selectFusionSource = selectFusionSource;
 window.doFusion = doFusion;
@@ -4085,15 +4167,15 @@ function showRewardSummary() {
         <div class="reward-card"><div class="reward-icon">📈</div><div class="reward-title">经验</div><div class="reward-desc">+${state._lastExpGain || 0}</div></div>
     `;
     showScreen('reward');
-    setTimeout(() => advanceFloor(), 1500);
+    setTimeout(() => advanceFloor(), 3000);
 }
 
 function showReward() {
     SFX.play('reward');
     state.screen = 'reward';
     state.attrRefreshCount = 0;
-    $('reward-floor-text').textContent = T.floor(state.floor);
-    $('reward-heal-desc').textContent = T.rewardHealDesc(Math.ceil(state.player.maxHp * BALANCE.healPercent));
+    const floorEl = $('reward-floor-text'); if (floorEl) floorEl.textContent = T.floor(state.floor);
+    const healEl = $('reward-heal-desc'); if (healEl) healEl.textContent = T.rewardHealDesc(Math.ceil(state.player.maxHp * BALANCE.healPercent));
     showScreen('reward');
 }
 
