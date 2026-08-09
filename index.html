@@ -1030,6 +1030,15 @@ function showRelicSelection() {
     advanceFloor();
 }
 
+function calcEnemyAtk() {
+    let mod = 0.7 + Math.random() * 0.6;
+    if (state.enemy && state.enemy.eliteSpecial === 'berserk') {
+        const hpRatio = state.enemy.hp / state.enemy.maxHp;
+        mod = 1 + (1 - hpRatio) * 2;
+    }
+    return Math.floor(state.enemy.attack * mod);
+}
+
 // Helper: pick a random boss for the given floor range
 function pickBossForFloor(floor) {
     if (floor === 100) return { ...BOSS_DEFS.fourGodsChosen };
@@ -1425,6 +1434,19 @@ function generateMap(startFloor, endFloor) {
             map.push(row);
         }
     }
+    // Add ~1 elite per 10 floors: pick random non-boss row, replace one room
+    for (let eliteFloor = startFloor; eliteFloor <= endFloor; eliteFloor += 7 + randInt(0, 5)) {
+        const rowIdx = eliteFloor - startFloor;
+        if (rowIdx >= 0 && rowIdx < map.length && !isBossFloor(eliteFloor)) {
+            const row = map[rowIdx];
+            const validCols = [];
+            for (let c = 0; c < cols; c++) { if (row[c]) validCols.push(c); }
+            if (validCols.length > 0) {
+                const c = validCols[Math.floor(Math.random() * validCols.length)];
+                row[c].type = 'elite';
+            }
+        }
+    }
     return map;
 }
 
@@ -1626,6 +1648,7 @@ function freshState() {
         pendingRuneChoices: null,
         pendingCard: null,
         declinedRunes: [],
+        completedEvents: [],
         engraveOrigin: 'boss',  // 'boss' | 'shop' | 'chest'
         chestResult: null,
         // Map / road system
@@ -1815,6 +1838,12 @@ function discardCard(card) {
 function startTurn() {
     if (state.screen !== 'battle' || state.battlePhase === 'over') return;
 
+    // Ironclad berserk: lose 10% HP per turn
+    if (state.enemy && state.enemy.eliteSpecial === 'berserk') {
+        const loss = Math.max(1, Math.ceil(state.enemy.maxHp * 0.1));
+        state.enemy.hp = Math.max(1, state.enemy.hp - loss);
+        addMessage(`⚔️ 铁甲战士失去 ${loss} 点生命（狂暴）`, 'damage');
+    }
     // Plague is permanent after Great Unclean One uses it
 
     // Handle skipCardPlayTurns (守秘者享乐)
@@ -1936,6 +1965,8 @@ function playCard(handIndex) {
                 state.enemyCurrentDef = 0;
             }
         }
+        // Wrath elite takes 2x damage
+        if (state.enemy && state.enemy.eliteSpecial === 'wrath') { actualDmg *= 2; }
         state.enemy.hp -= actualDmg;
         if (actualDmg > 0) {
             addMessage(`${T.player} 使用${T.cardAttack}，造成 ${actualDmg} 点伤害！`, 'damage');
@@ -2042,7 +2073,7 @@ function initEnemyIntent() {
                 const randSkill = skills[Math.floor(Math.random() * skills.length)];
                 const skillBoss = BOSS_DEFS[randSkill];
                 state.enemyIntentLabel = skillBoss ? skillBoss.skillIcon + ' ' + skillBoss.skillName : '';
-                state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + Math.random() * 0.6));
+                state.enemyCurrentAtk = calcEnemyAtk();
             }
         } else {
             const roll = Math.random();
@@ -2057,7 +2088,7 @@ function initEnemyIntent() {
             } else {
                 state.enemyIntentType = 'attack';
                 state.enemyIntentLabel = '';
-                state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + Math.random() * 0.6));
+                state.enemyCurrentAtk = calcEnemyAtk();
             }
         }
     } else {
@@ -2068,7 +2099,7 @@ function initEnemyIntent() {
         } else {
             state.enemyIntentType = 'attack';
             state.enemyIntentLabel = '';
-            state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + Math.random() * 0.6));
+            state.enemyCurrentAtk = calcEnemyAtk();
         }
     }
 }
@@ -2102,7 +2133,7 @@ function generateNextIntent() {
                 const randSkill = skills[Math.floor(Math.random() * skills.length)];
                 const skillBoss = BOSS_DEFS[randSkill];
                 state.enemyIntentLabel = skillBoss ? skillBoss.skillIcon + ' ' + skillBoss.skillName : '';
-                state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + Math.random() * 0.6));
+                state.enemyCurrentAtk = calcEnemyAtk();
             }
         } else if (state.enemy._skillUsed) {
             if (Math.random() < 0.3) {
@@ -2112,7 +2143,7 @@ function generateNextIntent() {
             } else {
                 state.enemyIntentType = 'attack';
                 state.enemyIntentLabel = '';
-                state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + Math.random() * 0.6));
+                state.enemyCurrentAtk = calcEnemyAtk();
             }
         } else {
             const roll = Math.random();
@@ -2127,7 +2158,7 @@ function generateNextIntent() {
             } else {
                 state.enemyIntentType = 'attack';
                 state.enemyIntentLabel = '';
-                state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + Math.random() * 0.6));
+                state.enemyCurrentAtk = calcEnemyAtk();
             }
         }
     } else {
@@ -2138,7 +2169,7 @@ function generateNextIntent() {
         } else {
             state.enemyIntentType = 'attack';
             state.enemyIntentLabel = '';
-            state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + Math.random() * 0.6));
+            state.enemyCurrentAtk = calcEnemyAtk();
         }
     }
 }
@@ -2697,6 +2728,16 @@ function resolveRoom(cell) {
             startTurn();
             break;
 
+        case 'elite':
+            state.enemy = generateElite(state.floor);
+            initEnemyIntent();
+            state.screen = 'battle';
+            render();
+            renderStickFigure('player-sprite', 'var(--player)', false, false);
+            renderStickFigure('enemy-sprite', 'var(--enemy)', true, false);
+            startTurn();
+            break;
+
         case 'boss':
             SFX.play('boss_appear');
             state.enemy = generateEnemy(state.floor);
@@ -2941,6 +2982,88 @@ function declineCard() {
 // =====================================================================
 // QUESTION ROOM INTERACTION
 // =====================================================================
+// EVENT DEFINITIONS (one-time per run)
+// =====================================================================
+const EVENT_DEFS = [
+    {
+        id: 'runeMage', name: '流浪的符文法师', floorMin: 3,
+        desc: '流浪的符文法师正在寻找遗失的符文宝石。',
+        options: [
+            { label: '给予宝石', condition: s => hasRelic('runeGem'), effect(s) { giveRelic('runeGem'); addMessage('符文法师感谢你，赠送了「符文法师的魔法书」！', 'heal'); state.player.cards.push({id:'magicBook',icon:'📖',type:'atk',cost:2,effect:'magicAttack',rune:null,runeData:{}}); }},
+            { label: '离开', effect(s) { addMessage('你离开了符文法师', 'info'); }},
+        ],
+    },
+    {
+        id: 'fallenAngel', name: '逃避追捕的堕天使', floorMin: 1,
+        desc: '黑暗天使正在追捕他们眼中的叛徒堕天使。',
+        options: [
+            { label: '帮助逃避', effect(s) { state.player.gold += 15; grantBattleExp(); addMessage('堕天使感激地给了你金币', 'heal'); }},
+            { label: '协助追捕者', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '黑暗天使'; enterEventBattle(); }},
+        ],
+    },
+    {
+        id: 'unitreeRobot', name: '宇树机器人', floorMin: 1,
+        desc: '一个外形像人类的机器朝你挥手，说自己准备跳一支舞。',
+        options: [
+            { label: '默默观看', effect(s) { state.player.hp = Math.max(1, Math.floor(state.player.hp * 0.9)); addMessage('舞蹈太过辣眼，你失去10%生命', 'damage'); }},
+            { label: '一脚踹倒', effect(s) { state.player.maxHp += 10; addMessage('宇树机器人倒下，你感觉神清气爽（最大HP+10）', 'heal'); }},
+        ],
+    },
+    {
+        id: 'defectBot', name: '故障机器人寻找他的朋友', floorMin: 1,
+        desc: '从某个高塔跑出来的故障机器人突然意识到他的朋友还在高塔里。',
+        options: [
+            { label: '安慰', effect(s) { state.player.gold += 91; addMessage('机器人将91金币交给你', 'heal'); }},
+            { label: '朝它倒水', effect(s) { state.player.hp = Math.max(1, state.player.hp - 10); addMessage('机器人短路，你受到10点伤害', 'damage'); }},
+            { label: '支付67金币进行缝合', condition: s => state.player.gold >= 67, effect(s) { state.player.gold -= 67; state._pendingFusion = true; addMessage('支付67金币，可进行印记缝合（功能开发中）', 'heal'); }},
+        ],
+    },
+    {
+        id: 'ironcladEvent', name: '失去自我的铁甲战士', floorMin: 1,
+        desc: '被诅咒而失去理智的战士毁灭了自己的种族。',
+        options: [
+            { label: '攻击', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '失去自我的铁甲战士'; state.enemy.eliteSpecial = 'berserk'; enterEventBattle(); }},
+            { label: '告密', effect(s) { giveRelic('burningBlood'); addMessage('战士将燃烧之血交给你', 'heal'); }},
+            { label: '离开', effect(s) { addMessage('离这个疯子远点吧', 'info'); }},
+        ],
+    },
+    {
+        id: 'silentHunter', name: '追求极致的静默猎手', floorMin: 1,
+        desc: '追求极致的猎手正在与两头怪物搏斗。',
+        options: [
+            { label: '协助猎手', effect(s) { giveRelic('snakeRing'); addMessage('猎手将蛇之戒指赠与你', 'heal'); }},
+            { label: '攻击猎手', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '精英怪物'; enterEventBattle(); }},
+            { label: '离开', effect(s) { addMessage('君子不立危墙之下', 'info'); }},
+        ],
+    },
+    {
+        id: 'watcherEvent', name: '情绪飘忽不定的观者大人', floorMin: 1,
+        desc: '来到另一个地方的观者仍旧保持着愤怒、平静和神格三种状态。',
+        options: [
+            { label: '与愤怒形态对话', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '愤怒的观者'; state.enemy.eliteSpecial = 'wrath'; enterEventBattle(); }},
+            { label: '与平静形态对话', effect(s) { healPlayer(Math.ceil(state.player.maxHp * 0.2)); addMessage('观者道歉，回复20%生命', 'heal'); }},
+            { label: '与神格状态对话', effect(s) { for(let i=0;i<5;i++){ state.player.exp += expToNextLevel(); checkLevelUp(); } addMessage('观者认为你弱小，但你提升了5级！', 'heal'); }},
+        ],
+    },
+];
+
+function enterEventBattle() {
+    state.deck = { draw: createDeck(), hand: [], discard: [] };
+    state.shield = 0;
+    state.messages = [];
+    state.pendingReward = true;
+    state.battlePhase = 'player';
+    state._battleTurnCount = 0;
+    state.plagueTurns = 0;
+    initEnemyIntent();
+    state.screen = 'battle';
+    render();
+    renderStickFigure('player-sprite', 'var(--player)', false, false);
+    renderStickFigure('enemy-sprite', 'var(--enemy)', true, false);
+    startTurn();
+}
+
+// =====================================================================
 
 let _questionRoomTimer = null;
 
@@ -2948,23 +3071,14 @@ function showQuestionRoom() {
     // Prevent re-entry (race condition from multiple render() calls)
     if (_questionRoomTimer !== null) return;
     SFX.play('question');
-    // Auto-resolve: 50% monster, 50% chest
-    const isMonster = Math.random() < 0.25;
-    if (isMonster) {
-        // Show monster reveal then enter battle
-        $('question-room-options').innerHTML = `
-            <div class="reward-card">
-                <div class="reward-icon">👾</div>
-                <div class="reward-title">遭遇怪物！</div>
-                <div class="reward-desc">前方出现了未知敌人…</div>
-            </div>
-        `;
+    // Distribution: 15% monster, 15% chest, 70% event
+    const roll = Math.random();
+    if (roll < 0.15) {
+        // Monster encounter
+        $('question-room-options').innerHTML = `<div class="reward-card"><div class="reward-icon">👾</div><div class="reward-title">遭遇怪物！</div><div class="reward-desc">前方出现了未知敌人…</div></div>`;
         showScreen('question-room');
-        _questionRoomTimer = setTimeout(() => {
-            _questionRoomTimer = null;
-            enterQuestionBattle();
-        }, 1000);
-    } else {
+        _questionRoomTimer = setTimeout(() => { _questionRoomTimer = null; enterQuestionBattle(); }, 1000);
+    } else if (roll < 0.3) {
         // Chest
         const reward = pickChestReward();
         if (reward.id === 'randomRune') {
@@ -2994,8 +3108,46 @@ function showQuestionRoom() {
                 proceedAfterRoom();
             }, 1500);
         }
+    } else {
+        // Event (70%)
+        _questionRoomTimer = null;
+        if (!state.completedEvents) state.completedEvents = [];
+        const available = EVENT_DEFS.filter(e => !state.completedEvents.includes(e.id) && state.floor >= e.floorMin);
+        if (available.length === 0) {
+            proceedAfterRoom();
+            return;
+        }
+        const event = available[Math.floor(Math.random() * available.length)];
+        state.completedEvents.push(event.id);
+        showEvent(event);
     }
 }
+
+function showEvent(event) {
+    let html = `<h3 style="color:var(--gold);margin-bottom:8px;">${event.name}</h3>`;
+    html += `<p style="color:var(--text-dim);margin-bottom:16px;">${event.desc}</p>`;
+    for (const opt of event.options) {
+        let disabled = '';
+        if (opt.condition && !opt.condition(state)) disabled = 'disabled';
+        html += `<button class="btn btn-small" style="display:block;width:100%;margin-bottom:8px;" ${disabled}
+            onclick="handleEventOption('${event.id}', ${event.options.indexOf(opt)})">${opt.label}</button>`;
+    }
+    $('question-room-options').innerHTML = html;
+    state._currentEvent = event;
+    showScreen('question-room');
+}
+
+function handleEventOption(eventId, optIdx) {
+    const event = state._currentEvent;
+    if (!event) return;
+    const opt = event.options[optIdx];
+    if (opt.condition && !opt.condition(state)) return;
+    opt.effect(state);
+    state.engraveOrigin = 'boss';
+    if (state.screen === 'battle') return; // event started a battle
+    proceedAfterRoom();
+}
+window.handleEventOption = handleEventOption;
 
 function enterQuestionBattle() {
     state.enemy = generateEnemy(state.floor);
