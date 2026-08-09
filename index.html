@@ -1003,9 +1003,62 @@ const RELIC_DEFS = {
         id: 'snakeRing', name: '蛇之戒指', icon: '💍',
         desc: '来自一名猎手的友谊。每场战斗第一回合额外抽1张牌。',
     },
+    hexCrystal: {
+        id: 'hexCrystal', name: '海克斯水晶', icon: '💠',
+        desc: '蕴含巨大能量的水晶，科技与魔法在其中交汇。每场战斗第一个回合额外+1精力。',
+    },
+    voidShard: {
+        id: 'voidShard', name: '虚空碎片', icon: '🌑',
+        desc: '来自世界之外的碎片。生命值低于50%时，攻击力和防御力+10%。',
+    },
+    soulStone: {
+        id: 'soulStone', name: '灵魂石', icon: '💎',
+        desc: '曾经属于某个死去的灵魂。生命值归零时复活并回复50%HP，使用后消失。不可再次获得。',
+    },
+    emperorSeal: {
+        id: 'emperorSeal', name: '帝皇圣印', icon: '👑',
+        desc: '在这个黑暗的时代，信仰本身就是一种武器。每场战斗第一次受到致命伤害时，伤害降至1点。',
+    },
+    chaosMark: {
+        id: 'chaosMark', name: '混沌印记', icon: '🌀',
+        desc: '力量从来不会无偿给予。攻击力和防御力+10%，但每场战斗结束失去2%最大HP。',
+    },
+    blessedBlood: {
+        id: 'blessedBlood', name: '赐予恩惠的神血', icon: '🩸',
+        desc: '只要还愿意继续前进，弱小也终能变成力量。获得经验值时额外+20%。',
+    },
+    hestiaBlessing: {
+        id: 'hestiaBlessing', name: '赫斯缇雅的恩惠', icon: '🔥',
+        desc: '神明无法替你战斗，但她会一直注视着你。每次升级时额外回复5%最大HP。',
+    },
+    dungeonTreasure: {
+        id: 'dungeonTreasure', name: '地下城的宝藏', icon: '💎',
+        desc: '越是深入地下，等待冒险者的东西就越珍贵。击败怪物后额外获得10%金币。',
+    },
+    medicKit: {
+        id: 'medicKit', name: '医疗探员的急救包', icon: '🏥',
+        desc: '真正优秀的医疗探员总能让队友活着离开。每场战斗结束后回复最大HP的3%。',
+    },
+    engineerToolbox: {
+        id: 'engineerToolbox', name: '工程探员的工具箱', icon: '🧰',
+        desc: '战场上没有绝对无法解决的问题。每场战斗第一次获得护盾时护盾翻倍。',
+    },
+    scoutGoggles: {
+        id: 'scoutGoggles', name: '侦察探员的战术目镜', icon: '🥽',
+        desc: '先看清敌人，才能决定下一步。进入战斗时若敌人意图为攻击则额外抽1张牌。',
+    },
 };
 
+function getShopPrice(basePrice) { return Math.floor(basePrice * (1 + state.floor * 0.02)); }
 function hasRelic(id) { return state.player.relics && state.player.relics.includes(id); }
+function relicStatBonus(base, stat) {
+    // Void shard: +10% ATK/DEF when HP < 50%
+    // Chaos mark: always +10% ATK/DEF
+    let bonus = base;
+    if (hasRelic('chaosMark')) bonus = Math.floor(bonus * 1.1);
+    if (hasRelic('voidShard') && state.player.hp < state.player.maxHp * 0.5) bonus = Math.floor(bonus * 1.1);
+    return bonus;
+}
 function giveRelic(id) {
     if (!state.player.relics) state.player.relics = [];
     if (!state.player.relics.includes(id)) { state.player.relics.push(id); return true; }
@@ -1624,7 +1677,7 @@ const CHEST_REWARDS = [
         weight: 1,
         apply(state) {
             const expGain = Math.ceil(expToNextLevel() * 0.2);
-            state.player.exp += expGain;
+            state.player.exp += expGain + (hasRelic('blessedBlood') ? Math.ceil(expGain * 0.2) : 0);
             checkLevelUp();
             return { msg: `📈 获得了 ${expGain} 点经验！`, icon: '📈' };
         },
@@ -1919,9 +1972,9 @@ function startTurn() {
         state.battlePhase = 'player';
         state.shield = 0;
         state.turnFlags = { damageReduction: false, damageReductionCard: null, counterAttack: false, counterAttackCard: null };
-        const extraEnergy = (state.player.shopExtraEnergyBought ? 1 : 0) + (hasRelic('runeGem') ? 1 : 0);
+        const extraEnergy = (state.player.shopExtraEnergyBought ? 1 : 0) + (hasRelic('runeGem') ? 1 : 0) + ((hasRelic('hexCrystal') && state._battleTurnCount === 1) ? 1 : 0);
         state.energy = state.maxEnergy + extraEnergy;
-        const firstTurnBonus = (state._battleTurnCount === 1 && hasRelic('snakeRing')) ? 1 : 0;
+        const firstTurnBonus = (state._battleTurnCount === 1 ? ((hasRelic('snakeRing') ? 1 : 0) + (hasRelic('scoutGoggles') && state.enemyIntentType === 'attack' ? 1 : 0)) : 0);
         const drawCount = BALANCE.player.drawPerTurn + (state.player.shopExtraDrawCount || 0) + firstTurnBonus;
         const drawn = drawCards(drawCount);
         if (drawn.length > 0) {
@@ -1937,9 +1990,9 @@ function startTurn() {
     state._battleTurnCount = (state._battleTurnCount || 0) + 1;
     state.shield = 0;
     state.turnFlags = { damageReduction: false, damageReductionCard: null, counterAttack: false, counterAttackCard: null };
-    const extraEnergy = (state.player.shopExtraEnergyBought ? 1 : 0) + (hasRelic('runeGem') ? 1 : 0);
+    const extraEnergy = (state.player.shopExtraEnergyBought ? 1 : 0) + (hasRelic('runeGem') ? 1 : 0) + ((hasRelic('hexCrystal') && state._battleTurnCount === 1) ? 1 : 0);
     state.energy = state.maxEnergy + extraEnergy;
-    const firstTurnBonus = (state._battleTurnCount === 1 && hasRelic('snakeRing')) ? 1 : 0;
+    const firstTurnBonus = (state._battleTurnCount === 1 ? ((hasRelic('snakeRing') ? 1 : 0) + (hasRelic('scoutGoggles') && state.enemyIntentType === 'attack' ? 1 : 0)) : 0);
     const drawCount = BALANCE.player.drawPerTurn + (state.player.shopExtraDrawCount || 0) + firstTurnBonus;
     const drawn = drawCards(drawCount);
     if (drawn.length > 0) {
@@ -2014,7 +2067,7 @@ function playCard(handIndex) {
     // Apply card effect
     if (card.effect === 'magicAttack') {
         // Magic book: ATK + level*3, ignores defense
-        let dmg = state.player.attack + state.player.level * 3;
+        let dmg = relicStatBonus(state.player.attack + state.player.level * 3);
         if (hooks.modifyDamage) dmg = hooks.modifyDamage(state, card, dmg);
         state.enemy.hp -= dmg;
         addMessage(`📖 魔法书：造成 ${dmg} 点伤害（无视防御）！`, 'damage');
@@ -2029,7 +2082,7 @@ function playCard(handIndex) {
             setTimeout(() => onEnemyDefeated(), 400); return;
         }
     } else if (card.effect === 'dealDamage') {
-        let dmg = state.player.attack;
+        let dmg = relicStatBonus(state.player.attack);
         if (hooks.modifyDamage) {
             dmg = hooks.modifyDamage(state, card, dmg);
         }
@@ -2077,7 +2130,7 @@ function playCard(handIndex) {
         const extraAttacks = onPlayResult.extraAttacks || 0;
         for (let i = 0; i < extraAttacks; i++) {
             if (state.enemy.hp <= 0) break;
-            let extraDmg = state.player.attack;
+            let extraDmg = relicStatBonus(state.player.attack);
             if (hooks.modifyDamage) {
                 extraDmg = hooks.modifyDamage(state, card, extraDmg);
             }
@@ -2112,9 +2165,13 @@ function playCard(handIndex) {
         }
 
     } else if (card.effect === 'gainShield') {
-        let shieldAmt = state.player.defense;
+        let shieldAmt = relicStatBonus(state.player.defense);
         if (hooks.modifyShield) {
             shieldAmt = hooks.modifyShield(state, card, shieldAmt);
+        }
+        if (hasRelic('engineerToolbox') && !state._shieldDoubledThisBattle) {
+            shieldAmt *= 2;
+            state._shieldDoubledThisBattle = true;
         }
         state.shield += shieldAmt;
         addMessage(`${T.player} 使用${T.cardDefense}，获得 ${shieldAmt} 点护盾！`, 'info');
@@ -2322,6 +2379,12 @@ function enemyAttack() {
     }
 
     // Apply damage to player
+    // Emperor's Seal: first lethal hit → 1 damage
+    if (hasRelic('emperorSeal') && !state._sealUsedThisBattle && (state.player.hp - netDmg) <= 0 && netDmg > 0) {
+        netDmg = Math.max(0, state.player.hp - 1);
+        state._sealUsedThisBattle = true;
+        addMessage('👑 帝皇圣印：致命伤害降至1点！', 'heal');
+    }
     state.player.hp -= netDmg;
     if (netDmg > 0) {
         addMessage(T.msgEnemyAttack(enemy.name, netDmg), 'damage');
@@ -2376,14 +2439,24 @@ function onEnemyDefeated() {
     const goldDrop = isBossFloor(state.floor)
         ? Math.floor(10 + state.floor)
         : Math.floor(3 + state.floor * 0.5);
-    state.player.gold += goldDrop;
-    state._lastGoldGain = goldDrop;
+    state.player.gold += goldDrop + (hasRelic('dungeonTreasure') ? Math.ceil(goldDrop * 0.1) : 0);
+    state._lastGoldGain = goldDrop + (hasRelic('dungeonTreasure') ? Math.ceil(goldDrop * 0.1) : 0);
     state._lastExpGain = 0; // set below
     addMessage(`${T.msgEnemyDeath(state.enemy.name)}`, 'info');
     addMessage(`💰 获得 ${goldDrop} 金币！`, 'heal');
     const prevExp = state.player.exp;
     grantBattleExp();
     state._lastExpGain = state.player.exp - prevExp;
+    if (hasRelic('chaosMark')) {
+        const chaosLoss = Math.max(1, Math.ceil(state.player.maxHp * 0.02));
+        state.player.hp = Math.max(1, state.player.hp - chaosLoss);
+        addMessage(`🌀 混沌印记：失去 ${chaosLoss} 点生命`, 'damage');
+    }
+    if (hasRelic('medicKit')) {
+        const mkHeal = Math.max(1, Math.ceil(state.player.maxHp * 0.03));
+        healPlayer(mkHeal);
+        addMessage(`🏥 急救包：回复 ${mkHeal} 点生命`, 'heal');
+    }
     if (hasRelic('burningBlood')) {
         const healAmt = Math.max(1, Math.ceil(state.player.maxHp * 0.05));
         healPlayer(healAmt);
@@ -2404,6 +2477,13 @@ function onEnemyDefeated() {
         setTimeout(() => showRuneSelection(), 600);
     } else if (state.enemy && state.enemy.isElite) {
         // Elite: show rune selection (1 rune), then advance
+        // Elite: give random relic
+        const eliteAvailable = Object.values(RELIC_DEFS).filter(r => !hasRelic(r.id));
+        if (eliteAvailable.length > 0) {
+            const relic = eliteAvailable[Math.floor(Math.random() * eliteAvailable.length)];
+            giveRelic(relic.id);
+            addMessage(`🎁 精英遗物：「${relic.name}」！`, 'heal');
+        }
         setTimeout(() => showEliteReward(), 600);
     } else {
         // Normal monster: show reward summary
@@ -2413,6 +2493,15 @@ function onEnemyDefeated() {
 
 function onPlayerDeath() {
     if (state.screen !== 'battle') return;
+    // Soul Stone: revive once
+    if (hasRelic('soulStone')) {
+        state.player.hp = Math.ceil(state.player.maxHp * 0.5);
+        state.player.relics = state.player.relics.filter(r => r !== 'soulStone');
+        addMessage('💎 灵魂石发动！复活并回复50%HP，灵魂石已粉碎', 'heal');
+        state.battlePhase = 'player';
+        startTurn();
+        return;
+    }
     SFX.play('game_over');
     saveRecord('death');
     clearSave();
@@ -2440,7 +2529,7 @@ function grantBattleExp() {
     else if (state.floor <= 50) expGain = 7;
     else if (state.floor <= 75) expGain = 5;
     else expGain = 3;
-    state.player.exp += expGain;
+    state.player.exp += expGain + (hasRelic('blessedBlood') ? Math.ceil(expGain * 0.2) : 0);
     addMessage(`获得 ${expGain} 点经验！`, 'heal');
     checkLevelUp();
 }
@@ -2453,6 +2542,7 @@ function checkLevelUp() {
         state.player.level++;
         state.player.maxHp += BALANCE.player.levelUpBonus.maxHp;
         healPlayer(BALANCE.player.levelUpBonus.maxHp);
+        if (hasRelic('hestiaBlessing')) healPlayer(Math.ceil(state.player.maxHp * 0.05));
         leveled = true;
         SFX.play('level_up');
         addMessage(`${T.levelUp} 等级 ${state.player.level}！`, 'heal');
@@ -2806,6 +2896,8 @@ function resolveRoom(cell) {
     }
     state.deck = { draw: createDeck(), hand: [], discard: [] };
     state._battleTurnCount = 0;
+    state._sealUsedThisBattle = false;
+    state._shieldDoubledThisBattle = false;
     // Only battle rooms get the EXP/HP reward screen
     state.pendingReward = (cell.type === 'battle' || cell.type === 'boss');
     state.battlePhase = 'player'; // Reset for new battle
@@ -3299,13 +3391,13 @@ function renderShop() {
             remainText = ` <span style="color:#888;font-size:11px;">(剩余${remain}次)</span>`;
             if (remain <= 0) disabled = true;
         }
-        const canAfford = state.player.gold >= item.price && !disabled;
+        const canAfford = state.player.gold >= (item.displayPrice || item.price) && !disabled;
         return `
             <div class="shop-item">
                 <div class="shop-item-icon">${item.icon}</div>
                 <div class="shop-item-name">${item.name}${remainText}</div>
                 <div class="shop-item-desc">${item.desc}</div>
-                <div class="shop-item-price">💰 ${item.price}</div>
+                <div class="shop-item-price">💰 ${item.displayPrice || item.price}</div>
                 <button class="btn btn-small" ${!canAfford ? 'disabled' : ''}
                         onclick="buyShopItem('${item.id}')">购买</button>
             </div>
@@ -3320,9 +3412,16 @@ function renderShop() {
 }
 
 function buyShopItem(itemId) {
-    const item = SHOP_ITEMS.find(i => i.id === itemId);
+    let item = SHOP_ITEMS.find(i => i.id === itemId);
+    let itemPrice = item ? getShopPrice(item.price) : 0;
+    // Check shop relics
+    if (!item && itemId.startsWith('relic_')) {
+        const relicId = itemId.replace('relic_', '');
+        item = { id: itemId, relicId, price: getShopPrice(50), isRelic: true };
+        itemPrice = item.price;
+    }
     if (!item) return;
-    if (state.player.gold < item.price) return;
+    if (state.player.gold < itemPrice) return;
 
     // Special handling for random rune
     if (item.id === 'randomRune') {
@@ -3410,6 +3509,15 @@ function buyShopItem(itemId) {
         return;
     }
 
+    // Shop relic purchase
+    if (item.isRelic && item.relicId) {
+        state.player.gold -= itemPrice;
+        if (giveRelic(item.relicId)) {
+            addMessage(`🎁 获得遗物「${RELIC_DEFS[item.relicId].name}」！`, 'heal');
+        }
+        renderShop();
+        return;
+    }
     if (item.id === 'fuseService') {
         state.player.gold -= item.price;
         state._pendingFusion = true;
