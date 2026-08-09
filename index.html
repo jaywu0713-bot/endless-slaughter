@@ -553,6 +553,42 @@ body {
         </div>
     </div>
 
+    <!-- ADMIN PANEL (press ` key) -->
+    <div id="modal-admin" class="modal-overlay" style="display:none;" onclick="closeAdmin(event)">
+        <div class="modal-content" onclick="event.stopPropagation()" style="max-width:400px;">
+            <h2 style="color:var(--gold);">🔧 管理员面板</h2>
+            <div style="display:flex;flex-direction:column;gap:8px;margin:12px 0;">
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <span style="color:var(--text-dim);min-width:60px;">跳转楼层</span>
+                    <input id="admin-floor" type="number" min="1" max="100" value="1" style="width:80px;background:#222;color:#fff;border:1px solid #555;padding:4px;border-radius:4px;">
+                    <button class="btn btn-small" onclick="adminJumpFloor()">跳转</button>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <span style="color:var(--text-dim);min-width:60px;">添加遗物</span>
+                    <select id="admin-relic" style="width:160px;background:#222;color:#fff;border:1px solid #555;padding:4px;border-radius:4px;"></select>
+                    <button class="btn btn-small" onclick="adminAddRelic()">添加</button>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <span style="color:var(--text-dim);min-width:60px;">修改属性</span>
+                </div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                    <button class="btn btn-small" onclick="adminModStat('attack',1)">攻击+1</button>
+                    <button class="btn btn-small" onclick="adminModStat('attack',10)">攻击+10</button>
+                    <button class="btn btn-small" onclick="adminModStat('defense',1)">防御+1</button>
+                    <button class="btn btn-small" onclick="adminModStat('defense',10)">防御+10</button>
+                    <button class="btn btn-small" onclick="adminModStat('maxHp',10)">HP+10</button>
+                    <button class="btn btn-small" onclick="adminModStat('maxHp',50)">HP+50</button>
+                    <button class="btn btn-small" onclick="adminModStat('gold',50)">金币+50</button>
+                    <button class="btn btn-small" onclick="adminModStat('gold',200)">金币+200</button>
+                    <button class="btn btn-small" onclick="adminModStat('level',1)">等级+1</button>
+                    <button class="btn btn-small" onclick="adminHealFull()">满血</button>
+                </div>
+            </div>
+            <button class="btn btn-small" onclick="closeAdmin()">关闭</button>
+            <p style="font-size:10px;color:#555;margin-top:8px;">按 ` 键打开/关闭</p>
+        </div>
+    </div>
+
     <!-- RELIC DETAIL MODAL -->
     <div id="modal-relic-detail" class="modal-overlay" style="display:none;" onclick="closeRelicDetail(event)">
         <div class="modal-content" onclick="event.stopPropagation()">
@@ -3528,6 +3564,62 @@ function showRelicDetail(relicId) {
 function closeRelicDetail(e) { $('modal-relic-detail').style.display = 'none'; }
 window.showRelicDetail = showRelicDetail;
 window.closeRelicDetail = closeRelicDetail;
+
+// =====================================================================
+// ADMIN PANEL (` key)
+// =====================================================================
+function openAdmin() {
+    const sel = document.getElementById('admin-relic');
+    sel.innerHTML = Object.values(RELIC_DEFS).map(r => `<option value="${r.id}">${r.icon} ${r.name}</option>`).join('');
+    $('modal-admin').style.display = 'flex';
+}
+function closeAdmin(e) { $('modal-admin').style.display = 'none'; }
+function adminJumpFloor() {
+    const floor = parseInt($('admin-floor').value) || 1;
+    state.floor = Math.max(1, Math.min(100, floor));
+    startNewArea(state.floor);
+    $('modal-admin').style.display = 'none';
+}
+function adminAddRelic() {
+    const rid = document.getElementById('admin-relic').value;
+    if (giveRelic(rid)) {
+        addMessage(`[管理员] 获得遗物：${RELIC_DEFS[rid].name}`, 'heal');
+        render();
+    }
+}
+function adminModStat(stat, amount) {
+    if (stat === 'level') {
+        state.player.level += amount;
+    } else if (stat === 'gold') {
+        state.player.gold += amount;
+    } else {
+        state.player[stat] = (state.player[stat] || 0) + amount;
+        if (stat === 'maxHp') state.player.hp = Math.min(state.player.hp + amount, state.player.maxHp);
+    }
+    addMessage(`[管理员] ${stat} +${amount}`, 'heal');
+    render();
+}
+function adminHealFull() {
+    state.player.hp = state.player.maxHp;
+    addMessage('[管理员] 满血复活', 'heal');
+    render();
+}
+
+// Keyboard shortcut
+document.addEventListener('keydown', function(e) {
+    if (e.key === '`' || e.key === 'Backquote') {
+        e.preventDefault();
+        const admin = $('modal-admin');
+        if (admin.style.display === 'flex') { admin.style.display = 'none'; }
+        else { openAdmin(); }
+    }
+});
+
+window.closeAdmin = closeAdmin;
+window.adminJumpFloor = adminJumpFloor;
+window.adminAddRelic = adminAddRelic;
+window.adminModStat = adminModStat;
+window.adminHealFull = adminHealFull;
 
 function updateHUD() {
     const p = state.player;
