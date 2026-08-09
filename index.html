@@ -2341,6 +2341,7 @@ function generateNextIntent() {
 
 function enemyAttack() {
     const enemy = state.enemy;
+    state.enemyCurrentDef = 0;  // Reset defense each enemy turn
 
     // Defense intent — monster gains defense NOW, no attack
     if (state.enemyIntentType === 'defense') {
@@ -2464,7 +2465,7 @@ function onEnemyDefeated() {
     // Gold drop: 2 for normal, 10 for boss
     const goldDrop = isBossFloor(state.floor)
         ? Math.floor(10 + state.floor)
-        : Math.floor(3 + state.floor * 0.5);
+        : Math.floor((3 + state.floor * 0.5) * 1.5);
     state.player.gold += goldDrop + (hasRelic('dungeonTreasure') ? Math.ceil(goldDrop * 0.1) : 0);
     state._lastGoldGain = goldDrop + (hasRelic('dungeonTreasure') ? Math.ceil(goldDrop * 0.1) : 0);
     state._lastExpGain = 0; // set below
