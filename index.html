@@ -1919,7 +1919,7 @@ function initEnemyIntent() {
                 state.enemyIntentType = 'defense';
                 state.enemyIntentLabel = '🛡️ 防御';
                 state.enemyCurrentAtk = 0;
-            } else if (roll < 0.5) {
+            } else if (roll < 0.7) {
                 state.enemyIntentType = 'skill';
                 state.enemyIntentLabel = state.enemy.skillIcon + ' ' + state.enemy.skillName;
                 state.enemyCurrentAtk = 0;
@@ -1971,7 +1971,7 @@ function generateNextIntent() {
                 state.enemyIntentType = 'defense';
                 state.enemyIntentLabel = '🛡️ 防御';
                 state.enemyCurrentAtk = 0;
-            } else if (roll < 0.5) {
+            } else if (roll < 0.7) {
                 state.enemyIntentType = 'skill';
                 state.enemyIntentLabel = (state.enemy.skillIcon || '') + ' ' + (state.enemy.skillName || '');
                 state.enemyCurrentAtk = 0;
