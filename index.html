@@ -653,16 +653,6 @@ body {
         </div>
     </div>
 
-    <!-- ATTR BUY -->
-    <div id="screen-attr-buy" class="screen">
-        <h2 id="attr-buy-title"></h2>
-        <p id="attr-buy-gold" style="font-size:14px;color:var(--energy);"></p>
-        <div style="display:flex;gap:12px;margin-top:12px;">
-            <button class="btn" id="btn-attr-buy" onclick="buyOtherAttr()">购买 2💰</button>
-            <button class="btn btn-small" onclick="finishAttrPick()">跳过</button>
-        </div>
-    </div>
-
     <!-- VICTORY -->
     <div id="screen-victory" class="screen">
         <h2>🎉 恭喜通关！</h2>
@@ -1537,8 +1527,6 @@ function freshState() {
         mapCursorFloor: 1,
         mapCursorPath: 0,
         pendingReward: true,
-        pendingAttrType: null,
-        pendingBuyType: null,
     };
 }
 
@@ -3049,7 +3037,7 @@ function showScreen(name) {
     const el = $(`screen-${name}`);
     if (el) el.classList.add('active');
     // Show HUD on game screens, hide on menu/victory/gameover
-    const gameScreens = ['map', 'battle', 'question-room', 'shop', 'chest-result', 'rune-select', 'rune-engrave', 'rune-confirm', 'reward', 'attr-pick', 'attr-buy'];
+    const gameScreens = ['map', 'battle', 'question-room', 'shop', 'chest-result', 'rune-select', 'rune-engrave', 'rune-confirm', 'reward', 'attr-pick'];
     $('hud-bar').style.display = gameScreens.includes(name) ? 'flex' : 'none';
     if (gameScreens.includes(name)) updateHUD();
 }
@@ -3381,9 +3369,6 @@ function render() {
         case 'attr-pick':
             showScreen('attr-pick');
             break;
-        case 'attr-buy':
-            showScreen('attr-buy');
-            break;
         case 'rune-select':
             showScreen('rune-select');
             break;
@@ -3459,40 +3444,13 @@ function showAttrPick() {
 }
 
 function pickAttr(type) {
-    state.pendingAttrType = type;
-    // Apply the free attribute
     if (type === 'attack') {
         state.player.attack += 1;
         addMessage(`💪 攻击力 +1！`, 'heal');
-        state.pendingBuyType = 'defense';
     } else {
         state.player.defense += 1;
         addMessage(`🛡️ 防御力 +1！`, 'heal');
-        state.pendingBuyType = 'attack';
     }
-    // Show buy screen for the other attribute
-    const buyName = state.pendingBuyType === 'attack' ? '攻击力' : '防御力';
-    $('attr-buy-title').textContent = `💡 ${buyName} +1？`;
-    $('attr-buy-gold').textContent = `💰 金币：${state.player.gold}`;
-    $('btn-attr-buy').style.display = state.player.gold >= 2 ? '' : 'none';
-    state.screen = 'attr-buy';
-    showScreen('attr-buy');
-}
-
-function buyOtherAttr() {
-    if (state.player.gold < 2) return;
-    state.player.gold -= 2;
-    if (state.pendingBuyType === 'attack') {
-        state.player.attack += 1;
-        addMessage(`💪 攻击力 +1！（花费2💰）`, 'heal');
-    } else {
-        state.player.defense += 1;
-        addMessage(`🛡️ 防御力 +1！（花费2💰）`, 'heal');
-    }
-    advanceFloor();
-}
-
-function finishAttrPick() {
     advanceFloor();
 }
 
