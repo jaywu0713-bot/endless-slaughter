@@ -518,6 +518,7 @@ body {
 </head>
 <body>
 <div id="error-overlay" style="display:none;position:fixed;top:0;left:0;right:0;background:#c62828;color:#fff;padding:10px 16px;z-index:9999;font-size:13px;white-space:pre-wrap;cursor:pointer;" onclick="this.style.display='none'"></div>
+<div id="side-panel-overlay" style="display:none;position:fixed;left:4px;top:40px;z-index:50;flex-direction:column;gap:4px;width:105px;max-height:calc(100vh-80px);overflow-y:auto;"></div>
 <div id="app">
 
     <!-- HUD (shown on game screens) -->
@@ -2003,8 +2004,27 @@ function startTurn() {
 }
 
 function getCardHooks(card) {
-    if (!card || !card.rune || !RUNE_DEFS[card.rune]) return {};
-    return RUNE_DEFS[card.rune].hooks || {};
+    if (!card) return {};
+    let hooks = {};
+    // Primary rune hooks
+    if (card.rune && RUNE_DEFS[card.rune]) {
+        hooks = { ...RUNE_DEFS[card.rune].hooks || {} };
+    }
+    // Fused runes hooks
+    if (card._fusedRunes) {
+        for (const rid of card._fusedRunes) {
+            if (RUNE_DEFS[rid] && RUNE_DEFS[rid].hooks) {
+                const fh = RUNE_DEFS[rid].hooks;
+                // Chain hooks: call original then fused
+                for (const key of Object.keys(fh)) {
+                    const orig = hooks[key];
+                    const fused = fh[key];
+                    hooks[key] = orig ? function(...args) { orig.apply(this, args); fused.apply(this, args); } : fused;
+                }
+            }
+        }
+    }
+    return hooks;
 }
 
 function playCard(handIndex) {
@@ -3519,10 +3539,9 @@ function buyShopItem(itemId) {
         return;
     }
     if (item.id === 'fuseService') {
-        state.player.gold -= item.price;
-        state._pendingFusion = true;
-        renderShop();
-        addMessage('🪡 请选择来源卡牌和目标卡牌进行印记缝合', 'info');
+        state.player.gold -= itemPrice;
+        addMessage('🪡 购买印记缝合服务！', 'info');
+        showFusionScreen();
         return;
     }
 
@@ -3565,6 +3584,17 @@ function showScreen(name) {
     const gameScreens = ['map', 'battle', 'question-room', 'shop', 'chest-result', 'rune-select', 'rune-engrave', 'rune-confirm', 'reward', 'attr-pick'];
     $('hud-bar').style.display = gameScreens.includes(name) ? 'flex' : 'none';
     if (gameScreens.includes(name)) updateHUD();
+    // Show/hide floating side panel
+    const sidePanelGameScreens = ['battle', 'map', 'shop', 'reward'];
+    const panel = document.getElementById('side-panel-overlay');
+    if (panel) {
+        if (sidePanelGameScreens.includes(name)) {
+            panel.style.display = 'flex';
+            panel.innerHTML = renderSidePanel() + renderCardBackpack();
+        } else {
+            panel.style.display = 'none';
+        }
+    }
 }
 
 function showEffects() {
@@ -3655,13 +3685,102 @@ function renderSidePanel() {
 }
 
 function injectSidePanel(screenName) {
-    const screen = document.getElementById('screen-' + screenName);
-    if (!screen) return;
-    // Remove old side panel
-    const old = screen.querySelector('.side-panel');
-    if (old) old.remove();
-    screen.insertAdjacentHTML('afterbegin', renderSidePanel());
+    const panel = document.getElementById('side-panel-overlay');
+    if (!panel) return;
+    const gameScreens = ['battle', 'map', 'shop', 'reward', 'question-room', 'rune-select', 'rune-engrave', 'attr-pick'];
+    if (gameScreens.includes(screenName)) {
+        panel.style.display = 'flex';
+        panel.innerHTML = renderSidePanel() + renderCardBackpack();
+    } else {
+        panel.style.display = 'none';
+    }
 }
+
+function renderCardBackpack() {
+    const cards = state.player.cards || [];
+    let html = '<div class="panel-title">🎒 卡牌 (' + cards.length + ')</div>';
+    for (let i = 0; i < cards.length; i++) {
+        const c = cards[i];
+        const runeName = c.rune ? (RUNE_DEFS[c.rune]?.name || c.rune) : '';
+        const fusedRunes = c._fusedRunes ? c._fusedRunes.map(r => RUNE_DEFS[r]?.name || r).join('+') : '';
+        html += `<div style="font-size:9px;color:var(--text-dim);padding:1px 0;">${c.icon} ${c.id==='attack'?'攻':'防'}${runeName?' 🔮'+runeName:''}${fusedRunes?' +'+fusedRunes:''} ⚡${c.cost}</div>`;
+    }
+    return html;
+}
+
+// =====================================================================
+// RUNE FUSION
+// =====================================================================
+let _fusionSource = null;
+
+function showFusionScreen() {
+    state.screen = 'rune-engrave';
+    _fusionSource = null;
+    const cards = state.player.cards;
+    let html = '<h2 style="color:var(--gold);">🪡 印记缝合</h2><p style="color:var(--text-dim);font-size:13px;">选择来源卡牌（将其印记转移走）</p><div class="card-engrave-options" style="display:flex;flex-wrap:wrap;gap:8px;">';
+    for (let i = 0; i < cards.length; i++) {
+        const c = cards[i];
+        const hasRune = c.rune || (c._fusedRunes && c._fusedRunes.length > 0);
+        const cardName = c.id === 'attack' ? '攻击' : (c.id === 'magicBook' ? '魔法书' : '防御');
+        const runeLabel = c.rune ? '🔮' + (RUNE_DEFS[c.rune]?.name || c.rune) : (c._fusedRunes ? c._fusedRunes.map(r => RUNE_DEFS[r]?.name || r).join('+') : '');
+        const sel = _fusionSource === i ? 'border:2px solid var(--gold);' : '';
+        html += `<div class="engrave-card" style="${sel}" onclick="selectFusionSource(${i})"><div>${c.icon} ${cardName}</div><div style="font-size:10px;">${runeLabel}</div></div>`;
+    }
+    html += '</div>';
+    if (_fusionSource !== null) {
+        const src = cards[_fusionSource];
+        html += '<p style="color:var(--gold);margin-top:8px;">选择目标卡牌（接收印记）</p><div class="card-engrave-options" style="display:flex;flex-wrap:wrap;gap:8px;">';
+        for (let i = 0; i < cards.length; i++) {
+            if (i === _fusionSource) continue;
+            const c = cards[i];
+            const hasRune = c.rune || (c._fusedRunes && c._fusedRunes.length > 0);
+            if (!hasRune) continue;
+            const srcRune = src.rune || (src._fusedRunes && src._fusedRunes[0]);
+            const cardName = c.id === 'attack' ? '攻击' : (c.id === 'magicBook' ? '魔法书' : '防御');
+            const srcRuneDef = RUNE_DEFS[srcRune];
+            const compatible = srcRuneDef ? isRuneCompatible(srcRuneDef, c) : true;
+            if (!compatible) continue;
+            html += `<div class="engrave-card" onclick="doFusion(${i})"><div>${c.icon} ${cardName}</div><div style="font-size:10px;">接收印记</div></div>`;
+        }
+        html += '</div>';
+    }
+    html += '<button class="btn btn-small" onclick="closeFusion()" style="margin-top:8px;">关闭</button>';
+    document.getElementById('card-engrave-options').innerHTML = html;
+    showScreen('rune-engrave');
+}
+
+function selectFusionSource(idx) {
+    _fusionSource = idx;
+    showFusionScreen();
+}
+
+function doFusion(targetIdx) {
+    if (_fusionSource === null) return;
+    const src = state.player.cards[_fusionSource];
+    const tgt = state.player.cards[targetIdx];
+    if (!src || !tgt) return;
+    const srcRune = src.rune || (src._fusedRunes && src._fusedRunes.pop());
+    if (!srcRune) return;
+    // Transfer rune
+    if (src.rune) { src.rune = null; src.runeData = {}; }
+    if (!tgt._fusedRunes) tgt._fusedRunes = [];
+    tgt._fusedRunes.push(srcRune);
+    addMessage(`🪡 缝合完成！印记已转移`, 'heal');
+    SFX.play('rune');
+    _fusionSource = null;
+    if (state._pendingFusion) { state._pendingFusion = false; advanceFloor(); }
+    else { render(); }
+}
+
+function closeFusion() {
+    _fusionSource = null;
+    if (state._pendingFusion) { state._pendingFusion = false; advanceFloor(); }
+    else { render(); }
+}
+window.selectFusionSource = selectFusionSource;
+window.doFusion = doFusion;
+window.closeFusion = closeFusion;
+window.showFusionScreen = showFusionScreen;
 
 function showRelicDetail(relicId) {
     const r = RELIC_DEFS[relicId];
@@ -3960,7 +4079,8 @@ function renderHand() {
 function showRewardSummary() {
     state.screen = 'reward';
     $('reward-floor-text').textContent = T.floor(state.floor);
-    $('reward-options').innerHTML = `
+    const opts = document.querySelector('#screen-reward .reward-options');
+    if (opts) opts.innerHTML = `
         <div class="reward-card"><div class="reward-icon">💰</div><div class="reward-title">金币</div><div class="reward-desc">+${state._lastGoldGain || 0}</div></div>
         <div class="reward-card"><div class="reward-icon">📈</div><div class="reward-title">经验</div><div class="reward-desc">+${state._lastExpGain || 0}</div></div>
     `;
@@ -3986,18 +4106,15 @@ function render() {
         case 'battle':
             showScreen('battle');
             updateBattleUI();
-            injectSidePanel('battle');
             break;
         case 'map':
             showMap();
-            injectSidePanel('map');
             break;
         case 'question-room':
             showQuestionRoom();
             break;
         case 'shop':
             renderShop();
-            injectSidePanel('shop');
             break;
         case 'chest-result':
             showScreen('chest-result');
