@@ -893,11 +893,11 @@ const BOSS_DEFS = {
         intro: '「我有如此景象可供你一睹！」',
         skillName: '享乐',
         skillIcon: '😵',
-        skillDesc: '玩家跳过下一次自己的回合（照常回能量和抽牌，但不能打出卡牌）。',
+        skillDesc: '玩家接下来3回合无法出牌（照常回能量和抽牌）。',
         floorRange: [40, 80],
         skillEffect(state) {
-            state.skipCardPlay = true;
-            addMessage('😵 守秘者使用了「享乐」：下回合无法出牌！', 'damage');
+            state.skipCardPlayTurns = 3;
+            addMessage('😵 守秘者使用了「享乐」：接下来3回合无法出牌！', 'damage');
         },
     },
     greatUnclean: {
@@ -1516,7 +1516,7 @@ function freshState() {
         enemyTurnCounter: 0,   // Track turns for boss skill cycle
         enemyIntentType: 'attack', // 'attack' | 'skill'
         enemyIntentLabel: '',  // Intent display label for skills
-        skipCardPlay: false,   // Secret Keeper's pleasure skill
+        skipCardPlayTurns: 0,   // Secret Keeper's pleasure skill (remaining turns)
         plagueTurns: 0,        // Great Unclean One's plague debuff
         turnFlags: {
             damageReduction: false,
@@ -1723,9 +1723,9 @@ function startTurn() {
     // Decrement plague turns
     if (state.plagueTurns > 0) state.plagueTurns--;
 
-    // Handle skipCardPlay (守秘者享乐)
-    if (state.skipCardPlay) {
-        state.skipCardPlay = false;
+    // Handle skipCardPlayTurns (守秘者享乐)
+    if (state.skipCardPlayTurns > 0) {
+        state.skipCardPlayTurns--;
         state.battlePhase = 'player';
         state.shield = 0;
         state.turnFlags = { damageReduction: false, damageReductionCard: null, counterAttack: false, counterAttackCard: null };
@@ -1736,7 +1736,7 @@ function startTurn() {
             SFX.play('draw');
             addMessage(T.msgDraw, 'info');
         }
-        addMessage('😵 享乐效果：本回合无法出牌，请直接结束回合', 'info');
+        addMessage(`😵 享乐效果：本回合无法出牌（剩余${state.skipCardPlayTurns}回合）`, 'info');
         // Disable all cards automatically
         updateBattleUI();
         return;
@@ -1763,7 +1763,7 @@ function getCardHooks(card) {
 function playCard(handIndex) {
     if (state.battlePhase !== 'player') return;
     // Skip card play if affected by Secret Keeper's pleasure
-    if (state.skipCardPlay) {
+    if (state.skipCardPlayTurns > 0) {
         addMessage('😵 享乐效果：无法出牌！', 'damage');
         return;
     }
