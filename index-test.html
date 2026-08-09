@@ -1,0 +1,4400 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>无尽杀戮</title>
+<style>
+/* ==================== RESET & BASE ==================== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+:root {
+    --bg: #0a0a1a;
+    --panel: #14142a;
+    --panel-light: #1e1e3a;
+    --gold: #ffd700;
+    --gold-dark: #b8960f;
+    --player: #4fc3f7;
+    --player-dark: #0288d1;
+    --enemy: #ef5350;
+    --enemy-dark: #b71c1c;
+    --shield: #42a5f5;
+    --energy: #ffeb3b;
+    --hp-green: #4caf50;
+    --hp-red: #f44336;
+    --text: #e0e0e0;
+    --text-dim: #9e9e9e;
+    --card-atk: #ef5350;
+    --card-def: #42a5f5;
+    --card-bg: #1a1a35;
+    --btn-bg: #2a2a4a;
+    --btn-hover: #3a3a5a;
+}
+
+html, body { width: 100%; height: 100%; overflow: hidden; }
+body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Helvetica Neue", sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    display: flex; align-items: center; justify-content: center;
+    user-select: none;
+    -webkit-user-select: none;
+}
+#app { width: 100%; max-width: 800px; height: 100dvh; max-height: 100dvh; position: relative; overflow: hidden; }
+
+/* ==================== HUD BAR ==================== */
+#hud-bar {
+    position: absolute; top: 0; left: 0; right: 0; z-index: 100;
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 6px 16px; background: rgba(10,10,26,0.92);
+    border-bottom: 1px solid #333; font-size: 14px; font-weight: 700;
+}
+.hud-hp { color: var(--hp-green); }
+.hud-floor { color: var(--gold); }
+.hud-gold { color: var(--energy); }
+.hud-effects-btn { padding: 3px 10px; font-size: 12px; }
+
+/* ==================== MODAL ==================== */
+.modal-overlay {
+    position: fixed; inset: 0; background: rgba(0,0,0,0.75); z-index: 200;
+    display: flex; align-items: center; justify-content: center;
+}
+.modal-content {
+    background: var(--panel); border: 2px solid var(--gold); border-radius: 12px;
+    padding: 20px 24px; max-width: 560px; width: 90%; max-height: 80vh;
+    overflow-y: auto; text-align: center;
+}
+.modal-content h2 { color: var(--gold); font-size: 20px; margin-bottom: 12px; }
+.effects-list { display: flex; flex-direction: column; gap: 8px; text-align: left; }
+.effect-entry {
+    padding: 10px 14px; background: var(--panel-light); border-radius: 8px;
+    border-left: 3px solid #ce93d8;
+}
+.effect-entry .eff-name { font-weight: 700; color: #ce93d8; font-size: 14px; }
+.effect-entry .eff-tag {
+    font-size: 10px; padding: 1px 6px; border-radius: 4px; margin-left: 6px;
+    font-weight: 700;
+}
+.eff-tag.attack { background: rgba(239,83,80,0.2); color: var(--card-atk); }
+.eff-tag.defense { background: rgba(66,165,245,0.2); color: var(--card-def); }
+.eff-tag.universal { background: rgba(255,215,0,0.2); color: var(--gold); }
+.effect-entry .eff-desc { font-size: 12px; color: #bbb; margin-top: 2px; line-height: 1.5; }
+
+/* ==================== SCREENS ==================== */
+.screen { position: absolute; inset: 0; display: none; flex-direction: column; align-items: center; justify-content: center; padding: 24px; }
+.screen.active { display: flex; }
+
+/* ==================== MAIN MENU ==================== */
+#screen-menu { gap: 16px; }
+#screen-menu .title { font-size: 38px; font-weight: 900; color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.4), 2px 2px 0 var(--gold-dark); letter-spacing: 4px; }
+#screen-menu .subtitle { font-size: 16px; color: var(--text-dim); margin-bottom: 12px; letter-spacing: 2px; }
+.menu-instructions {
+    max-width: 580px; max-height: 280px; overflow-y: auto; text-align: left;
+    font-size: 13px; color: #aaa; line-height: 1.7; margin-bottom: 16px;
+    padding: 12px 16px; background: rgba(255,255,255,0.03); border-radius: 8px;
+    border: 1px solid #2a2a4a;
+}
+.menu-instructions p { margin-bottom: 6px; }
+.menu-instructions b { color: var(--text); }
+
+/* ==================== RECORDS ==================== */
+.records-container { max-width: 440px; width: 90%; margin: 0 auto; }
+.records-container h3 { font-size: 14px; color: var(--gold); text-align: center; margin-bottom: 8px; }
+.record-item { display: flex; align-items: center; gap: 8px; padding: 5px 10px; background: var(--panel); border-radius: 6px; margin-bottom: 4px; font-size: 12px; }
+.record-icon { font-size: 16px; min-width: 24px; text-align: center; }
+.record-label { color: var(--text); font-weight: 700; min-width: 80px; }
+.record-stats { color: var(--text-dim); flex: 1; }
+.record-date { color: #555; font-size: 10px; white-space: nowrap; }
+
+/* ==================== BUTTONS ==================== */
+.btn {
+    padding: 14px 40px; font-size: 18px; font-weight: 700;
+    border: 2px solid var(--gold); border-radius: 8px;
+    background: var(--btn-bg); color: var(--gold);
+    cursor: pointer; transition: all 0.2s; letter-spacing: 2px;
+}
+.btn:hover { background: var(--btn-hover); transform: translateY(-2px); box-shadow: 0 4px 16px rgba(255,215,0,0.2); }
+.btn:active { transform: translateY(0); }
+.btn-small { padding: 8px 20px; font-size: 14px; }
+.btn-danger { border-color: var(--enemy); color: var(--enemy); }
+.btn-danger:hover { box-shadow: 0 4px 16px rgba(239,83,80,0.3); }
+
+/* ==================== BATTLE SCREEN ==================== */
+#screen-battle { justify-content: space-between; padding: 6px 10px; gap: 0; }
+.battle-header { width: 100%; display: flex; justify-content: space-between; align-items: center; }
+/* Side info panel (relics + player stats) */
+.side-panel { width: 100px; display: flex; flex-direction: column; gap: 6px; font-size: 10px; padding: 4px; background: rgba(0,0,0,0.2); border-radius: 6px; height: fit-content; max-height: 100%; overflow-y: auto; }
+.side-panel .panel-title { font-size: 11px; color: var(--gold); text-align: center; border-bottom: 1px solid #333; padding-bottom: 2px; margin-bottom: 2px; }
+.side-panel .stat-row { display: flex; justify-content: space-between; }
+.side-panel .stat-label { color: var(--text-dim); }
+.side-panel .stat-value { color: var(--text); font-weight: 700; }
+.side-relics { display: flex; flex-wrap: wrap; gap: 4px; justify-content: center; }
+.side-relic { font-size: 18px; cursor: pointer; padding: 2px; border-radius: 4px; transition: background 0.2s; }
+.side-relic:hover { background: rgba(255,215,0,0.2); }
+.battle-header .floor { font-size: 16px; font-weight: 700; color: var(--gold); }
+.battle-header .header-gold { font-size: 13px; font-weight: 700; color: var(--energy); }
+.battle-header .btn { padding: 4px 10px; font-size: 11px; }
+
+.battle-main { display: flex; gap: 6px; flex: 2 0 auto; align-items: center; }
+.battle-left { width: 110px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; }
+.battle-center { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
+.battle-right { width: 110px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; }
+/* Hide player-stats when side panel is shown */
+#screen-battle .side-panel ~ .battle-left { display: none; }
+
+.char-sprite { width: 75px; height: 115px; }
+#enemy-sprite { width: 75px; height: 115px; }
+.boss #enemy-sprite { width: 95px; height: 135px; }
+.chars-row { display: flex; align-items: flex-end; gap: 10px; margin: 4px 0; }
+.shield-big { font-size: 22px; font-weight: 900; top: -8px; }
+.vs-text { font-size: 18px; }
+.enemy-info-center { width: 150px; }
+.enemy-info-center .hp-bar-wrap { width: 150px; }
+
+.char-name { font-size: 14px; font-weight: 700; }
+.player-name { color: var(--player); }
+.enemy-name { color: var(--enemy); }
+.intent-display { font-size: 18px; font-weight: 900; color: var(--enemy); text-align: center; padding: 4px 0; text-shadow: 0 0 8px rgba(239,83,80,0.6); min-height: 28px; }
+.intent-display.skill-intent { color: var(--gold); text-shadow: 0 0 8px rgba(255,215,0,0.5); animation: pulseIntent 0.8s ease-in-out infinite; }
+@keyframes pulseIntent { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+.btn-view-skill { font-size: 10px; padding: 2px 6px; background: var(--panel); border: 1px solid var(--gold); color: var(--gold); border-radius: 4px; cursor: pointer; margin-top: 2px; }
+.btn-view-skill:hover { background: var(--gold); color: #000; }
+.boss-intro-text { font-size: 22px; font-weight: 900; color: var(--gold); text-align: center; text-shadow: 0 0 16px rgba(255,215,0,0.6); padding: 40px; animation: fadeInMsg 0.5s ease; line-height: 1.5; }
+
+.chars-row { display: flex; align-items: flex-end; gap: 12px; }
+.char-box { display: flex; flex-direction: column; align-items: center; position: relative; }
+.char-box .hp-bar-wrap { width: 90px; margin-top: 2px; }
+.char-box .hp-text { font-size: 10px; }
+.vs-text { font-size: 18px; font-weight: 900; color: var(--gold); text-shadow: 0 0 8px rgba(255,215,0,0.3); align-self: flex-end; margin-bottom: 30px; }
+
+.char-sprite { width: 70px; height: 105px; }
+#enemy-sprite { width: 70px; height: 105px; }
+.boss #enemy-sprite { width: 90px; height: 130px; }
+
+.shield-big {
+    font-size: 22px; font-weight: 900; color: var(--shield);
+    position: absolute; top: -8px; left: 50%; transform: translateX(-50%);
+    text-shadow: 0 0 8px rgba(66,165,245,0.5); white-space: nowrap;
+}
+
+.enemy-info-center { display: flex; flex-direction: column; align-items: center; gap: 1px; width: 160px; }
+
+.stats { display: flex; flex-direction: column; gap: 1px; font-size: 11px; width: 100%; }
+.stat-row { display: flex; justify-content: space-between; }
+.stat-row .label { color: var(--text-dim); }
+.stat-row .value { font-weight: 700; }
+
+.hp-bar-wrap { width: 100%; height: 8px; background: #333; border-radius: 4px; overflow: hidden; }
+.hp-bar { height: 100%; transition: width 0.4s ease; border-radius: 4px; }
+.hp-bar.player-hp { background: var(--hp-green); }
+.hp-bar.enemy-hp { background: var(--hp-red); }
+.hp-text { font-size: 11px; font-weight: 700; text-align: center; }
+
+/* Card row at bottom */
+.card-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+.energy-big {
+    font-size: 24px; font-weight: 900; color: var(--energy);
+    text-shadow: 0 0 8px rgba(255,235,59,0.4); white-space: nowrap;
+    min-width: 60px; text-align: center;
+}
+
+/* ==================== MESSAGE LOG ==================== */
+.message-log { width: 100%; min-height: 40px; max-height: 80px; overflow-y: auto; font-size: 12px; color: var(--text-dim); text-align: center; padding: 4px 0; flex: 1; }
+.message-log .msg { padding: 2px 0; animation: fadeInMsg 0.3s ease; }
+.message-log .msg.damage { color: var(--enemy); }
+.message-log .msg.heal { color: var(--hp-green); }
+.message-log .msg.info { color: var(--player); }
+@keyframes fadeInMsg { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+
+/* ==================== CARD HAND ==================== */
+.card-area { width: 100%; }
+.card-hand { display: flex; justify-content: flex-start; gap: 12px; padding: 8px 0; }
+.card-slot { width: 130px; min-height: 170px; }
+.card {
+    width: 130px; min-height: 170px; border-radius: 10px; padding: 12px;
+    background: var(--card-bg); border: 2px solid #333;
+    display: flex; flex-direction: column; justify-content: space-between;
+    cursor: pointer; transition: all 0.2s; position: relative;
+}
+.card:hover:not(.disabled) { transform: translateY(-8px); box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
+.card:active:not(.disabled) { transform: translateY(-2px); }
+.card.atk-card { border-color: var(--card-atk); }
+.card.atk-card:hover:not(.disabled) { box-shadow: 0 8px 24px rgba(239,83,80,0.3); }
+.card.def-card { border-color: var(--card-def); }
+.card.def-card:hover:not(.disabled) { box-shadow: 0 8px 24px rgba(66,165,245,0.3); }
+.card.disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(50%); }
+.card-cost {
+    position: absolute; top: -8px; left: -8px;
+    width: 28px; height: 28px; border-radius: 50%;
+    background: var(--energy); color: #333;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 14px; font-weight: 900;
+}
+.card-icon { font-size: 36px; text-align: center; }
+.card-title { font-size: 16px; font-weight: 700; text-align: center; }
+.card-desc { font-size: 11px; color: var(--text-dim); text-align: center; line-height: 1.4; }
+.card-type-label { font-size: 10px; text-align: center; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+.card-type-label.atk { color: var(--card-atk); }
+.card-type-label.def { color: var(--card-def); }
+
+.card-rune {
+    font-size: 10px; text-align: center; font-weight: 700;
+    color: #ce93d8; background: rgba(156,39,176,0.15);
+    border-radius: 4px; padding: 1px 6px; margin: 2px 0;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+
+.deck-info { text-align: center; font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+
+/* ==================== END TURN BUTTON ==================== */
+.end-turn-wrap { text-align: center; padding-bottom: 4px; }
+.end-turn-wrap .btn { min-width: 140px; }
+
+/* ==================== REWARD SCREEN ==================== */
+#screen-reward { gap: 24px; }
+#screen-reward h2 { font-size: 28px; color: var(--gold); }
+#screen-reward .reward-options { display: flex; gap: 20px; }
+.reward-card {
+    width: 200px; padding: 20px; border-radius: 12px;
+    border: 2px solid #555; background: var(--panel-light);
+    text-align: center; cursor: pointer; transition: all 0.2s;
+}
+.reward-card:hover { border-color: var(--gold); transform: translateY(-4px); box-shadow: 0 8px 24px rgba(255,215,0,0.15); }
+.reward-card .reward-icon { font-size: 40px; margin-bottom: 8px; }
+.reward-card .reward-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.reward-card .reward-desc { font-size: 13px; color: var(--text-dim); }
+
+/* ==================== VICTORY & GAMEOVER ==================== */
+#screen-victory h2 { font-size: 36px; color: var(--gold); margin-bottom: 8px; text-shadow: 0 0 20px rgba(255,215,0,0.5); }
+#screen-victory p, #screen-gameover p { color: var(--text-dim); margin-bottom: 24px; font-size: 16px; }
+#screen-gameover h2 { font-size: 32px; color: var(--enemy); margin-bottom: 8px; }
+#screen-victory .btn, #screen-gameover .btn { margin-top: 8px; }
+
+/* ==================== SHAKE ANIMATION ==================== */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20% { transform: translateX(-6px); }
+    40% { transform: translateX(6px); }
+    60% { transform: translateX(-4px); }
+    80% { transform: translateX(4px); }
+}
+.shake { animation: shake 0.4s ease; }
+
+/* ==================== DAMAGE FLOAT ==================== */
+.damage-float {
+    position: absolute; font-weight: 900; font-size: 20px;
+    pointer-events: none; animation: floatUp 1s ease-out forwards;
+    z-index: 10;
+}
+@keyframes floatUp {
+    0% { opacity: 1; transform: translateY(0); }
+    100% { opacity: 0; transform: translateY(-50px); }
+}
+
+/* ==================== MAP SCREEN ==================== */
+#screen-map { justify-content: flex-start; padding: 16px 20px; gap: 8px; overflow-y: auto; }
+.map-layout { display: flex; gap: 16px; width: 100%; flex: 1; }
+.map-sidebar { display: flex; flex-direction: column; gap: 8px; min-width: 130px; max-width: 160px; padding-top: 40px; }
+.map-sidebar h2 { font-size: 18px; color: var(--gold); }
+.map-area { font-size: 14px; color: var(--text-dim); }
+.map-legend { display: flex; flex-direction: column; gap: 4px; font-size: 12px; color: var(--text-dim); }
+.map-grid-wrap { flex: 1; overflow: auto; max-height: 470px; }
+.map-grid { min-width: 100%; display: flex; justify-content: center; }
+.map-row { display: flex; gap: 8px; justify-content: center; }
+.map-cell {
+    width: 80px; min-height: 64px; border-radius: 10px; flex-shrink: 0;
+    display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 1px;
+    font-size: 11px; font-weight: 700; cursor: default; transition: all 0.2s;
+    border: 2px solid transparent; background: var(--panel);
+}
+.map-cell.empty { background: transparent; border: none; pointer-events: none; }
+.map-cell.past { opacity: 0.2; }
+.map-cell.current { border-color: #fff; box-shadow: 0 0 14px rgba(255,255,255,0.4); animation: pulse-current 1.5s ease-in-out infinite; opacity: 1; }
+.map-cell.future { opacity: 0.3; }
+.map-cell.next { cursor: pointer; animation: pulse-next 2s ease-in-out infinite; opacity: 1; z-index: 1; }
+.map-cell.next:hover { transform: scale(1.1); box-shadow: 0 0 20px rgba(255,215,0,0.6); z-index: 2; }
+.map-cell .cell-icon { font-size: 24px; line-height: 1; }
+.map-cell .cell-type { font-size: 10px; line-height: 1; }
+
+@keyframes pulse-current { 0%,100% { box-shadow: 0 0 8px rgba(255,255,255,0.2); } 50% { box-shadow: 0 0 18px rgba(255,255,255,0.5); } }
+@keyframes pulse-next { 0%,100% { box-shadow: 0 0 4px rgba(255,215,0,0.2); } 50% { box-shadow: 0 0 14px rgba(255,215,0,0.5); } }
+
+.map-hint { font-size: 13px; color: var(--gold); text-align: center; }
+
+/* ==================== QUESTION ROOM ==================== */
+#screen-question-room h2 { font-size: 28px; color: var(--gold); margin-bottom: 4px; }
+#screen-question-room p { color: var(--text-dim); margin-bottom: 20px; font-size: 15px; }
+#question-room-options { display: flex; gap: 16px; justify-content: center; flex-wrap: wrap; }
+
+/* ==================== SHOP ==================== */
+#screen-shop { gap: 16px; }
+.shop-header { display: flex; align-items: center; gap: 16px; }
+.shop-header h2 { font-size: 28px; color: var(--gold); }
+.shop-gold { font-size: 18px; font-weight: 700; color: var(--energy); }
+#shop-items { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+.shop-item {
+    width: 200px; padding: 20px; border-radius: 12px;
+    border: 2px solid #555; background: var(--panel-light);
+    text-align: center; transition: all 0.2s;
+}
+.shop-item .shop-item-icon { font-size: 36px; margin-bottom: 6px; }
+.shop-item .shop-item-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.shop-item .shop-item-desc { font-size: 12px; color: var(--text-dim); margin-bottom: 10px; }
+.shop-item .shop-item-price { font-size: 16px; font-weight: 700; color: var(--energy); margin-bottom: 10px; }
+.shop-item .btn { padding: 8px 24px; font-size: 14px; }
+.shop-item .btn:disabled { opacity: 0.35; cursor: not-allowed; }
+
+/* ==================== CHEST RESULT ==================== */
+#screen-chest-result { gap: 16px; }
+#screen-chest-result h2 { font-size: 28px; color: var(--gold); }
+#chest-result-content { text-align: center; }
+#chest-result-content .chest-icon { font-size: 60px; margin-bottom: 12px; }
+#chest-result-content .chest-msg { font-size: 20px; font-weight: 700; color: var(--text); margin-bottom: 4px; }
+#chest-result-content .chest-desc { font-size: 14px; color: var(--text-dim); }
+
+/* ==================== RUNE SELECTION ==================== */
+#screen-rune-select h2, #screen-rune-engrave h2 { font-size: 24px; color: var(--gold); margin-bottom: 4px; }
+#screen-rune-select p, #screen-rune-engrave p { color: var(--text-dim); margin-bottom: 16px; font-size: 14px; }
+
+.rune-options, .card-engrave-options { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
+
+.rune-card, .engrave-card {
+    width: 200px; padding: 16px; border-radius: 12px;
+    border: 2px solid #555; background: var(--panel-light);
+    cursor: pointer; transition: all 0.2s; text-align: center;
+}
+.rune-card:hover, .engrave-card:hover:not(.disabled) {
+    border-color: var(--gold); transform: translateY(-4px);
+    box-shadow: 0 8px 24px rgba(255,215,0,0.2);
+}
+.engrave-card.disabled { opacity: 0.35; cursor: not-allowed; filter: grayscale(60%); }
+.engrave-card.hasRune { border-color: #9c27b0; }
+.engrave-card.selected { border-color: var(--gold) !important; box-shadow: 0 0 16px rgba(255,215,0,0.4); }
+
+.rune-card .rune-icon { font-size: 36px; margin-bottom: 4px; }
+.rune-card .rune-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+.rune-card .rune-tag {
+    display: inline-block; padding: 2px 8px; border-radius: 10px;
+    font-size: 10px; font-weight: 700; letter-spacing: 1px; margin-bottom: 6px;
+}
+.rune-tag.attack { background: rgba(239,83,80,0.2); color: var(--card-atk); }
+.rune-tag.defense { background: rgba(66,165,245,0.2); color: var(--card-def); }
+.rune-tag.universal { background: rgba(255,215,0,0.2); color: var(--gold); }
+.rune-card .rune-desc { font-size: 13px; color: #ccc; line-height: 1.6; font-weight: 500; margin-top: 4px; }
+
+.engrave-card .engrave-icon { font-size: 32px; margin-bottom: 4px; }
+.engrave-card .engrave-name { font-size: 16px; font-weight: 700; margin-bottom: 2px; }
+.engrave-card .engrave-rune {
+    font-size: 11px; padding: 1px 6px; border-radius: 6px;
+    background: rgba(156,39,176,0.2); color: #ce93d8; display: inline-block; margin-bottom: 4px;
+}
+.engrave-card .engrave-hint { font-size: 11px; color: var(--text-dim); }
+
+/* ==================== MOBILE ADAPTATION ==================== */
+@media (max-width: 750px) {
+    #app { max-height: none; height: 100dvh; }
+    #screen-menu .title { font-size: 28px; }
+    #screen-menu .subtitle { font-size: 13px; }
+    .menu-instructions { max-height: 200px; font-size: 11px; }
+    .menu-instructions p { margin-bottom: 4px; }
+    .btn { padding: 12px 28px; font-size: 15px; }
+
+    /* Battle: narrower side panels */
+    .battle-left, .battle-right { width: 85px; font-size: 10px; }
+    .battle-left .stats, .battle-right .stats { font-size: 10px; }
+    .battle-header { flex-wrap: wrap; gap: 4px; }
+    .battle-header .floor { font-size: 13px; }
+    .battle-header .header-gold { font-size: 11px; }
+    .battle-header .btn { padding: 3px 8px; font-size: 10px; }
+
+    /* Cards: smaller, flexible */
+    .card { width: calc(25% - 8px); min-width: 70px; max-width: 110px; min-height: 130px; padding: 6px; }
+    .card-icon { font-size: 18px; }
+    .card-title { font-size: 11px; }
+    .card-desc { font-size: 9px; }
+    .card-cost { width: 22px; height: 22px; font-size: 10px; top: -6px; left: -6px; }
+    .card-type-label { font-size: 8px; padding: 1px 4px; }
+    .card-rune { font-size: 9px; }
+    .card-hand { gap: 4px; }
+
+    /* Sprites: smaller */
+    .char-sprite { width: 50px; height: 80px; }
+    #enemy-sprite { width: 50px; height: 80px; }
+    .boss #enemy-sprite { width: 65px; height: 95px; }
+    .shield-big { font-size: 16px; top: -4px; }
+    .vs-text { font-size: 14px; margin-bottom: 20px; }
+    .char-name { font-size: 11px; }
+    .intent-display { font-size: 12px; }
+    .char-box .hp-bar-wrap { width: 70px; }
+    .char-box .hp-text { font-size: 9px; }
+
+    /* Energy & buttons */
+    .energy-big { font-size: 18px; min-width: 45px; }
+    .card-row { flex-wrap: nowrap; gap: 4px; overflow-x: auto; }
+    .card-hand { flex-shrink: 1; min-width: 0; }
+    #btn-end-turn { padding: 8px 12px; font-size: 13px; min-width: 72px; flex-shrink: 0; }
+    .btn-view-skill { font-size: 9px; padding: 2px 4px; }
+
+    /* Map */
+    .map-layout { flex-direction: column; }
+    .map-sidebar { flex-direction: row; flex-wrap: wrap; gap: 8px; max-width: none; min-width: 0; }
+    .map-sidebar h2 { font-size: 14px; }
+    .map-legend { flex-direction: row; gap: 8px; }
+    .map-grid { transform: scale(0.7); transform-origin: top center; }
+    #map-area-text { font-size: 12px; }
+
+    /* Shop */
+    .shop-item { padding: 6px; font-size: 11px; }
+    .shop-item-icon { font-size: 16px; }
+    .shop-item-name { font-size: 11px; }
+    .shop-item-desc { font-size: 9px; }
+    .shop-item-price { font-size: 10px; }
+    #screen-shop { gap: 6px; padding: 6px; }
+    #shop-items { max-height: 55vh; overflow-y: auto; }
+    .shop-pages { gap: 8px; }
+    .shop-pages .btn { padding: 6px 12px; font-size: 12px; }
+    #btn-leave-shop { margin-top: 4px; font-size: 13px; padding: 8px 20px; }
+
+    /* Modals */
+    .modal-content { padding: 14px 16px; max-width: 95vw; }
+    .boss-intro-text { font-size: 16px; padding: 20px; }
+
+    /* Message log */
+    .message-log { font-size: 10px; min-height: 30px; max-height: 60px; }
+
+    /* Reward */
+    .reward-card { width: 140px; padding: 16px; }
+    .reward-icon { font-size: 32px; }
+
+    /* Deck info */
+    .deck-info { font-size: 10px; }
+
+    /* Records */
+    .record-item { font-size: 10px; gap: 4px; padding: 4px 6px; }
+    .record-icon { font-size: 13px; min-width: 20px; }
+    .record-label { min-width: 60px; }
+    .record-date { font-size: 8px; }
+}
+
+@media (max-width: 400px) {
+    .card { min-width: 60px; max-width: 90px; min-height: 110px; padding: 4px; }
+    .card-icon { font-size: 14px; }
+    .card-title { font-size: 10px; }
+    .card-desc { font-size: 8px; }
+    .card-cost { width: 18px; height: 18px; font-size: 9px; }
+    .battle-left, .battle-right { width: 65px; font-size: 9px; }
+    .battle-left .stats, .battle-right .stats { font-size: 9px; }
+    #screen-menu .title { font-size: 24px; }
+    .char-sprite { width: 40px; height: 65px; }
+    #enemy-sprite { width: 40px; height: 65px; }
+    .boss #enemy-sprite { width: 52px; height: 78px; }
+    .btn { padding: 10px 22px; font-size: 13px; }
+    .energy-big { font-size: 16px; }
+    #btn-end-turn { padding: 6px 10px; font-size: 12px; min-width: 64px; flex-shrink: 0; }
+}
+
+/* Landscape: tight vertical spacing */
+@media (max-height: 500px) {
+    .battle-main { gap: 2px; }
+    .chars-row { gap: 6px; margin: 0; }
+    .char-box .hp-bar-wrap { width: 60px; margin-top: 0; }
+    .hp-bar-wrap { height: 6px; }
+    .vs-text { margin-bottom: 12px; font-size: 12px; }
+    .battle-left, .battle-right { font-size: 9px; gap: 0; }
+    .battle-left .stats, .battle-right .stats { font-size: 9px; gap: 0; }
+    .card-area { padding: 0; }
+    .card { min-height: 100px; }
+    .message-log { min-height: 20px; max-height: 30px; font-size: 9px; }
+    #screen-battle { padding: 2px 6px; gap: 0; }
+    .battle-header { padding: 0; }
+    .battle-header .floor { font-size: 12px; }
+    .char-name { font-size: 10px; }
+    .char-box .hp-text { font-size: 8px; }
+}
+</style>
+</head>
+<body>
+<div id="error-overlay" style="display:none;position:fixed;top:0;left:0;right:0;background:#c62828;color:#fff;padding:10px 16px;z-index:9999;font-size:13px;white-space:pre-wrap;cursor:pointer;" onclick="this.style.display='none'"></div>
+<div id="side-panel-overlay" style="display:none;position:fixed;left:4px;top:40px;z-index:50;flex-direction:column;gap:4px;width:105px;max-height:calc(100vh-80px);overflow-y:auto;"></div>
+<div id="app">
+
+    <!-- HUD (shown on game screens) -->
+    <div id="hud-bar" style="display:none;">
+        <span class="hud-hp">❤️ <span id="hud-hp">100/100</span></span>
+        <span class="hud-floor" id="hud-floor">第 1 层</span>
+        <span class="hud-gold">💰 <span id="hud-gold">0</span></span>
+        <button class="btn btn-small hud-effects-btn" id="btn-effects">效果</button>
+    </div>
+
+    <!-- EFFECTS GLOSSARY MODAL -->
+    <div id="modal-effects" class="modal-overlay" style="display:none;" onclick="closeEffects(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2>🔮 印记图鉴</h2>
+            <div class="effects-list" id="effects-list"></div>
+            <button class="btn btn-small" onclick="closeEffects()">关闭</button>
+        </div>
+    </div>
+
+    <!-- BOSS INTRO MODAL -->
+    <div id="modal-boss-intro" class="modal-overlay" style="display:none;">
+        <div class="modal-content" style="border-color:var(--enemy);">
+            <div class="boss-intro-text" id="boss-intro-text"></div>
+        </div>
+    </div>
+
+    <!-- BOSS SKILL MODAL -->
+    <div id="modal-boss-skill" class="modal-overlay" style="display:none;" onclick="closeBossSkill(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2 id="boss-skill-title" style="color:var(--gold);"></h2>
+            <p id="boss-skill-desc" style="font-size:15px;color:var(--text-dim);margin:12px 0;"></p>
+            <button class="btn btn-small" onclick="closeBossSkill()">关闭</button>
+        </div>
+    </div>
+
+    <!-- ADMIN PANEL (press ` key) -->
+    <div id="modal-admin" class="modal-overlay" style="display:none;" onclick="closeAdmin(event)">
+        <div class="modal-content" onclick="event.stopPropagation()" style="max-width:400px;">
+            <h2 style="color:var(--gold);">🔧 管理员面板</h2>
+            <div style="display:flex;flex-direction:column;gap:8px;margin:12px 0;">
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <span style="color:var(--text-dim);min-width:60px;">跳转楼层</span>
+                    <input id="admin-floor" type="number" min="1" max="100" value="1" style="width:80px;background:#222;color:#fff;border:1px solid #555;padding:4px;border-radius:4px;">
+                    <button class="btn btn-small" onclick="adminJumpFloor()">跳转</button>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <span style="color:var(--text-dim);min-width:60px;">添加遗物</span>
+                    <select id="admin-relic" style="width:160px;background:#222;color:#fff;border:1px solid #555;padding:4px;border-radius:4px;"></select>
+                    <button class="btn btn-small" onclick="adminAddRelic()">添加</button>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
+                    <span style="color:var(--text-dim);min-width:60px;">修改属性</span>
+                </div>
+                <div style="display:flex;gap:4px;flex-wrap:wrap;">
+                    <button class="btn btn-small" onclick="adminModStat('attack',1)">攻击+1</button>
+                    <button class="btn btn-small" onclick="adminModStat('attack',10)">攻击+10</button>
+                    <button class="btn btn-small" onclick="adminModStat('defense',1)">防御+1</button>
+                    <button class="btn btn-small" onclick="adminModStat('defense',10)">防御+10</button>
+                    <button class="btn btn-small" onclick="adminModStat('maxHp',10)">HP+10</button>
+                    <button class="btn btn-small" onclick="adminModStat('maxHp',50)">HP+50</button>
+                    <button class="btn btn-small" onclick="adminModStat('gold',50)">金币+50</button>
+                    <button class="btn btn-small" onclick="adminModStat('gold',200)">金币+200</button>
+                    <button class="btn btn-small" onclick="adminModStat('level',1)">等级+1</button>
+                    <button class="btn btn-small" onclick="adminHealFull()">满血</button>
+                </div>
+            </div>
+            <button class="btn btn-small" onclick="closeAdmin()">关闭</button>
+            <p style="font-size:10px;color:#555;margin-top:8px;">按 ` 键打开/关闭</p>
+        </div>
+    </div>
+
+    <!-- RELIC DETAIL MODAL -->
+    <div id="modal-relic-detail" class="modal-overlay" style="display:none;" onclick="closeRelicDetail(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <div id="relic-detail-content"></div>
+            <button class="btn btn-small" onclick="closeRelicDetail()">关闭</button>
+        </div>
+    </div>
+
+    <!-- RECORDS MODAL -->
+    <div id="modal-records" class="modal-overlay" style="display:none;" onclick="closeRecordsModal(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2 style="color:var(--gold);">📜 历史记录</h2>
+            <div id="records-list" style="max-height:50vh;overflow-y:auto;"></div>
+            <button class="btn btn-small" onclick="closeRecordsModal()" style="margin-top:12px;">关闭</button>
+        </div>
+    </div>
+
+    <!-- MAIN MENU -->
+    <div id="screen-menu" class="screen active">
+        <div class="title">无尽杀戮</div>
+        <div class="subtitle">组建卡组，击杀怪物</div>
+        <div class="menu-instructions">
+            <p><b>⚔️ 战斗：</b>回合制卡牌对战。每回合抽2张牌、恢复2点精力。怪物有防御池——攻击优先消耗防御再扣HP。每回合可看到敌人的意图（攻击/防御/技能）。</p>
+            <p><b>🗺️ 路线：</b>每层在地图上选择房间。⚔️普通战斗 · ⭐精英怪 · ❓事件 · 🛒商店 · 💀楼层主。沿金色连线移动。</p>
+            <p><b>❓ 事件：</b>多样的剧情遭遇，做出选择获得不同结果。每个事件每局最多遇到一次。</p>
+            <p><b>🛒 商店：</b>购买卡牌、属性、遗物、印记缝合等服务。价格随楼层上涨。每局随机上架2个遗物。</p>
+            <p><b>🔮 印记：</b>击败楼层主（25/50/75层）获得印记，刻在卡牌上获得永久效果。商店100g可进行印记缝合转移。</p>
+            <p><b>📈 升级：</b>经验随楼层分档（1-25层:10EXP → 76-100层:3EXP）。升级增加最大HP，攻防通过战斗奖励提升。</p>
+            <p><b>🏆 目标：</b>击败第100层最终Boss「四神共选」通关！按 ` 键打开管理员面板调试。</p>
+        </div>
+        <div class="menu-buttons">
+            <button class="btn" id="btn-start">开始游戏</button>
+            <button class="btn" id="btn-continue" style="display:none;">继续游戏</button>
+            <button class="btn btn-small" id="btn-records" onclick="showRecordsModal()">📜 历史记录</button>
+        </div>
+    </div>
+
+    <!-- BATTLE -->
+    <div id="screen-battle" class="screen">
+        <div class="battle-header">
+            <span class="floor" id="battle-floor">第 1 层</span>
+            <span class="header-gold" id="header-gold">💰 0</span>
+            <button class="btn btn-small" id="btn-quit-battle">返回主界面</button>
+        </div>
+        <div class="battle-main">
+            <!-- Player Stats (left) -->
+            <div class="battle-left">
+                <div class="char-name player-name">玩家</div>
+                <div class="stats" id="player-stats"></div>
+            </div>
+            <!-- Center: Characters + Shield -->
+            <div class="battle-center">
+                <div class="chars-row">
+                    <div class="char-box">
+                        <div class="shield-big" id="shield-display">🛡️ 0</div>
+                        <div class="char-sprite" id="player-sprite"></div>
+                        <div class="hp-bar-wrap"><div class="hp-bar player-hp" id="player-hp-bar" style="width:100%"></div></div>
+                        <div class="hp-text" id="player-hp-text">100 / 100</div>
+                    </div>
+                    <div class="vs-text">VS</div>
+                    <div class="char-box">
+                        <div class="char-name enemy-name" id="enemy-name">怪物</div>
+                        <div class="intent-display" id="enemy-intent">⚔️ 0</div>
+                        <button class="btn-view-skill" id="btn-view-skill" style="display:none;" onclick="viewBossSkill()">查看技能</button>
+                        <div class="char-sprite" id="enemy-sprite"></div>
+                        <div class="hp-bar-wrap"><div class="hp-bar enemy-hp" id="enemy-hp-bar" style="width:100%"></div></div>
+                        <div class="hp-text" id="enemy-hp-text"></div>
+                    </div>
+                </div>
+            </div>
+            <!-- Enemy Stats (right) -->
+            <div class="battle-right">
+                <div class="stats" id="enemy-stats"></div>
+            </div>
+        </div>
+        <div class="message-log" id="message-log"></div>
+        <div class="card-area">
+            <div class="card-row">
+                <div class="energy-big" id="energy-display">⚡ 3 / 3</div>
+                <div class="card-hand" id="card-hand"></div>
+                <button class="btn" id="btn-end-turn">结束回合</button>
+            </div>
+            <div class="deck-info" id="deck-info"></div>
+        </div>
+    </div>
+
+    <!-- REWARD -->
+    <div id="screen-reward" class="screen">
+        <h2>🏆 战斗胜利！</h2>
+        <p id="reward-floor-text">第 1 层</p>
+        <div class="reward-options">
+            <div class="reward-card" id="reward-heal" onclick="selectReward('heal')">
+                <div class="reward-icon">💚</div>
+                <div class="reward-title">回复血量</div>
+                <div class="reward-desc" id="reward-heal-desc">+0 HP</div>
+            </div>
+            <div class="reward-card" id="reward-attr" onclick="showAttrPick()">
+                <div class="reward-icon">💪</div>
+                <div class="reward-title">提升属性</div>
+                <div class="reward-desc">攻击力或防御力 +1~3</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ATTR PICK -->
+    <div id="screen-attr-pick" class="screen">
+        <h2>💪 选择一个属性免费提升</h2>
+        <p id="attr-pick-gold" style="font-size:14px;color:var(--energy);margin-bottom:8px;"></p>
+        <div class="reward-options">
+            <div class="reward-card" onclick="pickAttr('attack')">
+                <div class="reward-icon">⚔️</div>
+                <div class="reward-title">攻击力 +1</div>
+                <div class="reward-desc">免费</div>
+            </div>
+            <div class="reward-card" onclick="pickAttr('defense')">
+                <div class="reward-icon">🛡️</div>
+                <div class="reward-title">防御力 +1</div>
+                <div class="reward-desc">免费</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- VICTORY -->
+    <div id="screen-victory" class="screen">
+        <h2>🎉 恭喜通关！</h2>
+        <p>你击败了所有敌人，成功突破25层！</p>
+        <div class="stats" id="victory-stats"></div>
+        <button class="btn" id="btn-victory-menu">返回主界面</button>
+    </div>
+
+    <!-- MAP / ROAD SELECTION -->
+    <div id="screen-map" class="screen">
+        <div class="map-layout">
+            <div class="map-grid-wrap">
+                <div class="map-grid" id="map-grid"></div>
+            </div>
+            <div class="map-sidebar">
+                <h2>🗺️ 选择路线</h2>
+                <span class="map-area" id="map-area-text"></span>
+                <div class="map-legend" id="map-legend">
+                    <span>⚔️ 战斗</span><span>❓ 问号</span><span>🛒 商店</span><span>💀 Boss</span>
+                </div>
+            </div>
+        </div>
+        <p class="map-hint" id="map-hint">点击上方可选房间继续</p>
+    </div>
+
+    <!-- QUESTION ROOM -->
+    <div id="screen-question-room" class="screen">
+        <h2>❓ 问号房</h2>
+        <p>你发现了一个神秘房间…</p>
+        <div id="question-room-options"></div>
+    </div>
+
+    <!-- SHOP -->
+    <div id="screen-shop" class="screen">
+        <div class="shop-header">
+            <h2>🛒 商店</h2>
+            <span class="shop-gold" id="shop-gold">💰 0</span>
+        </div>
+        <div id="shop-items"></div>
+        <div class="shop-pages" style="display:flex;gap:12px;align-items:center;justify-content:center;margin-top:8px;">
+            <button class="btn btn-small" id="btn-shop-prev" onclick="shopPage(-1)" style="display:none;">◀ 上一页</button>
+            <span id="shop-page-num" style="font-size:12px;color:var(--text-dim);"></span>
+            <button class="btn btn-small" id="btn-shop-next" onclick="shopPage(1)">下一页 ▶</button>
+        </div>
+        <button class="btn" id="btn-leave-shop" style="margin-top:8px;">离开商店</button>
+    </div>
+
+    <!-- CHEST RESULT -->
+    <div id="screen-chest-result" class="screen">
+        <h2>📦 随机宝箱</h2>
+        <div id="chest-result-content"></div>
+        <button class="btn" id="btn-chest-continue">继续</button>
+    </div>
+
+    <!-- RUNE CONFIRM (accept/decline) -->
+    <div id="screen-rune-confirm" class="screen">
+        <h2>🔮 获得印记</h2>
+        <div id="rune-confirm-card" class="rune-card" style="margin-bottom:16px;"></div>
+        <div style="display:flex;gap:12px;">
+            <button class="btn" id="btn-accept-rune" onclick="acceptRune()">获得</button>
+            <button class="btn btn-small" onclick="declineRune()">放弃</button>
+        </div>
+    </div>
+
+    <!-- RUNE SELECTION -->
+    <div id="screen-rune-select" class="screen">
+        <h2 id="rune-select-title">选择印记</h2>
+        <p id="rune-select-desc">选择一个印记刻在卡牌上</p>
+        <div class="rune-options" id="rune-options"></div>
+        <button class="btn btn-small" onclick="declineRune()" style="margin-top:12px;">放弃（不获得印记）</button>
+    </div>
+
+    <!-- CARD ENGRAVE -->
+    <div id="screen-rune-engrave" class="screen">
+        <h2 id="rune-engrave-title">选择卡牌</h2>
+        <p id="rune-engrave-desc"></p>
+        <div class="card-engrave-options" id="card-engrave-options"></div>
+    </div>
+
+    <!-- GAME OVER -->
+    <div id="screen-gameover" class="screen">
+        <h2>💀 游戏结束</h2>
+        <p>很可惜，再接再厉吧！</p>
+        <div class="stats" id="gameover-stats"></div>
+        <button class="btn btn-danger" id="btn-gameover-menu">返回主界面</button>
+    </div>
+
+</div>
+
+<script>
+// =====================================================================
+// TEXT SYSTEM (i18n-ready — swap this object for English or other langs)
+// =====================================================================
+const T = {
+    gameTitle: '无尽杀戮',
+    gameSubtitle: '组建卡组，击杀怪物',
+    startGame: '开始游戏',
+    backToMenu: '返回主界面',
+    player: '玩家',
+    enemyMonster: '怪物',
+    enemyBoss: '楼层主',
+    floor: (n) => `第 ${n} 层`,
+    victory: '🎉 恭喜通关！',
+    victoryDesc: '你击败了所有敌人，成功突破25层！',
+    gameOver: '💀 游戏结束',
+    gameOverDesc: '很可惜，再接再厉吧！',
+    battleWin: '🏆 战斗胜利！',
+    rewardExp: '提升经验值',
+    rewardHeal: '回复血量',
+    rewardExpDesc: (n) => `获得 ${n} 点经验`,
+    rewardHealDesc: (n) => `恢复 ${n} 点生命（最大HP的10%）`,
+    cardAttack: '攻击',
+    cardDefense: '防御',
+    cardAttackDesc: (atk) => `造成 ${atk} 点伤害`,
+    cardDefenseDesc: (def) => `获得 ${def} 点护盾`,
+    endTurn: '结束回合',
+    levelUp: '🎊 升级！',
+    msgDraw: '抽到了 4 张牌',
+    msgShuffle: '抽牌堆为空，洗入弃牌堆',
+    msgEnemyAttack: (name, dmg) => `${name} 攻击，造成 ${dmg} 点伤害`,
+    msgShieldBlock: (amount) => `护盾抵挡了 ${amount} 点伤害`,
+    msgPlayerDeath: '玩家倒下了…',
+    msgEnemyDeath: (name) => `${name} 被击败了！`,
+    msgNoEnergy: '精力不足！',
+    deckInfo: (draw, discard) => `📦 抽牌堆 ${draw} 张 ｜ 🗑️ 弃牌堆 ${discard} 张`,
+    // Runes
+    runeSelectTitle: '选择印记',
+    runeSelectDesc: '选择一个印记刻在卡牌上',
+    runeEngraveTitle: '选择卡牌',
+    runeEngraveDesc: (runeName) => `将「${runeName}」刻在哪张卡牌上？`,
+    runeTypeAttack: '攻击印记',
+    runeTypeDefense: '防御印记',
+    runeTypeUniversal: '通用印记',
+    runeEngraved: (runeName, cardName) => `「${runeName}」已刻在${cardName}卡上！`,
+    cardHasRune: '该卡已有印记',
+    cardIncompatible: '卡牌类型不匹配',
+    victoryV2: '🎉 恭喜通关！',
+    victoryV2Desc: '你击败了第100层的最终Boss！',
+};
+
+// =====================================================================
+// GAME BALANCE CONFIG
+// =====================================================================
+const BALANCE = {
+    totalFloors: 100,
+    bossFloors: [25, 50, 75, 100],
+    player: {
+        initial: { level: 1, maxHp: 50, hp: 50, attack: 7, defense: 4, exp: 0, gold: 0 },
+        maxEnergy: 2,
+        drawPerTurn: 2,
+        levelUpBonus: { maxHp: 10 },
+        shopExtraEnergyBought: false,
+        shopExtraDrawCount: 0,
+        relics: [],
+        initialCards: [
+            { id: 'attack', icon: '⚔️', type: 'atk', cost: 1, effect: 'dealDamage', rune: null, runeData: {} },
+            { id: 'attack', icon: '⚔️', type: 'atk', cost: 1, effect: 'dealDamage', rune: null, runeData: {} },
+            { id: 'defense', icon: '🛡️', type: 'def', cost: 1, effect: 'gainShield', rune: null, runeData: {} },
+            { id: 'defense', icon: '🛡️', type: 'def', cost: 1, effect: 'gainShield', rune: null, runeData: {} },
+        ],
+    },
+    monster: {}, // HP/ATK now calculated in-tier in generateEnemy
+    bosses: {
+        25: { hp: 190, attack: 17 },
+        50: { hp: 280, attack: 26 },
+        75: { hp: 400, attack: 35 },
+        100: { hp: 700, attack: 55 },
+    },
+    healPercent: 0.1,
+    runesPerSelection: 3,
+};
+
+// =====================================================================
+// BOSS DEFINITIONS (data-driven — add new bosses here)
+// =====================================================================
+const BOSS_DEFS = {
+    shapeshifter: {
+        id: 'shapeshifter',
+        name: '万变魔君',
+        intro: '「世界毁灭，再重塑——这才是我最享受的戏法。」',
+        skillName: '变化',
+        skillIcon: '🎭',
+        skillDesc: '所有卡牌精力消耗随机变为0–3点，持续到战斗结束。',
+        floorRange: [1, 35],
+        skillEffect(state) {
+            for (const card of [...state.deck.hand, ...state.deck.draw, ...state.deck.discard]) {
+                card._savedCost = card.cost;
+                card.cost = randInt(0, 3);
+            }
+            addMessage('🎭 万变魔君使用了「变化」：所有卡牌消耗永久随机改变！', 'damage');
+        },
+        skillCleanup(state) {
+            for (const card of [...state.deck.hand, ...state.deck.draw, ...state.deck.discard]) {
+                if (card._savedCost !== undefined) { card.cost = card._savedCost; delete card._savedCost; }
+            }
+        },
+    },
+    bloodrage: {
+        id: 'bloodrage',
+        name: '嗜血狂魔',
+        intro: '「杀！杀！杀！」',
+        skillName: '鲜血暴怒',
+        skillIcon: '🩸',
+        skillDesc: 'Boss当前HP降低30%，随后对玩家造成自身攻击力×2的伤害（可被护盾抵挡）。',
+        floorRange: [25, 60],
+        skillEffect(state) {
+            const selfDmg = Math.floor(state.enemy.hp * 0.3);
+            state.enemy.hp -= selfDmg;
+            let dmg = state.enemy.attack * 2;
+            // Apply shield first
+            if (state.shield > 0) {
+                const blocked = Math.min(state.shield, dmg);
+                state.shield -= blocked;
+                dmg -= blocked;
+                if (blocked > 0) addMessage(T.msgShieldBlock(blocked), 'info');
+            }
+            state.player.hp -= dmg;
+            addMessage(`🩸 嗜血狂魔使用了「鲜血暴怒」：自损 ${selfDmg}，对你造成 ${dmg} 点伤害！`, 'damage');
+            if (dmg > 0) {
+                animateDamage('player-sprite', dmg, 'damage');
+                shakeElement('player-sprite');
+            }
+            SFX.play('hit');
+        },
+    },
+    secretKeeper: {
+        id: 'secretKeeper',
+        name: '守秘者',
+        intro: '「我有如此景象可供你一睹！」',
+        skillName: '享乐',
+        skillIcon: '😵',
+        skillDesc: '玩家接下来3回合无法出牌（照常回能量和抽牌）。',
+        floorRange: [40, 80],
+        skillEffect(state) {
+            state.skipCardPlayTurns = 3;
+            addMessage('😵 守秘者使用了「享乐」：接下来3回合无法出牌！', 'damage');
+        },
+    },
+    greatUnclean: {
+        id: 'greatUnclean',
+        name: '大不净者',
+        intro: '「瘟疫是生命的礼赞，腐烂是慈父的诗篇。」',
+        skillName: '瘟疫',
+        skillIcon: '☠️',
+        skillDesc: '每使用一张卡牌额外失去最大HP的5%，持续到战斗结束。',
+        floorRange: [60, 100],
+        skillEffect(state) {
+            state.plagueTurns = 999;
+            addMessage('☠️ 大不净者使用了「瘟疫」：本场战斗每出一张卡扣5%最大HP！', 'damage');
+        },
+    },
+    fourGodsChosen: {
+        id: 'fourGodsChosen',
+        name: '四神共选',
+        intro: '「这里是终点吗？」',
+        skillName: '四神之力',
+        skillIcon: '👑',
+        skillDesc: '可使用万变魔君、嗜血狂魔、守秘者、大不净者的所有技能。',
+        floorRange: [100, 100],
+        allSkills: ['shapeshifter', 'bloodrage', 'secretKeeper', 'greatUnclean'],
+        _skillIndex: 0,
+        skillEffect(state) {
+            const skills = this.allSkills;
+            const skillId = skills[this._skillIndex % skills.length];
+            this._skillIndex++;
+            const skillBoss = BOSS_DEFS[skillId];
+            addMessage(`👑 四神共选释放了「${skillBoss.skillName}」！`, 'damage');
+            skillBoss.skillEffect(state);
+        },
+    },
+};
+
+// =====================================================================
+// RELIC DEFINITIONS (data-driven)
+// =====================================================================
+const RELIC_DEFS = {
+    runeGem: {
+        id: 'runeGem', name: '符文宝石', icon: '💎',
+        desc: '一块看似普通的宝石，内部封存着某种强大的力量。每回合精力值+1。',
+    },
+    blackstoneShard: {
+        id: 'blackstoneShard', name: '黑石要塞的残片', icon: '🏰',
+        desc: '远古文明留下的巨大黑色堡垒。获得后可进行一次免费印记缝合。',
+    },
+    burningBlood: {
+        id: 'burningBlood', name: '燃烧之血', icon: '🔥',
+        desc: '此血来自一名不知疲倦的战士。每场战斗结束后回复最大HP的5%。',
+    },
+    snakeRing: {
+        id: 'snakeRing', name: '蛇之戒指', icon: '💍',
+        desc: '来自一名猎手的友谊。每场战斗第一回合额外抽1张牌。',
+    },
+    hexCrystal: {
+        id: 'hexCrystal', name: '海克斯水晶', icon: '💠',
+        desc: '蕴含巨大能量的水晶，科技与魔法在其中交汇。每场战斗第一个回合额外+1精力。',
+    },
+    voidShard: {
+        id: 'voidShard', name: '虚空碎片', icon: '🌑',
+        desc: '来自世界之外的碎片。生命值低于50%时，攻击力和防御力+10%。',
+    },
+    soulStone: {
+        id: 'soulStone', name: '灵魂石', icon: '💎',
+        desc: '曾经属于某个死去的灵魂。生命值归零时复活并回复50%HP，使用后消失。不可再次获得。',
+    },
+    emperorSeal: {
+        id: 'emperorSeal', name: '帝皇圣印', icon: '👑',
+        desc: '在这个黑暗的时代，信仰本身就是一种武器。每场战斗第一次受到致命伤害时，伤害降至1点。',
+    },
+    chaosMark: {
+        id: 'chaosMark', name: '混沌印记', icon: '🌀',
+        desc: '力量从来不会无偿给予。攻击力和防御力+10%，但每场战斗结束失去2%最大HP。',
+    },
+    blessedBlood: {
+        id: 'blessedBlood', name: '赐予恩惠的神血', icon: '🩸',
+        desc: '只要还愿意继续前进，弱小也终能变成力量。获得经验值时额外+20%。',
+    },
+    hestiaBlessing: {
+        id: 'hestiaBlessing', name: '赫斯缇雅的恩惠', icon: '🔥',
+        desc: '神明无法替你战斗，但她会一直注视着你。每次升级时额外回复5%最大HP。',
+    },
+    dungeonTreasure: {
+        id: 'dungeonTreasure', name: '地下城的宝藏', icon: '💎',
+        desc: '越是深入地下，等待冒险者的东西就越珍贵。击败怪物后额外获得10%金币。',
+    },
+    medicKit: {
+        id: 'medicKit', name: '医疗探员的急救包', icon: '🏥',
+        desc: '真正优秀的医疗探员总能让队友活着离开。每场战斗结束后回复最大HP的3%。',
+    },
+    engineerToolbox: {
+        id: 'engineerToolbox', name: '工程探员的工具箱', icon: '🧰',
+        desc: '战场上没有绝对无法解决的问题。每场战斗第一次获得护盾时护盾翻倍。',
+    },
+    scoutGoggles: {
+        id: 'scoutGoggles', name: '侦察探员的战术目镜', icon: '🥽',
+        desc: '先看清敌人，才能决定下一步。进入战斗时若敌人意图为攻击则额外抽1张牌。',
+    },
+};
+
+function getShopPrice(basePrice) { return Math.floor(basePrice * (1 + state.floor * 0.02)); }
+function hasRelic(id) { return state.player.relics && state.player.relics.includes(id); }
+function relicStatBonus(base, stat) {
+    // Void shard: +10% ATK/DEF when HP < 50%
+    // Chaos mark: always +10% ATK/DEF
+    let bonus = base;
+    if (hasRelic('chaosMark')) bonus = Math.floor(bonus * 1.1);
+    if (hasRelic('voidShard') && state.player.hp < state.player.maxHp * 0.5) bonus = Math.floor(bonus * 1.1);
+    return bonus;
+}
+function giveRelic(id) {
+    if (!state.player.relics) state.player.relics = [];
+    if (!state.player.relics.includes(id)) { state.player.relics.push(id); return true; }
+    return false;
+}
+
+// =====================================================================
+// ELITE DEFINITIONS (data-driven)
+// =====================================================================
+const ELITE_DEFS = {
+    darkAngel: {
+        id: 'darkAngel', name: '黑暗天使', icon: '😈',
+        hpMult: 2.6, atkMult: 2.0,
+    },
+    ironclad: {
+        id: 'ironclad', name: '失去自我的铁甲战士', icon: '⚔️',
+        hpMult: 1.75, atkMult: 1.35,
+        special: 'berserk', // loses 10% HP per turn, lower HP = higher ATK
+    },
+    wrathWatcher: {
+        id: 'wrathWatcher', name: '愤怒的观者', icon: '👁️',
+        hpMult: 1.75, atkMult: 2.7,
+        special: 'wrath', // takes 2x damage
+    },
+};
+
+function generateElite(floor) {
+    const eliteKeys = Object.keys(ELITE_DEFS);
+    const key = eliteKeys[Math.floor(Math.random() * eliteKeys.length)];
+    const cfg = ELITE_DEFS[key];
+    // Generate normal monster stats first, then multiply
+    let hpBase, atkBase;
+    if (floor <= 25) {
+        hpBase = randInt(10, 30) + Math.floor(floor * 1.5);
+        atkBase = randInt(1, 4) + Math.floor(floor * 0.22);
+    } else if (floor <= 50) {
+        hpBase = randInt(20, 50) + Math.floor(floor * 1.5);
+        atkBase = randInt(3, 7) + Math.floor(floor * 0.3);
+    } else if (floor <= 75) {
+        hpBase = randInt(40, 80) + Math.floor(floor * 1.8);
+        atkBase = randInt(5, 10) + Math.floor(floor * 0.38);
+    } else {
+        hpBase = randInt(60, 110) + Math.floor(floor * 2);
+        atkBase = randInt(8, 14) + Math.floor(floor * 0.45);
+    }
+    const defBase = floor <= 20
+        ? Math.floor(floor * 1) + randInt(-1, 2)
+        : Math.floor(floor * 1.8) + randInt(-2, 3);
+    return {
+        name: cfg.name,
+        maxHp: Math.floor(hpBase * cfg.hpMult),
+        hp: Math.floor(hpBase * cfg.hpMult),
+        attack: Math.floor(atkBase * cfg.atkMult),
+        defense: Math.max(1, Math.floor(defBase * 1.5)),
+        isElite: true,
+        eliteId: cfg.id,
+        eliteIcon: cfg.icon,
+        eliteSpecial: cfg.special || null,
+    };
+}
+
+function showEliteReward() {
+    state.screen = 'reward';
+    const relicName = state._lastRelicGain ? state._lastRelicGain.name : '';
+    const relicIcon = state._lastRelicGain ? state._lastRelicGain.icon : '';
+    $('reward-floor-text').textContent = '⭐ 精英奖励';
+    const opts = document.querySelector('#screen-reward .reward-options');
+    if (opts) opts.innerHTML = `
+        <div class="reward-card"><div class="reward-icon">${relicIcon || '🎁'}</div><div class="reward-title">${relicName || '遗物'}</div><div class="reward-desc">已获得</div></div>
+        <div class="reward-card"><div class="reward-icon">💰</div><div class="reward-title">印记</div><div class="reward-desc">点击获得随机印记</div></div>
+    `;
+    showScreen('reward');
+    setTimeout(() => {
+        const runeIds = ALL_RUNE_IDS;
+        const randomId = runeIds[Math.floor(Math.random() * runeIds.length)];
+        const rune = RUNE_DEFS[randomId];
+        state.pendingRuneId = randomId;
+        state.engraveOrigin = 'elite';
+        showRuneConfirm(rune);
+    }, 2500);
+}
+
+function showRelicSelection() {
+    const available = Object.values(RELIC_DEFS).filter(r => !hasRelic(r.id));
+    if (available.length === 0) { advanceFloor(); return; }
+    const relic = available[Math.floor(Math.random() * available.length)];
+    addMessage(`🎁 获得了遗物「${relic.name}」！`, 'heal');
+    giveRelic(relic.id);
+    advanceFloor();
+}
+
+function calcEnemyAtk() {
+    let mod = 0.7 + Math.random() * 0.6;
+    if (state.enemy && state.enemy.eliteSpecial === 'berserk') {
+        const hpRatio = state.enemy.hp / state.enemy.maxHp;
+        mod = 1 + (1 - hpRatio) * 2;
+    }
+    return Math.floor(state.enemy.attack * mod);
+}
+
+// Helper: pick a random boss for the given floor range
+function pickBossForFloor(floor) {
+    if (floor === 100) return { ...BOSS_DEFS.fourGodsChosen };
+    const candidates = Object.values(BOSS_DEFS).filter(b => {
+        if (b.id === 'fourGodsChosen') return false;
+        return floor >= b.floorRange[0] && floor <= b.floorRange[1];
+    });
+    if (candidates.length === 0) return null;
+    return { ...candidates[Math.floor(Math.random() * candidates.length)] };
+}
+
+// =====================================================================
+// MAP / ROAD SYSTEM CONFIG
+// =====================================================================
+const MAP_CONFIG = {
+    cols: 5,              // 5 columns — cleaner layout
+    previewRows: 8,
+    cellW: 80,
+    cellH: 64,
+    rowGap: 40,
+    connectorReach: 1,    // Tighter connections = less visual noise
+    roomWeights: {
+        battle: 65,
+        question: 20,
+        shop: 15,
+    },
+    maxSpecialPerFloor: 1, // Max 1 non-battle room per floor
+};
+
+const ROOM_TYPES = {
+    battle: { id: 'battle', name: '战斗', icon: '⚔️', color: '#ef5350', desc: '普通怪物' },
+    elite:  { id: 'elite', name: '精英', icon: '⭐', color: '#ff9800', desc: '精英怪物' },
+    boss:   { id: 'boss', name: '楼层主', icon: '💀', color: '#ff5722', desc: '强力敌人' },
+    question: { id: 'question', name: '问号房', icon: '❓', color: '#ffd700', desc: '事件、怪物或宝箱' },
+    shop:   { id: 'shop', name: '商店', icon: '🛒', color: '#4caf50', desc: '购买物品' },
+};
+
+// =====================================================================
+// CARD DEFINITIONS
+// =====================================================================
+const CARD_DEFS = {
+    attack: {
+        id: 'attack',
+        icon: '⚔️',
+        type: 'atk',
+        cost: 1,
+        effect: 'dealDamage', // deals player.attack damage to enemy
+    },
+    defense: {
+        id: 'defense',
+        icon: '🛡️',
+        type: 'def',
+        cost: 1,
+        effect: 'gainShield', // gains player.defense shield to player
+    },
+};
+
+// =====================================================================
+// RUNE DEFINITIONS (data-driven — add new runes here)
+// =====================================================================
+const RUNE_DEFS = {
+    bloodthirst: {
+        id: 'bloodthirst',
+        name: '渴血',
+        type: 'attack',
+        tag: 'attack',
+        desc: '每次攻击造成伤害后，回复最大HP的2.5%（最少1点）。越战越勇，适合持久战。',
+        hooks: {
+            onDamage(state, card, damageDealt) {
+                const heal = Math.max(1, Math.ceil(state.player.maxHp * 0.025));
+                healPlayer(heal);
+                addMessage(`🩸 渴血：回复 ${heal} 点生命`, 'heal');
+            },
+        },
+    },
+    doubleStrike: {
+        id: 'doubleStrike',
+        name: '连击',
+        type: 'attack',
+        tag: 'attack',
+        desc: '使用该攻击卡时自动攻击两次。每次攻击独立计算伤害和印记效果（如渴血），伤害翻倍！',
+        hooks: {
+            onPlay(state, card) {
+                return { extraAttacks: 1 };
+            },
+        },
+    },
+    freeEnergy: {
+        id: 'freeEnergy',
+        name: '白嫖',
+        type: 'universal',
+        tag: 'universal',
+        desc: '使用该卡牌时不消耗精力。最适合刻在你想每回合都用的那张卡上。',
+        hooks: {
+            onPlay(state, card) {
+                return { energyRefund: card.cost };
+            },
+        },
+    },
+    elder: {
+        id: 'elder',
+        name: '长者',
+        type: 'attack',
+        tag: 'attack',
+        desc: '伤害随等级成长：每级+10%伤害。例如Lv.10时伤害为基础值的190%。后期最强攻击印记。',
+        hooks: {
+            modifyDamage(state, card, baseDamage) {
+                const bonus = Math.floor(baseDamage * (state.player.level - 1) * 0.1);
+                return baseDamage + bonus;
+            },
+        },
+    },
+    dominator: {
+        id: 'dominator',
+        name: '主宰',
+        type: 'attack',
+        tag: 'attack',
+        desc: '每用此卡击杀一个怪物，永久+15%伤害（跨战斗累积）。清怪越多越强，滚雪球型印记。',
+        hooks: {
+            modifyDamage(state, card, baseDamage) {
+                const kills = (card.runeData && card.runeData.kills) || 0;
+                const bonus = Math.floor(baseDamage * kills * 0.15);
+                return baseDamage + bonus;
+            },
+            onKill(state, card) {
+                if (!card.runeData) card.runeData = {};
+                card.runeData.kills = (card.runeData.kills || 0) + 1;
+                // Also update the persistent card via source index
+                const idx = card._sourceIndex;
+                if (idx !== undefined && idx < state.player.cards.length) {
+                    const persistentCard = state.player.cards[idx];
+                    if (persistentCard && persistentCard.rune === 'dominator') {
+                        if (!persistentCard.runeData) persistentCard.runeData = {};
+                        persistentCard.runeData.kills = card.runeData.kills;
+                    }
+                }
+                addMessage(`💀 主宰：击杀计数 +1（当前 ${card.runeData.kills}）`, 'damage');
+            },
+        },
+    },
+    shieldMaster: {
+        id: 'shieldMaster',
+        name: '护盾大师',
+        type: 'defense',
+        tag: 'defense',
+        desc: '护盾值×2。例如防御力5时获得10点护盾。简单粗暴的生存增强。',
+        hooks: {
+            modifyShield(state, card, baseShield) {
+                return baseShield * 2;
+            },
+        },
+    },
+    counterAttack: {
+        id: 'counterAttack',
+        name: '防御反击',
+        type: 'defense',
+        tag: 'defense',
+        desc: '使用后本回合内若敌人攻击你，反弹其50%攻击伤害给敌人。攻防一体的强力印记。',
+        hooks: {
+            onDefensePlayed(state, card) {
+                state.turnFlags.counterAttack = true;
+                state.turnFlags.counterAttackCard = card;
+                addMessage('🛡️ 防御反击：本回合敌人攻击时将受到反伤', 'info');
+            },
+            onEnemyAttack(state, card, enemyRawDamage) {
+                const reflect = Math.floor(enemyRawDamage * 0.5);
+                if (state.enemy && reflect > 0) {
+                    state.enemy.hp -= reflect;
+                    addMessage(`⚔️ 防御反击：反弹 ${reflect} 点伤害！`, 'damage');
+                    animateDamage('enemy-sprite', reflect, 'damage');
+                }
+            },
+        },
+    },
+    damageReduction: {
+        id: 'damageReduction',
+        name: '伤害减免',
+        type: 'defense',
+        tag: 'defense',
+        desc: '使用后本回合受到的所有伤害减半（含护盾前）。面对高攻Boss时的最佳保命印记。',
+        hooks: {
+            onDefensePlayed(state, card) {
+                state.turnFlags.damageReduction = true;
+                state.turnFlags.damageReductionCard = card;
+                addMessage('🛡️ 伤害减免：本回合受到伤害降低50%', 'info');
+            },
+            modifyIncomingDamage(state, card, incomingDamage) {
+                const reduced = Math.floor(incomingDamage * 0.5);
+                addMessage(`🛡️ 伤害减免：${incomingDamage} → ${reduced}`, 'info');
+                return reduced;
+            },
+        },
+    },
+    heavyStrike: {
+        id: 'heavyStrike',
+        name: '重击',
+        type: 'attack',
+        tag: 'attack',
+        desc: '卡牌消耗+2精力，伤害×3。高风险高回报。',
+        hooks: {
+            onPlay(state, card) { return { costModifier: 2 }; },
+            modifyDamage(state, card, baseDamage) { return baseDamage * 3; },
+        },
+    },
+    slaySpireLogic: {
+        id: 'slaySpireLogic',
+        name: '杀戮尖塔的底层逻辑',
+        type: 'universal',
+        tag: 'universal',
+        desc: '攻击卡使用后同时获得护盾（=防御力）。防御卡使用后同时造成伤害（=攻击力-敌人防御）。',
+        hooks: {
+            onPlay(state, card) {
+                if (card.type === 'atk') {
+                    state.shield += state.player.defense;
+                    addMessage(`🔮 杀戮尖塔：额外获得 ${state.player.defense} 点护盾`, 'info');
+                } else if (card.type === 'def') {
+                    if (state.enemy && state.enemy.hp > 0) {
+                        let bonusDmg = state.player.attack;
+                        if (state.enemyCurrentDef >= bonusDmg) {
+                            state.enemyCurrentDef -= bonusDmg;
+                            bonusDmg = 0;
+                        } else {
+                            bonusDmg -= state.enemyCurrentDef;
+                            state.enemyCurrentDef = 0;
+                        }
+                        state.enemy.hp -= bonusDmg;
+                        if (bonusDmg > 0) {
+                            addMessage(`🔮 杀戮尖塔：额外造成 ${bonusDmg} 点伤害`, 'damage');
+                            animateDamage('enemy-sprite', bonusDmg, 'damage');
+                            shakeElement('enemy-sprite');
+                        }
+                    }
+                }
+                return {};
+            },
+        },
+    },
+    bloodForBlood: {
+        id: 'bloodForBlood',
+        name: '以血换血',
+        type: 'attack',
+        tag: 'attack',
+        desc: '使用后失去5%当前生命（最少1点），伤害+30%。以命搏命。',
+        hooks: {
+            onPlay(state, card) {
+                const hpLoss = Math.max(1, Math.ceil(state.player.hp * 0.05));
+                state.player.hp -= hpLoss;
+                addMessage(`🩸 以血换血：失去 ${hpLoss} 点生命`, 'damage');
+                animateDamage('player-sprite', hpLoss, 'damage');
+                return {};
+            },
+            modifyDamage(state, card, baseDamage) { return Math.floor(baseDamage * 1.3); },
+        },
+    },
+    waitAndRest: {
+        id: 'waitAndRest',
+        name: '以逸待劳',
+        type: 'universal',
+        tag: 'universal',
+        desc: '未使用时留在手中，每保留1回合效果+10%（可累积），使用后重置。',
+        hooks: {
+            onPlay(state, card) {
+                const heldTurns = (card.runeData && card.runeData.heldTurns) || 0;
+                if (!card.runeData) card.runeData = {};
+                card.runeData.heldTurns = 0;
+                if (heldTurns > 0) {
+                    addMessage(`⏳ 以逸待劳：释放 ${heldTurns} 回合积蓄！（+${heldTurns * 10}%效果）`, 'info');
+                }
+                return {};
+            },
+            modifyDamage(state, card, baseDamage) {
+                const heldTurns = (card.runeData && card.runeData.heldTurns) || 0;
+                return Math.floor(baseDamage * (1 + heldTurns * 0.1));
+            },
+            modifyShield(state, card, baseShield) {
+                const heldTurns = (card.runeData && card.runeData.heldTurns) || 0;
+                return Math.floor(baseShield * (1 + heldTurns * 0.1));
+            },
+        },
+    },
+};
+
+// Helper: get all rune IDs
+const ALL_RUNE_IDS = Object.keys(RUNE_DEFS);
+
+// Helper: pick random unique runes
+function pickRandomRunes(count) {
+    const shuffled = shuffle([...ALL_RUNE_IDS]);
+    return shuffled.slice(0, count).map(id => RUNE_DEFS[id]);
+}
+
+// =====================================================================
+// MAP GENERATION
+// =====================================================================
+
+function randomRoomType() {
+    const w = MAP_CONFIG.roomWeights;
+    const total = w.battle + w.question + w.shop;
+    let roll = Math.random() * total;
+    if ((roll -= w.battle) <= 0) return 'battle';
+    if ((roll -= w.question) <= 0) return 'question';
+    return 'shop';
+}
+
+// Pick N spread-out column positions from [0, cols-1]
+function pickPositions(cols, count) {
+    if (count >= cols) return [...Array(cols).keys()];
+    // Ensure coverage: at least one room in left third, one in right third
+    const positions = new Set();
+    const leftThird = Math.floor(cols / 3);
+    const rightThird = cols - leftThird - 1;
+    // Force at least one in left and right regions
+    positions.add(randInt(0, leftThird));
+    positions.add(randInt(rightThird, cols - 1));
+    // Fill remaining
+    while (positions.size < count) {
+        positions.add(randInt(0, cols - 1));
+    }
+    return [...positions].sort((a, b) => a - b);
+}
+
+// Ensure new row's rooms connect to at least one previous room
+function pickConnectedPositions(cols, count, prevPositions) {
+    if (prevPositions.length === 0) return pickPositions(cols, count);
+    const reach = MAP_CONFIG.connectorReach;
+    const positions = new Set();
+    // First, place one room reachable from each edge of the previous row
+    const prevMin = Math.min(...prevPositions);
+    const prevMax = Math.max(...prevPositions);
+    positions.add(randInt(Math.max(0, prevMin - reach), Math.min(cols - 1, prevMin + reach)));
+    positions.add(randInt(Math.max(0, prevMax - reach), Math.min(cols - 1, prevMax + reach)));
+    // Fill remaining
+    while (positions.size < count) {
+        // Pick a position reachable from at least one previous position
+        const refPrev = prevPositions[randInt(0, prevPositions.length - 1)];
+        positions.add(randInt(Math.max(0, refPrev - reach), Math.min(cols - 1, refPrev + reach)));
+    }
+    return [...positions].sort((a, b) => a - b);
+}
+
+// Check if two columns are connected
+function columnsConnected(c1, c2) {
+    return Math.abs(c1 - c2) <= MAP_CONFIG.connectorReach;
+}
+
+function generateMap(startFloor, endFloor) {
+    const numFloors = endFloor - startFloor + 1;
+    const cols = MAP_CONFIG.cols;
+    const map = []; // array of rows, each row is array of length `cols` (null or room obj)
+
+    for (let f = 0; f < numFloors; f++) {
+        const floorNum = startFloor + f;
+        const isBoss = isBossFloor(floorNum);
+
+        if (isBoss) {
+            // Boss: single room in center column
+            const row = new Array(cols).fill(null);
+            row[Math.floor(cols / 2)] = { type: 'boss', floor: floorNum, col: Math.floor(cols / 2) };
+            map.push(row);
+        } else if (f === 0) {
+            // First floor: 2-4 rooms spread out
+            const row = new Array(cols).fill(null);
+            const count = randInt(2, 4);
+            const pos = pickPositions(cols, count);
+            for (const c of pos) {
+                row[c] = { type: randomRoomType(), floor: floorNum, col: c };
+            }
+            map.push(row);
+        } else {
+            // Normal floor: rooms that connect to previous floor
+            const prevRow = map[f - 1];
+            const prevPositions = [];
+            for (let c = 0; c < cols; c++) {
+                if (prevRow[c]) prevPositions.push(c);
+            }
+
+            const row = new Array(cols).fill(null);
+            const count = randInt(2, 4);
+            const pos = pickConnectedPositions(cols, count, prevPositions);
+            let specialCount = 0;
+            for (const c of pos) {
+                let type = randomRoomType();
+                // Limit non-battle rooms per floor
+                if (type !== 'battle') {
+                    if (specialCount >= MAP_CONFIG.maxSpecialPerFloor) {
+                        type = 'battle';
+                    } else {
+                        specialCount++;
+                    }
+                }
+                row[c] = { type, floor: floorNum, col: c };
+            }
+            map.push(row);
+        }
+    }
+    // Add ~1 elite per 10 floors: pick random non-boss row, replace one room
+    for (let eliteFloor = startFloor; eliteFloor <= endFloor; eliteFloor += 7 + randInt(0, 5)) {
+        const rowIdx = eliteFloor - startFloor;
+        if (rowIdx >= 0 && rowIdx < map.length && !isBossFloor(eliteFloor)) {
+            const row = map[rowIdx];
+            const validCols = [];
+            for (let c = 0; c < cols; c++) { if (row[c]) validCols.push(c); }
+            if (validCols.length > 0) {
+                const c = validCols[Math.floor(Math.random() * validCols.length)];
+                row[c].type = 'elite';
+            }
+        }
+    }
+    return map;
+}
+
+// =====================================================================
+// SHOP ITEMS (data-driven — add new items here)
+// =====================================================================
+const SHOP_ITEMS = [
+    {
+        id: 'heal',
+        name: '回复生命',
+        icon: '💚',
+        desc: '回复最大HP的15%',
+        price: 12,
+        apply(state) {
+            const heal = Math.ceil(state.player.maxHp * 0.15);
+            healPlayer(heal);
+            return `回复了 ${heal} 点生命`;
+        },
+    },
+    {
+        id: 'randomRune',
+        name: '随机印记',
+        icon: '🔮',
+        desc: '获得一个随机印记并刻印',
+        price: 20,
+        apply(state) { return null; },
+    },
+    {
+        id: 'buyAttack',
+        name: '攻击卡牌',
+        icon: '⚔️',
+        desc: '获得1张攻击卡牌',
+        price: 20,
+        apply(state) { return null; },
+    },
+    {
+        id: 'buyDefense',
+        name: '防御卡牌',
+        icon: '🛡️',
+        desc: '获得1张防御卡牌',
+        price: 20,
+        apply(state) { return null; },
+    },
+    {
+        id: 'extraEnergy',
+        name: '额外精力值',
+        icon: '⚡',
+        desc: '每回合永久+1精力（限购1次）',
+        price: 67,
+        maxPurchases: 1,
+        apply(state) { return null; },
+    },
+    {
+        id: 'extraDraw',
+        name: '额外抽卡',
+        icon: '🃏',
+        desc: '每回合永久多抽1张牌（限购2次）',
+        price: 67,
+        maxPurchases: 2,
+        apply(state) { return null; },
+    },
+    {
+        id: 'fuseService',
+        name: '印记缝合服务',
+        icon: '🪡',
+        desc: '将一张卡牌的印记转移到另一张已有印记的卡牌上',
+        price: 100,
+        apply(state) { return null; },
+    },
+    {
+        id: 'buyAtk',
+        name: '攻击力 +1',
+        icon: '⚔️',
+        desc: '永久增加1点攻击力',
+        price: 10,
+        apply(state) { return null; },
+    },
+    {
+        id: 'buyDef',
+        name: '防御力 +1',
+        icon: '🛡️',
+        desc: '永久增加1点防御力',
+        price: 10,
+        apply(state) { return null; },
+    },
+    {
+        id: 'buyMaxHp',
+        name: '生命上限 +5',
+        icon: '❤️',
+        desc: '永久增加5点最大生命值',
+        price: 10,
+        apply(state) { return null; },
+    },
+];
+
+// =====================================================================
+// RANDOM CHEST REWARDS (data-driven — add new rewards here)
+// =====================================================================
+const CHEST_REWARDS = [
+    {
+        id: 'heal',
+        name: '回复血量',
+        icon: '💚',
+        desc: '回复最大HP的10%',
+        weight: 1,
+        apply(state) {
+            const heal = Math.ceil(state.player.maxHp * 0.1);
+            healPlayer(heal);
+            return { msg: `💚 回复了 ${heal} 点生命！`, icon: '💚' };
+        },
+    },
+    {
+        id: 'exp',
+        name: '获得经验值',
+        icon: '📈',
+        desc: '获得升级所需经验的20%',
+        weight: 1,
+        apply(state) {
+            const expGain = Math.ceil(expToNextLevel() * 0.2);
+            state.player.exp += expGain + (hasRelic('blessedBlood') ? Math.ceil(expGain * 0.2) : 0);
+            checkLevelUp();
+            return { msg: `📈 获得了 ${expGain} 点经验！`, icon: '📈' };
+        },
+    },
+    {
+        id: 'randomRune',
+        name: '随机印记',
+        icon: '🔮',
+        desc: '随机获得一个印记',
+        weight: 1,
+        apply(state) {
+            // Random rune handled in chest flow
+            return { msg: null, icon: '🔮' }; // special handling
+        },
+    },
+    {
+        id: 'randomCard',
+        name: '随机卡牌',
+        icon: '🃏',
+        desc: '随机获得一张攻击或防御卡牌',
+        weight: 1,
+        apply(state) {
+            // Special handling in showQuestionRoom
+            return { msg: null, icon: '🃏' };
+        },
+    },
+    {
+        id: 'empty',
+        name: '空宝箱',
+        icon: '📦',
+        desc: '真倒霉',
+        weight: 1,
+        apply(state) {
+            return { msg: '📦 真倒霉…空宝箱！', icon: '📦' };
+        },
+    },
+];
+
+function pickChestReward() {
+    const totalWeight = CHEST_REWARDS.reduce((sum, r) => sum + (r.weight || 1), 0);
+    let roll = Math.random() * totalWeight;
+    for (const reward of CHEST_REWARDS) {
+        roll -= (reward.weight || 1);
+        if (roll <= 0) return reward;
+    }
+    return CHEST_REWARDS[0];
+}
+
+// =====================================================================
+// GAME STATE
+// =====================================================================
+let state = {};
+
+function freshState() {
+    return {
+        screen: 'menu',
+        floor: 1,
+        player: {
+            ...BALANCE.player.initial,
+            cards: BALANCE.player.initialCards.map(c => ({
+                ...c,
+                runeData: {},
+            })),
+        },
+        enemy: null,
+        deck: { draw: [], hand: [], discard: [] },
+        energy: 0,
+        maxEnergy: BALANCE.player.maxEnergy,
+        shield: 0,
+        messages: [],
+        battlePhase: 'player',
+        enemyCurrentDef: 0,   // This turn's varied defense value
+        enemyCurrentAtk: 0,   // This turn's varied attack value (displayed as intent)
+        enemyTurnCounter: 0,   // Track turns for boss skill cycle
+        enemyIntentType: 'attack', // 'attack' | 'skill'
+        enemyIntentLabel: '',  // Intent display label for skills
+        skipCardPlayTurns: 0,   // Secret Keeper's pleasure skill (remaining turns)
+        plagueTurns: 0,        // Great Unclean One's plague debuff
+        turnFlags: {
+            damageReduction: false,
+            damageReductionCard: null,
+            counterAttack: false,
+            counterAttackCard: null,
+        },
+        pendingRuneId: null,
+        pendingConfirmRuneId: null,
+        pendingRuneChoices: null,
+        pendingCard: null,
+        declinedRunes: [],
+        completedEvents: [],
+        engraveOrigin: 'boss',  // 'boss' | 'shop' | 'chest'
+        chestResult: null,
+        // Map / road system
+        currentMap: null,
+        mapStartFloor: 1,
+        mapCursorFloor: 1,
+        mapCursorPath: 0,
+        pendingReward: true,
+    };
+}
+
+// =====================================================================
+// SOUND SYSTEM (Web Audio API — synthesized, no external files)
+// =====================================================================
+const SFX = {
+    ctx: null,
+    enabled: true,
+
+    init() {
+        try { this.ctx = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) { this.enabled = false; }
+    },
+
+    // Resume audio context on first user interaction
+    resume() {
+        if (this.ctx && this.ctx.state === 'suspended') this.ctx.resume();
+    },
+
+    play(type) {
+        if (!this.enabled || !this.ctx) return;
+        this.resume();
+        try {
+            const t = this.ctx.currentTime;
+            const g = (v, d, o) => { const n = this.ctx.createGain(); n.gain.setValueAtTime(v, t); n.gain.exponentialRampToValueAtTime(0.001, t+d); n.connect(o || this.ctx.destination); return n; };
+            const osc = (freq, type, dur) => { const o = this.ctx.createOscillator(); o.type = type; o.frequency.setValueAtTime(freq, t); o.start(t); o.stop(t+dur); return o; };
+            const noise = (dur) => { const buf = this.ctx.createBuffer(1, this.ctx.sampleRate*dur, this.ctx.sampleRate); const d = buf.getChannelData(0); for(let i=0;i<d.length;i++) d[i]=Math.random()*2-1; const s = this.ctx.createBufferSource(); s.buffer=buf; s.start(t); s.stop(t+dur); return s; };
+
+            switch(type) {
+                case 'click': { const o=osc(800,'sine',0.06); o.connect(g(0.15,0.06)); break; }
+                case 'draw': { for(let i=0;i<4;i++){ const o=osc(400+i*120,'sine',0.08); o.connect(g(0.08,0.1)); o.start(t+i*0.04); o.stop(t+i*0.04+0.08); } break; }
+                case 'play_card': { const o=osc(500,'triangle',0.12); o.connect(g(0.2,0.12)); break; }
+                case 'attack': { const o=osc(120,'sawtooth',0.15); o.connect(g(0.25,0.15)); break; }
+                case 'hit': { const n=noise(0.08); n.connect(g(0.2,0.08)); const o=osc(90,'square',0.08); o.connect(g(0.15,0.08)); break; }
+                case 'shield': { const o=osc(600,'sine',0.2); o.connect(g(0.15,0.2)); const o2=osc(900,'sine',0.15); o2.connect(g(0.1,0.2)); break; }
+                case 'enemy_attack': { const o=osc(80,'sawtooth',0.2); o.connect(g(0.2,0.2)); break; }
+                case 'enemy_death': { const o=osc(200,'sawtooth',0.3); o.frequency.exponentialRampToValueAtTime(40,t+0.3); o.connect(g(0.2,0.35)); break; }
+                case 'level_up': { [523,659,784,1047].forEach((f,i)=>{ const o=osc(f,'sine',0.2); o.connect(g(0.15,0.3)); o.start(t+i*0.1); o.stop(t+i*0.1+0.2); }); break; }
+                case 'reward': { const o=osc(660,'sine',0.15); o.connect(g(0.15,0.2)); const o2=osc(880,'sine',0.1); o2.connect(g(0.1,0.2)); break; }
+                case 'floor_enter': { const o=osc(220,'triangle',0.12); o.connect(g(0.1,0.15)); break; }
+                case 'boss_appear': { [80,100,120].forEach((f,i)=>{ const o=osc(f,'sawtooth',0.3); o.connect(g(0.2,0.4)); o.start(t+i*0.15); o.stop(t+i*0.15+0.3); }); break; }
+                case 'boss_defeat': { [262,330,392,523,659,784].forEach((f,i)=>{ const o=osc(f,'sine',0.25); o.connect(g(0.12,0.35)); o.start(t+i*0.1); o.stop(t+i*0.1+0.25); }); break; }
+                case 'question': { const o=osc(350,'sine',0.3); o.connect(g(0.12,0.35)); const o2=osc(520,'sine',0.25); o2.connect(g(0.08,0.3)); break; }
+                case 'chest': { [440,554,660].forEach((f,i)=>{ const o=osc(f,'triangle',0.15); o.connect(g(0.1,0.2)); o.start(t+i*0.08); o.stop(t+i*0.08+0.15); }); break; }
+                case 'rune': { const o=osc(800,'sine',0.3); o.connect(g(0.1,0.35)); const o2=osc(1200,'sine',0.2); o2.connect(g(0.06,0.25)); break; }
+                case 'shop': { [520,660,784].forEach((f,i)=>{ const o=osc(f,'sine',0.1); o.connect(g(0.1,0.15)); o.start(t+i*0.06); o.stop(t+i*0.06+0.1); }); break; }
+                case 'game_over': { const o=osc(200,'sawtooth',0.5); o.frequency.exponentialRampToValueAtTime(50,t+0.5); o.connect(g(0.2,0.6)); break; }
+                case 'victory': { [392,440,494,523,587,659,784,880,1047].forEach((f,i)=>{ const o=osc(f,'sine',0.2); o.connect(g(0.08,0.3)); o.start(t+i*0.08); o.stop(t+i*0.08+0.2); }); break; }
+            }
+        } catch(e){ /*silently ignore audio errors*/ }
+    }
+};
+
+// =====================================================================
+// UTILITY FUNCTIONS
+// =====================================================================
+function shuffle(arr) {
+    const a = [...arr];
+    for (let i = a.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [a[i], a[j]] = [a[j], a[i]];
+    }
+    return a;
+}
+
+function randInt(min, max) {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+}
+
+function isBossFloor(n) { return BALANCE.bossFloors.includes(n); }
+function healPlayer(amount) { state.player.hp = Math.min(state.player.maxHp, state.player.hp + amount); }
+function isRuneCompatible(rune, card) {
+    return rune.tag === 'universal' ||
+           (rune.tag === 'attack' && card.type === 'atk') ||
+           (rune.tag === 'defense' && card.type === 'def');
+}
+
+// =====================================================================
+// ENEMY GENERATION
+// =====================================================================
+function generateEnemy(floor) {
+    if (isBossFloor(floor)) {
+        const bossCfg = BALANCE.bosses[floor];
+        const bossData = pickBossForFloor(floor);
+        return {
+            name: bossData ? bossData.name : T.enemyBoss,
+            maxHp: bossCfg.hp,
+            hp: bossCfg.hp,
+            attack: bossCfg.attack,
+            defense: Math.floor(floor * 2),
+            isBoss: true,
+            bossId: bossData ? bossData.id : null,
+            skillName: bossData ? bossData.skillName : '',
+            skillDesc: bossData ? bossData.skillDesc : '',
+            skillIcon: bossData ? bossData.skillIcon : '',
+            intro: bossData ? bossData.intro : '',
+            allSkills: bossData ? (bossData.allSkills || null) : null,
+        };
+    }
+    // 4-tier HP/ATK scaling
+    let hp, atk;
+    if (floor <= 25) {
+        hp = randInt(10, 30) + Math.floor(floor * 1.5);
+        atk = randInt(1, 4) + Math.floor(floor * 0.22);
+    } else if (floor <= 50) {
+        hp = randInt(20, 50) + Math.floor(floor * 1.5);
+        atk = randInt(3, 7) + Math.floor(floor * 0.3);
+    } else if (floor <= 75) {
+        hp = randInt(40, 80) + Math.floor(floor * 1.8);
+        atk = randInt(5, 10) + Math.floor(floor * 0.38);
+    } else {
+        hp = randInt(60, 110) + Math.floor(floor * 2);
+        atk = randInt(8, 14) + Math.floor(floor * 0.45);
+    }
+    const def = floor <= 20
+        ? Math.floor(floor * 1) + randInt(-1, 2)
+        : Math.floor(floor * 1.8) + randInt(-2, 3);
+    return {
+        name: T.enemyMonster,
+        maxHp: hp,
+        hp: hp,
+        attack: atk,
+        defense: Math.max(1, def),
+        isBoss: false,
+    };
+}
+
+// =====================================================================
+// DECK MANAGEMENT
+// =====================================================================
+function createDeck() {
+    // Clone player's persistent cards (with runes) for this battle
+    return shuffle(state.player.cards.map((c, i) => ({
+        ...c,
+        _sourceIndex: i,
+        runeData: c.runeData ? { ...c.runeData } : {},
+    })));
+}
+
+function drawCards(count) {
+    const drawn = [];
+    for (let i = 0; i < count; i++) {
+        if (state.deck.draw.length === 0) {
+            if (state.deck.discard.length === 0) break;
+            addMessage(T.msgShuffle, 'info');
+            state.deck.draw = shuffle(state.deck.discard);
+            state.deck.discard = [];
+        }
+        if (state.deck.draw.length > 0) {
+            drawn.push(state.deck.draw.pop());
+        }
+    }
+    state.deck.hand.push(...drawn);
+    return drawn;
+}
+
+function discardHand() {
+    const kept = [];
+    for (const card of state.deck.hand) {
+        if (card.rune === 'waitAndRest') {
+            // Card stays in hand, increment held-turns counter for +10% per turn
+            if (!card.runeData) card.runeData = {};
+            card.runeData.heldTurns = (card.runeData.heldTurns || 0) + 1;
+            kept.push(card);
+        } else {
+            state.deck.discard.push(card);
+        }
+    }
+    state.deck.hand = kept;
+}
+
+function discardCard(card) {
+    state.deck.discard.push(card);
+}
+
+// =====================================================================
+// BATTLE LOGIC
+// =====================================================================
+function startTurn() {
+    if (state.screen !== 'battle' || state.battlePhase === 'over') return;
+
+    // Ironclad berserk: lose 10% HP per turn
+    if (state.enemy && state.enemy.eliteSpecial === 'berserk') {
+        const loss = Math.max(1, Math.ceil(state.enemy.maxHp * 0.1));
+        state.enemy.hp = Math.max(1, state.enemy.hp - loss);
+        addMessage(`⚔️ 铁甲战士失去 ${loss} 点生命（狂暴）`, 'damage');
+    }
+    // Plague is permanent after Great Unclean One uses it
+
+    // Handle skipCardPlayTurns (守秘者享乐)
+    if (state.skipCardPlayTurns > 0) {
+        state.skipCardPlayTurns--;
+        state._battleTurnCount = (state._battleTurnCount || 0) + 1;
+        state.battlePhase = 'player';
+        state.shield = 0;
+        state.turnFlags = { damageReduction: false, damageReductionCard: null, counterAttack: false, counterAttackCard: null };
+        const extraEnergy = (state.player.shopExtraEnergyBought ? 1 : 0) + (hasRelic('runeGem') ? 1 : 0) + ((hasRelic('hexCrystal') && state._battleTurnCount === 1) ? 1 : 0);
+        state.energy = state.maxEnergy + extraEnergy;
+        const firstTurnBonus = (state._battleTurnCount === 1 ? ((hasRelic('snakeRing') ? 1 : 0) + (hasRelic('scoutGoggles') && state.enemyIntentType === 'attack' ? 1 : 0)) : 0);
+        const drawCount = BALANCE.player.drawPerTurn + (state.player.shopExtraDrawCount || 0) + firstTurnBonus;
+        const drawn = drawCards(drawCount);
+        if (drawn.length > 0) {
+            SFX.play('draw');
+            addMessage(T.msgDraw, 'info');
+        }
+        addMessage(`😵 享乐效果：本回合无法出牌（剩余${state.skipCardPlayTurns}回合）`, 'info');
+        updateBattleUI();
+        return;
+    }
+
+    state.battlePhase = 'player';
+    state._battleTurnCount = (state._battleTurnCount || 0) + 1;
+    state.shield = 0;
+    state.turnFlags = { damageReduction: false, damageReductionCard: null, counterAttack: false, counterAttackCard: null };
+    const extraEnergy = (state.player.shopExtraEnergyBought ? 1 : 0) + (hasRelic('runeGem') ? 1 : 0) + ((hasRelic('hexCrystal') && state._battleTurnCount === 1) ? 1 : 0);
+    state.energy = state.maxEnergy + extraEnergy;
+    const firstTurnBonus = (state._battleTurnCount === 1 ? ((hasRelic('snakeRing') ? 1 : 0) + (hasRelic('scoutGoggles') && state.enemyIntentType === 'attack' ? 1 : 0)) : 0);
+    const drawCount = BALANCE.player.drawPerTurn + (state.player.shopExtraDrawCount || 0) + firstTurnBonus;
+    const drawn = drawCards(drawCount);
+    if (drawn.length > 0) {
+        SFX.play('draw');
+        addMessage(T.msgDraw, 'info');
+    }
+    updateBattleUI();
+}
+
+function getCardHooks(card) {
+    if (!card) return {};
+    let hooks = {};
+    // Primary rune hooks
+    if (card.rune && RUNE_DEFS[card.rune]) {
+        hooks = { ...RUNE_DEFS[card.rune].hooks || {} };
+    }
+    // Fused runes hooks
+    if (card._fusedRunes) {
+        for (let i = 0; i < card._fusedRunes.length; i++) {
+            const rid = card._fusedRunes[i];
+            if (RUNE_DEFS[rid] && RUNE_DEFS[rid].hooks) {
+                const fh = RUNE_DEFS[rid].hooks;
+                // Get this fused rune's persistent data (e.g. dominator kills)
+                const fusedData = (card._fusedRunesData && card._fusedRunesData[i]) || {};
+                // Chain hooks: call original then fused
+                for (const key of Object.keys(fh)) {
+                    const orig = hooks[key];
+                    // Wrap raw hook to inject correct runeData for this fused rune
+                    const injectData = function(rawHook) {
+                        return function(...args) {
+                            const savedData = card.runeData;
+                            card.runeData = fusedData;
+                            const result = rawHook.apply(this, args);
+                            card.runeData = savedData;
+                            return result;
+                        };
+                    };
+                    const fused = injectData(fh[key]);
+                    hooks[key] = orig ? function(...args) {
+                        const r1 = orig.apply(this, args);
+                        // Transform hooks (modifyDamage/modifyShield/modifyIncomingDamage):
+                        // pass the result of the first hook to the second
+                        if (args.length >= 3 && typeof r1 === 'number') {
+                            const passArgs = [...args];
+                            passArgs[2] = r1;
+                            return fused.apply(this, passArgs);
+                        }
+                        // onPlay hook: merge returned objects
+                        if (typeof r1 === 'object' && r1 !== null) {
+                            const r2 = fused.apply(this, args) || {};
+                            return { ...r1, ...r2 };
+                        }
+                        // Void hooks: just call both
+                        fused.apply(this, args);
+                        return r1;
+                    } : fused;
+                }
+            }
+        }
+    }
+    return hooks;
+}
+
+function playCard(handIndex) {
+    if (state.battlePhase !== 'player') return;
+    // Skip card play if affected by Secret Keeper's pleasure
+    if (state.skipCardPlayTurns > 0) {
+        addMessage('😵 享乐效果：无法出牌！', 'damage');
+        return;
+    }
+    const card = state.deck.hand[handIndex];
+    if (!card) return;
+
+    // Plague debuff: lose 5% max HP per card played
+    if (state.plagueTurns > 0) {
+        const plagueDmg = Math.max(1, Math.ceil(state.player.maxHp * 0.05));
+        state.player.hp -= plagueDmg;
+        addMessage(`☠️ 瘟疫：失去 ${plagueDmg} 点生命！`, 'damage');
+        animateDamage('player-sprite', plagueDmg, 'damage');
+        if (state.player.hp <= 0) {
+            state.player.hp = 0;
+            state.battlePhase = 'over';
+            updateBattleUI();
+            setTimeout(() => onPlayerDeath(), 500);
+            return;
+        }
+    }
+
+    const hooks = getCardHooks(card);
+
+    // Check onPlay hooks (free energy, double strike info)
+    let onPlayResult = {};
+    if (hooks.onPlay) {
+        onPlayResult = hooks.onPlay(state, card) || {};
+    }
+
+    // Calculate actual energy cost (energyRefund → free, costModifier → extra cost)
+    const actualCost = onPlayResult.energyRefund ? 0 : (card.cost + (onPlayResult.costModifier || 0));
+    if (state.energy < actualCost) {
+        addMessage(T.msgNoEnergy, 'damage');
+        return;
+    }
+    state.energy -= actualCost;
+    SFX.play('play_card');
+
+    // Remove from hand, add to discard
+    state.deck.hand.splice(handIndex, 1);
+    discardCard(card);
+
+    // Check if enemy died from onPlay side-effects (e.g. Slay the Spire Logic on defense card)
+    if (state.enemy && state.enemy.hp <= 0) {
+        state.enemy.hp = 0;
+        state.battlePhase = 'over';
+        if (hooks.onKill) hooks.onKill(state, card);
+        SFX.play('enemy_death');
+        updateBattleUI();
+        setTimeout(() => onEnemyDefeated(), 400);
+        return;
+    }
+
+    // Apply card effect
+    if (card.effect === 'magicAttack') {
+        // Magic book: ATK + level*3, ignores defense
+        let dmg = relicStatBonus(state.player.attack + state.player.level * 3);
+        if (hooks.modifyDamage) dmg = hooks.modifyDamage(state, card, dmg);
+        state.enemy.hp -= dmg;
+        addMessage(`📖 魔法书：造成 ${dmg} 点伤害（无视防御）！`, 'damage');
+        animateDamage('enemy-sprite', dmg, 'damage');
+        shakeElement('enemy-sprite');
+        SFX.play('attack');
+        if (hooks.onDamage) hooks.onDamage(state, card, dmg);
+        if (state.enemy.hp <= 0) {
+            state.enemy.hp = 0; state.battlePhase = 'over';
+            if (hooks.onKill) hooks.onKill(state, card);
+            SFX.play('enemy_death'); updateBattleUI();
+            setTimeout(() => onEnemyDefeated(), 400); return;
+        }
+    } else if (card.effect === 'dealDamage') {
+        let dmg = relicStatBonus(state.player.attack);
+        if (hooks.modifyDamage) {
+            dmg = hooks.modifyDamage(state, card, dmg);
+        }
+
+        // Damage vs defense pool
+        let actualDmg = dmg;
+        if (state.enemy) {
+            if (state.enemyCurrentDef >= dmg) {
+                state.enemyCurrentDef -= dmg;
+                actualDmg = 0;
+                addMessage(`🛡️ 怪物防御吸收了全部 ${dmg} 点伤害！剩余防御 ${state.enemyCurrentDef}`, 'info');
+            } else {
+                actualDmg = dmg - state.enemyCurrentDef;
+                addMessage(`🛡️ 穿透怪物防御：${dmg} → ${actualDmg}（防御消耗 ${state.enemyCurrentDef}）`, 'info');
+                state.enemyCurrentDef = 0;
+            }
+        }
+        // Wrath elite takes 2x damage
+        if (state.enemy && state.enemy.eliteSpecial === 'wrath') { actualDmg *= 2; }
+        state.enemy.hp -= actualDmg;
+        if (actualDmg > 0) {
+            addMessage(`${T.player} 使用${T.cardAttack}，造成 ${actualDmg} 点伤害！`, 'damage');
+            animateDamage('enemy-sprite', actualDmg, 'damage');
+            shakeElement('enemy-sprite');
+        }
+        SFX.play('attack');
+
+        // On-damage hook (e.g. bloodthirst)
+        if (hooks.onDamage) {
+            hooks.onDamage(state, card, dmg);
+        }
+
+        // Check enemy death
+        if (state.enemy.hp <= 0) {
+            state.enemy.hp = 0;
+            state.battlePhase = 'over';
+            if (hooks.onKill) hooks.onKill(state, card);
+            SFX.play('enemy_death');
+            updateBattleUI();
+            setTimeout(() => onEnemyDefeated(), 400);
+            return;
+        }
+
+        // Extra attacks (double strike)
+        const extraAttacks = onPlayResult.extraAttacks || 0;
+        for (let i = 0; i < extraAttacks; i++) {
+            if (state.enemy.hp <= 0) break;
+            let extraDmg = relicStatBonus(state.player.attack);
+            if (hooks.modifyDamage) {
+                extraDmg = hooks.modifyDamage(state, card, extraDmg);
+            }
+            let actualExtraDmg = extraDmg;
+            if (state.enemy) {
+                if (state.enemyCurrentDef >= extraDmg) {
+                    state.enemyCurrentDef -= extraDmg;
+                    actualExtraDmg = 0;
+                    addMessage(`🛡️ 怪物防御吸收了全部连击伤害！剩余防御 ${state.enemyCurrentDef}`, 'info');
+                } else {
+                    actualExtraDmg = extraDmg - state.enemyCurrentDef;
+                    addMessage(`🛡️ 连击穿透防御：${extraDmg} → ${actualExtraDmg}`, 'info');
+                    state.enemyCurrentDef = 0;
+                }
+            }
+            state.enemy.hp -= actualExtraDmg;
+            if (actualExtraDmg > 0) {
+                addMessage(`⚔️ 连击：额外造成 ${actualExtraDmg} 点伤害！`, 'damage');
+                animateDamage('enemy-sprite', actualExtraDmg, 'damage');
+            }
+            shakeElement('enemy-sprite');
+            if (hooks.onDamage) hooks.onDamage(state, card, extraDmg);
+
+            if (state.enemy.hp <= 0) {
+                state.enemy.hp = 0;
+                state.battlePhase = 'over';
+                if (hooks.onKill) hooks.onKill(state, card);
+                updateBattleUI();
+                setTimeout(() => onEnemyDefeated(), 400);
+                return;
+            }
+        }
+
+    } else if (card.effect === 'gainShield') {
+        let shieldAmt = relicStatBonus(state.player.defense);
+        if (hooks.modifyShield) {
+            shieldAmt = hooks.modifyShield(state, card, shieldAmt);
+        }
+        if (hasRelic('engineerToolbox') && !state._shieldDoubledThisBattle) {
+            shieldAmt *= 2;
+            state._shieldDoubledThisBattle = true;
+        }
+        state.shield += shieldAmt;
+        addMessage(`${T.player} 使用${T.cardDefense}，获得 ${shieldAmt} 点护盾！`, 'info');
+        SFX.play('shield');
+
+        // On-defense-played hooks
+        if (hooks.onDefensePlayed) {
+            hooks.onDefensePlayed(state, card);
+        }
+    }
+
+    updateBattleUI();
+}
+
+// Set initial intent at battle start (turn 1 defense is always 0)
+function initEnemyIntent() {
+    state.enemyCurrentDef = 0;
+    if (state.enemy && state.enemy.isBoss) {
+        // Shapeshifter & Great Unclean: first intent is always skill
+        if (state.enemy.bossId === 'shapeshifter' || state.enemy.bossId === 'greatUnclean') {
+            state.enemyIntentType = 'skill';
+            state.enemyIntentLabel = state.enemy.skillIcon + ' ' + state.enemy.skillName;
+            state.enemyCurrentAtk = 0;
+        } else if (state.enemy.bossId === 'fourGodsChosen') {
+            // Four Gods: 70% skill, 15% attack, 15% defense
+            const roll = Math.random();
+            if (roll < 0.7) {
+                state.enemyIntentType = 'skill';
+                state.enemyIntentLabel = state.enemy.skillIcon + ' ' + state.enemy.skillName;
+                state.enemyCurrentAtk = 0;
+            } else if (roll < 0.85) {
+                state.enemyIntentType = 'defense';
+                state.enemyIntentLabel = '🛡️ 防御';
+                state.enemyCurrentAtk = 0;
+            } else {
+                state.enemyIntentType = 'attack';
+                const skills = state.enemy.allSkills || [];
+                const randSkill = skills[Math.floor(Math.random() * skills.length)];
+                const skillBoss = BOSS_DEFS[randSkill];
+                state.enemyIntentLabel = skillBoss ? skillBoss.skillIcon + ' ' + skillBoss.skillName : '';
+                state.enemyCurrentAtk = calcEnemyAtk();
+            }
+        } else {
+            const roll = Math.random();
+            if (roll < 0.2) {
+                state.enemyIntentType = 'defense';
+                state.enemyIntentLabel = '🛡️ 防御';
+                state.enemyCurrentAtk = 0;
+            } else if (roll < 0.7) {
+                state.enemyIntentType = 'skill';
+                state.enemyIntentLabel = state.enemy.skillIcon + ' ' + state.enemy.skillName;
+                state.enemyCurrentAtk = 0;
+            } else {
+                state.enemyIntentType = 'attack';
+                state.enemyIntentLabel = '';
+                state.enemyCurrentAtk = calcEnemyAtk();
+            }
+        }
+    } else {
+        if (Math.random() < 0.4) {
+            state.enemyIntentType = 'defense';
+            state.enemyIntentLabel = '🛡️ 防御';
+            state.enemyCurrentAtk = 0;
+        } else {
+            state.enemyIntentType = 'attack';
+            state.enemyIntentLabel = '';
+            state.enemyCurrentAtk = calcEnemyAtk();
+        }
+    }
+}
+
+function endPlayerTurn() {
+    if (state.battlePhase !== 'player') return;
+    state.battlePhase = 'enemy';
+
+    updateBattleUI();
+    discardHand();
+    enemyAttack();
+}
+
+function generateNextIntent() {
+    if (state.enemy && state.enemy.isBoss) {
+        state.enemyTurnCounter++;
+        // Four Gods: 70% skill, 15% attack, 15% defense (can use skills repeatedly)
+        if (state.enemy.bossId === 'fourGodsChosen') {
+            const roll = Math.random();
+            if (roll < 0.7) {
+                state.enemyIntentType = 'skill';
+                state.enemyIntentLabel = (state.enemy.skillIcon || '') + ' ' + (state.enemy.skillName || '');
+                state.enemyCurrentAtk = 0;
+            } else if (roll < 0.85) {
+                state.enemyIntentType = 'defense';
+                state.enemyIntentLabel = '🛡️ 防御';
+                state.enemyCurrentAtk = 0;
+            } else {
+                state.enemyIntentType = 'attack';
+                const skills = state.enemy.allSkills || [];
+                const randSkill = skills[Math.floor(Math.random() * skills.length)];
+                const skillBoss = BOSS_DEFS[randSkill];
+                state.enemyIntentLabel = skillBoss ? skillBoss.skillIcon + ' ' + skillBoss.skillName : '';
+                state.enemyCurrentAtk = calcEnemyAtk();
+            }
+        } else if (state.enemy._skillUsed) {
+            if (Math.random() < 0.3) {
+                state.enemyIntentType = 'defense';
+                state.enemyIntentLabel = '🛡️ 防御';
+                state.enemyCurrentAtk = 0;
+            } else {
+                state.enemyIntentType = 'attack';
+                state.enemyIntentLabel = '';
+                state.enemyCurrentAtk = calcEnemyAtk();
+            }
+        } else {
+            const roll = Math.random();
+            if (roll < 0.2) {
+                state.enemyIntentType = 'defense';
+                state.enemyIntentLabel = '🛡️ 防御';
+                state.enemyCurrentAtk = 0;
+            } else if (roll < 0.7) {
+                state.enemyIntentType = 'skill';
+                state.enemyIntentLabel = (state.enemy.skillIcon || '') + ' ' + (state.enemy.skillName || '');
+                state.enemyCurrentAtk = 0;
+            } else {
+                state.enemyIntentType = 'attack';
+                state.enemyIntentLabel = '';
+                state.enemyCurrentAtk = calcEnemyAtk();
+            }
+        }
+    } else {
+        if (Math.random() < 0.4) {
+            state.enemyIntentType = 'defense';
+            state.enemyIntentLabel = '🛡️ 防御';
+            state.enemyCurrentAtk = 0;
+        } else {
+            state.enemyIntentType = 'attack';
+            state.enemyIntentLabel = '';
+            state.enemyCurrentAtk = calcEnemyAtk();
+        }
+    }
+}
+
+function enemyAttack() {
+    const enemy = state.enemy;
+    state.enemyCurrentDef = 0;  // Reset defense each enemy turn
+
+    // Defense intent — monster gains defense NOW, no attack
+    if (state.enemyIntentType === 'defense') {
+        state.enemyCurrentDef = Math.floor(enemy.defense * 1.5);
+        addMessage(`🛡️ ${enemy.name} 进入防御姿态！（获得 ${state.enemyCurrentDef} 点防御）`, 'info');
+        SFX.play('shield');
+        updateBattleUI();
+        if (state.enemy && state.enemy.hp <= 0) {
+            state.enemy.hp = 0;
+            state.battlePhase = 'over';
+            updateBattleUI();
+            setTimeout(() => onEnemyDefeated(), 400);
+            return;
+        }
+        generateNextIntent();
+        setTimeout(() => startTurn(), 600);
+        return;
+    }
+
+    // Boss skill turn — execute skill instead of normal attack
+    if (enemy.isBoss && state.enemyIntentType === 'skill') {
+        if (enemy.bossId && BOSS_DEFS[enemy.bossId]) {
+            const bossDef = BOSS_DEFS[enemy.bossId];
+            if (bossDef.skillEffect) bossDef.skillEffect(state);
+            state.enemy._skillUsed = true;
+        }
+        updateBattleUI();
+        if (state.player.hp <= 0) {
+            state.player.hp = 0;
+            state.battlePhase = 'over';
+            updateBattleUI();
+            setTimeout(() => onPlayerDeath(), 500);
+            return;
+        }
+        generateNextIntent();
+        // Next turn
+        setTimeout(() => startTurn(), 600);
+        return;
+    }
+
+    // Use pre-calculated turn attack (shared roll with defense, inverse correlation)
+    const rawEnemyDmg = state.enemyCurrentAtk;
+    let netDmg = rawEnemyDmg;
+
+    // Apply damage reduction if a defense card with that rune was played
+    if (state.turnFlags.damageReduction && state.turnFlags.damageReductionCard) {
+        const drHooks = getCardHooks(state.turnFlags.damageReductionCard);
+        if (drHooks.modifyIncomingDamage) {
+            netDmg = drHooks.modifyIncomingDamage(state, state.turnFlags.damageReductionCard, netDmg);
+        }
+    }
+
+    // Apply shield
+    let blocked = 0;
+    if (state.shield > 0) {
+        blocked = Math.min(state.shield, netDmg);
+        state.shield -= blocked;
+        netDmg -= blocked;
+        if (blocked > 0) {
+            addMessage(T.msgShieldBlock(blocked), 'info');
+        }
+    }
+
+    // Apply damage to player
+    // Emperor's Seal: first lethal hit → 1 damage
+    if (hasRelic('emperorSeal') && !state._sealUsedThisBattle && (state.player.hp - netDmg) <= 0 && netDmg > 0) {
+        netDmg = Math.max(0, state.player.hp - 1);
+        state._sealUsedThisBattle = true;
+        addMessage('👑 帝皇圣印：致命伤害降至1点！', 'heal');
+    }
+    state.player.hp -= netDmg;
+    if (netDmg > 0) {
+        addMessage(T.msgEnemyAttack(enemy.name, netDmg), 'damage');
+    } else if (rawEnemyDmg > 0) {
+        addMessage(`🛡️ ${enemy.name} 的攻击被护盾完全吸收！`, 'info');
+    }
+    if (netDmg > 0) {
+        animateDamage('player-sprite', netDmg, 'damage');
+        shakeElement('player-sprite');
+        SFX.play('hit');
+    } else {
+        SFX.play('enemy_attack');
+    }
+
+    // Apply counter attack if active
+    if (state.turnFlags.counterAttack && state.turnFlags.counterAttackCard && state.enemy) {
+        const caHooks = getCardHooks(state.turnFlags.counterAttackCard);
+        if (caHooks.onEnemyAttack) {
+            caHooks.onEnemyAttack(state, state.turnFlags.counterAttackCard, rawEnemyDmg);
+        }
+    }
+
+    updateBattleUI();
+
+    if (state.player.hp <= 0) {
+        state.player.hp = 0;
+        state.battlePhase = 'over';
+        updateBattleUI();
+        setTimeout(() => onPlayerDeath(), 500);
+        return;
+    }
+
+    // Check if enemy died from counter attack
+    if (state.enemy && state.enemy.hp <= 0) {
+        state.enemy.hp = 0;
+        state.battlePhase = 'over';
+        updateBattleUI();
+        setTimeout(() => onEnemyDefeated(), 400);
+        return;
+    }
+
+    generateNextIntent();
+    // Next turn
+    setTimeout(() => startTurn(), 600);
+}
+
+function onEnemyDefeated() {
+    if (state.screen !== 'battle') return;
+    state.battlePhase = 'over';
+
+    // Gold drop: 2 for normal, 10 for boss
+    const goldDrop = isBossFloor(state.floor)
+        ? Math.floor(10 + state.floor)
+        : Math.floor((3 + state.floor * 0.5) * 1.5);
+    state.player.gold += goldDrop + (hasRelic('dungeonTreasure') ? Math.ceil(goldDrop * 0.1) : 0);
+    state._lastGoldGain = goldDrop + (hasRelic('dungeonTreasure') ? Math.ceil(goldDrop * 0.1) : 0);
+    state._lastExpGain = 0; // set below
+    addMessage(`${T.msgEnemyDeath(state.enemy.name)}`, 'info');
+    addMessage(`💰 获得 ${goldDrop} 金币！`, 'heal');
+    const prevExp = state.player.exp;
+    if (state._eventRelicReward) { giveRelic(state._eventRelicReward); addMessage('🎁 获得遗物「' + RELIC_DEFS[state._eventRelicReward].name + '」！', 'heal'); state._eventRelicReward = null; }
+    grantBattleExp();
+    state._lastExpGain = state.player.exp - prevExp;
+    if (hasRelic('chaosMark')) {
+        const chaosLoss = Math.max(1, Math.ceil(state.player.maxHp * 0.02));
+        state.player.hp = Math.max(1, state.player.hp - chaosLoss);
+        addMessage(`🌀 混沌印记：失去 ${chaosLoss} 点生命`, 'damage');
+    }
+    if (hasRelic('medicKit')) {
+        const mkHeal = Math.max(1, Math.ceil(state.player.maxHp * 0.03));
+        healPlayer(mkHeal);
+        addMessage(`🏥 急救包：回复 ${mkHeal} 点生命`, 'heal');
+    }
+    if (hasRelic('burningBlood')) {
+        const healAmt = Math.max(1, Math.ceil(state.player.maxHp * 0.05));
+        healPlayer(healAmt);
+        addMessage(`🔥 燃烧之血：回复 ${healAmt} 点生命`, 'heal');
+    }
+    updateBattleUI();
+
+    // Boss: show relic screen + double rewards
+    if (isBossFloor(state.floor)) {
+        SFX.play('boss_defeat');
+        // Double gold and exp for boss
+        state.player.gold += state._lastGoldGain; // double (already added once)
+        state._lastGoldGain *= 2;
+        grantBattleExp(); // extra exp
+        state._lastExpGain *= 2;
+        // Give random relic
+        let bossRelic = null;
+        const availableRelics = Object.values(RELIC_DEFS).filter(r => !hasRelic(r.id));
+        if (availableRelics.length > 0) {
+            bossRelic = availableRelics[Math.floor(Math.random() * availableRelics.length)];
+            giveRelic(bossRelic.id);
+            addMessage(`🎁 Boss遗物：「${bossRelic.name}」！`, 'heal');
+        }
+        state._lastRelicGain = bossRelic;
+        // Show boss reward screen then rune selection
+        state.screen = 'reward';
+        const rn = bossRelic ? bossRelic.name : '无';
+        const ri = bossRelic ? bossRelic.icon : '❓';
+        $('reward-floor-text').textContent = `💀 ${T.floor(state.floor)} 楼层主`;
+        const opts = document.querySelector('#screen-reward .reward-options');
+        if (opts) opts.innerHTML = `
+            <div class="reward-card"><div class="reward-icon">${ri}</div><div class="reward-title">遗物：${rn}</div><div class="reward-desc">已获得</div></div>
+            <div class="reward-card"><div class="reward-icon">💰</div><div class="reward-title">金币×2</div><div class="reward-desc">+${state._lastGoldGain}</div></div>
+            <div class="reward-card"><div class="reward-icon">📈</div><div class="reward-title">经验×2</div><div class="reward-desc">+${state._lastExpGain}</div></div>
+        `;
+        showScreen('reward');
+        setTimeout(() => showRuneSelection(), 3000);
+    } else if (state.enemy && state.enemy.isElite) {
+        // Elite: show rune selection (1 rune), then advance
+        // Elite: give random relic
+        let eliteRelic = null;
+        const eliteAvailable = Object.values(RELIC_DEFS).filter(r => !hasRelic(r.id));
+        if (eliteAvailable.length > 0) {
+            eliteRelic = eliteAvailable[Math.floor(Math.random() * eliteAvailable.length)];
+            giveRelic(eliteRelic.id);
+            addMessage(`🎁 精英遗物：「${eliteRelic.name}」！`, 'heal');
+        }
+        state._lastRelicGain = eliteRelic;
+        setTimeout(() => showEliteReward(), 600);
+    } else {
+        // Normal monster: show reward summary
+        setTimeout(() => showRewardSummary(), 600);
+    }
+}
+
+function onPlayerDeath() {
+    if (state.screen !== 'battle') return;
+    // Soul Stone: revive once
+    if (hasRelic('soulStone')) {
+        state.player.hp = Math.ceil(state.player.maxHp * 0.5);
+        state.player.relics = state.player.relics.filter(r => r !== 'soulStone');
+        addMessage('💎 灵魂石发动！复活并回复50%HP，灵魂石已粉碎', 'heal');
+        state.battlePhase = 'player';
+        startTurn();
+        return;
+    }
+    SFX.play('game_over');
+    saveRecord('death');
+    clearSave();
+    state.battlePhase = 'over';
+    addMessage(T.msgPlayerDeath, 'damage');
+    state.screen = 'gameover';
+    render();
+}
+
+// =====================================================================
+// PROGRESSION
+// =====================================================================
+function applyReward(type) {
+    if (type === 'heal') {
+        const healAmt = Math.ceil(state.player.maxHp * BALANCE.healPercent);
+        healPlayer(healAmt);
+    }
+}
+
+// Auto-grant EXP after every battle
+function grantBattleExp() {
+    // Tiered EXP: 1-25: 10, 26-50: 7, 51-75: 5, 76-100: 3
+    let expGain;
+    if (state.floor <= 25) expGain = 10;
+    else if (state.floor <= 50) expGain = 7;
+    else if (state.floor <= 75) expGain = 5;
+    else expGain = 3;
+    state.player.exp += expGain + (hasRelic('blessedBlood') ? Math.ceil(expGain * 0.2) : 0);
+    addMessage(`获得 ${expGain} 点经验！`, 'heal');
+    checkLevelUp();
+}
+
+function checkLevelUp() {
+    let leveled = false;
+    while (state.player.exp >= expToNextLevel()) {
+        const cost = expToNextLevel();
+        state.player.exp -= cost;
+        state.player.level++;
+        state.player.maxHp += BALANCE.player.levelUpBonus.maxHp;
+        healPlayer(BALANCE.player.levelUpBonus.maxHp);
+        if (hasRelic('hestiaBlessing')) healPlayer(Math.ceil(state.player.maxHp * 0.05));
+        leveled = true;
+        SFX.play('level_up');
+        addMessage(`${T.levelUp} 等级 ${state.player.level}！`, 'heal');
+    }
+    return leveled;
+}
+
+function expToNextLevel() {
+    return state.player.level * 10 + 20;
+}
+
+// =====================================================================
+// SAVE / LOAD
+// =====================================================================
+const SAVE_KEY = 'endless_slaughter_save';
+
+function saveGame() {
+    try {
+        const data = {
+            floor: state.floor, player: state.player,
+            mapStartFloor: state.mapStartFloor, currentMap: state.currentMap,
+            mapCursorFloor: state.mapCursorFloor, mapCursorPath: state.mapCursorPath,
+        };
+        localStorage.setItem(SAVE_KEY, JSON.stringify(data));
+    } catch (e) {}
+}
+
+// =====================================================================
+// GAME RECORDS (persistent across sessions)
+// =====================================================================
+const RECORDS_KEY = 'endless_slaughter_records';
+const MAX_RECORDS = 10;
+
+function saveRecord(outcome) {
+    try {
+        const records = loadRecords();
+        const record = {
+            outcome,             // 'victory' | 'death'
+            floor: state.floor,
+            level: state.player.level,
+            attack: state.player.attack,
+            defense: state.player.defense,
+            maxHp: state.player.maxHp,
+            date: new Date().toLocaleString('zh-CN'),
+        };
+        records.unshift(record);
+        if (records.length > MAX_RECORDS) records.length = MAX_RECORDS;
+        localStorage.setItem(RECORDS_KEY, JSON.stringify(records));
+    } catch (e) {}
+}
+
+function loadRecords() {
+    try {
+        const raw = localStorage.getItem(RECORDS_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch (e) { return []; }
+}
+
+function renderRecordsModal() {
+    const records = loadRecords();
+    let html = '';
+    if (records.length === 0) {
+        html = '<p style="text-align:center;color:#666;padding:20px;">暂无记录，开始游戏吧！</p>';
+    } else {
+        for (const r of records) {
+            const icon = r.outcome === 'victory' ? '🏆' : '💀';
+            const label = r.outcome === 'victory' ? '通关' : `止步第 ${r.floor} 层`;
+            html += `<div class="record-item">
+                <span class="record-icon">${icon}</span>
+                <span class="record-label">${label}</span>
+                <span class="record-stats">Lv.${r.level} | ⚔${r.attack} 🛡${r.defense} ❤${r.maxHp}</span>
+                <span class="record-date">${r.date}</span>
+            </div>`;
+        }
+    }
+    $('records-list').innerHTML = html;
+}
+
+function showRecordsModal() {
+    renderRecordsModal();
+    $('modal-records').style.display = 'flex';
+}
+
+function closeRecordsModal(e) {
+    $('modal-records').style.display = 'none';
+}
+
+function loadGame() {
+    try { const raw = localStorage.getItem(SAVE_KEY); return raw ? JSON.parse(raw) : null; }
+    catch (e) { return null; }
+}
+
+function clearSave() {
+    try { localStorage.removeItem(SAVE_KEY); } catch (e) {}
+}
+
+function continueGame() {
+    const data = loadGame();
+    if (!data) return;
+    state = freshState();
+    Object.assign(state, data);
+    state.screen = 'map';
+    render();
+}
+
+function advanceFloor() {
+    state.floor++;
+    // Check victory
+    if (state.floor > BALANCE.totalFloors) {
+        saveRecord('victory');
+        clearSave();
+        SFX.play('victory');
+        state.screen = 'victory';
+        render();
+        return;
+    }
+
+    // If entering a new area (past current area's boss), generate new map
+    const currentAreaEnd = getAreaEnd(state.mapStartFloor);
+    if (state.floor > currentAreaEnd) {
+        startNewArea(state.floor);
+        saveGame();
+        return;
+    }
+
+    // Show map for next floor selection
+    state.screen = 'map';
+    saveGame();
+    render();
+    SFX.play('floor_enter');
+}
+
+function getAreaEnd(startFloor) {
+    // Find the next boss floor after startFloor
+    for (const bossFloor of BALANCE.bossFloors) {
+        if (bossFloor >= startFloor) return bossFloor;
+    }
+    return BALANCE.totalFloors;
+}
+
+function startNewArea(startFloor) {
+    const endFloor = getAreaEnd(startFloor);
+    state.mapStartFloor = startFloor;
+    state.currentMap = generateMap(startFloor, endFloor);
+    state.mapCursorFloor = startFloor - 1; // Before first floor → floor 1 rooms are clickable
+    state.mapCursorPath = -1;               // No current path yet
+    state.floor = startFloor - 1;
+    state.screen = 'map';
+    render();
+}
+
+// =====================================================================
+// MAP DISPLAY & INTERACTION
+// =====================================================================
+
+// Helper: which columns on the next floor are reachable from the current column?
+function getReachableCols(currentCol) {
+    if (currentCol < 0) {
+        const firstRow = state.currentMap[0];
+        const cols = [];
+        for (let c = 0; c < MAP_CONFIG.cols; c++) {
+            if (firstRow[c]) cols.push(c);
+        }
+        return cols;
+    }
+    const cols = [];
+    const maxReach = MAP_CONFIG.connectorReach;
+    // First pass: standard reachability
+    for (let c = 0; c < MAP_CONFIG.cols; c++) {
+        if (Math.abs(c - currentCol) <= maxReach) cols.push(c);
+    }
+    // Fallback: if no rooms reachable in the next row, open all paths to prevent dead ends
+    const nextRowIdx = state.mapCursorFloor + 1 - state.mapStartFloor;
+    if (nextRowIdx >= 0 && nextRowIdx < (state.currentMap ? state.currentMap.length : 0)) {
+        const nextRow = state.currentMap[nextRowIdx];
+        const hasAnyReachable = cols.some(c => nextRow[c] !== null);
+        if (!hasAnyReachable) {
+            // No standard-reach rooms exist → return all columns that have a room
+            const allCols = [];
+            for (let c = 0; c < MAP_CONFIG.cols; c++) {
+                if (nextRow[c]) allCols.push(c);
+            }
+            return allCols.length > 0 ? allCols : cols;
+        }
+    }
+    return cols;
+}
+
+function showMap() {
+    const map = state.currentMap;
+    if (!map) return;
+
+    const cursorFloor = state.mapCursorFloor;
+    const cursorCol = state.mapCursorPath;
+    const areaEnd = getAreaEnd(state.mapStartFloor);
+    const mapStart = state.mapStartFloor;
+    const cols = MAP_CONFIG.cols;
+    const CW = MAP_CONFIG.cellW;
+    const CH = MAP_CONFIG.cellH;
+    const GAP = MAP_CONFIG.rowGap;
+
+    $('map-area-text').textContent = `第 ${mapStart}-${areaEnd} 层`;
+    // Build legend from ROOM_TYPES
+    let legendHTML = '';
+    for (const r of Object.values(ROOM_TYPES)) {
+        legendHTML += `<span>${r.icon} ${r.name}</span>`;
+    }
+    $('map-legend').innerHTML = legendHTML;
+
+    const totalRows = map.length;
+    const showFrom = Math.max(0, cursorFloor >= mapStart ? cursorFloor - mapStart - 1 : 0);
+    const showTo = Math.min(totalRows, Math.max(cursorFloor - mapStart + MAP_CONFIG.previewRows, 4));
+    const visibleRows = showTo - showFrom;
+    const reachableCols = getReachableCols(cursorCol);
+
+    const nodesArr = [];
+    const svgLinesArr = [];
+    const totalW = cols * (CW + 8); // 8px gap between col slots
+
+    for (let vr = 0; vr < visibleRows; vr++) {
+        const r = showFrom + vr;
+        const row = map[r];
+        const floorNum = mapStart + r;
+        // Bottom-to-top: vr=0 is lowest floor → placed at bottom (max y)
+        const yTop = (visibleRows - 1 - vr) * (CH + GAP);
+
+        // Room cells
+        nodesArr.push(`<div class="map-row" style="position:absolute;top:${yTop}px;left:0;right:0;gap:8px;">`);
+        for (let c = 0; c < cols; c++) {
+            const cell = row[c];
+            if (!cell) {
+                nodesArr.push('<div class="map-cell empty"></div>');
+                continue;
+            }
+
+            let stateClass = 'future';
+            let clickable = false;
+
+            if (floorNum < cursorFloor || (floorNum === cursorFloor && cursorFloor >= mapStart)) {
+                stateClass = 'past';
+                if (floorNum === cursorFloor && c === cursorCol) stateClass = 'current';
+            } else if (floorNum === cursorFloor + 1) {
+                if (reachableCols.includes(c)) {
+                    stateClass = 'next';
+                    clickable = true;
+                }
+            }
+
+            const room = ROOM_TYPES[cell.type];
+            const onClick = clickable ? `onclick="selectRoom(${floorNum},${c})"` : '';
+            const bgStyle = `border-color:${room.color};background:${room.color}15;`;
+
+            nodesArr.push(`
+                <div class="map-cell ${stateClass}" style="${bgStyle}" ${onClick}>
+                    <div class="cell-icon">${room.icon}</div>
+                    <div class="cell-type">${room.name}</div>
+                </div>
+            `);
+        }
+        nodesArr.push('</div>');
+
+        // Connector lines from this row (lower) → next row (upper, above on screen)
+        if (r + 1 < totalRows && r + 1 < showTo) {
+            const nextRow = map[r + 1];
+            const yTopUpper = (visibleRows - 2 - vr) * (CH + GAP); // row above
+            for (let c = 0; c < cols; c++) {
+                if (!row[c]) continue;
+                for (let nc = 0; nc < cols; nc++) {
+                    if (!nextRow[nc]) continue;
+                    if (!columnsConnected(c, nc)) continue;
+
+                    const slotW = CW + 8;
+                    const x1 = c * slotW + CW / 2;
+                    const y1 = yTop + CH;        // bottom of lower cell
+                    const x2 = nc * slotW + CW / 2;
+                    const y2 = yTopUpper;         // top of upper cell (smaller y = higher on screen)
+
+                    const isActive = (cursorFloor >= mapStart && floorNum === cursorFloor
+                                    && c === cursorCol && reachableCols.includes(nc));
+                    // Only show inactive lines for direct connections (less visual noise)
+                    if (!isActive && Math.abs(c - nc) > 1) continue;
+                    const stroke = isActive ? 'var(--gold)' : '#2a2a3a';
+                    const sw = isActive ? 3.5 : 1;
+                    const op = isActive ? 1 : 0.25;
+                    svgLinesArr.push(`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="${stroke}" stroke-width="${sw}" stroke-linecap="round" opacity="${op}"/>`);
+                }
+            }
+        }
+    }
+
+    const totalH = Math.max(200, visibleRows * (CH + GAP) - GAP);
+    $('map-grid').innerHTML = `
+        <div style="position:relative;width:${totalW}px;height:${totalH}px;margin:0 auto;">
+            <svg style="position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0;">${svgLinesArr.join('')}</svg>
+            <div style="position:relative;z-index:1;">${nodesArr.join('')}</div>
+        </div>
+    `;
+
+    if (cursorFloor < mapStart) {
+        $('map-hint').textContent = '👆 点击第1层的房间开始冒险';
+    } else if (cursorFloor >= areaEnd) {
+        $('map-hint').textContent = '⚔️ 迎战楼层主！';
+    } else {
+        $('map-hint').textContent = '沿金色连线选择下一个房间';
+    }
+
+    showScreen('map');
+    setTimeout(() => {
+        const wrap = $('map-grid-wrap');
+        if (wrap) {
+            // Current position in flipped coordinates (bottom-to-top)
+            const curRowIdx = cursorFloor >= mapStart ? cursorFloor - mapStart : 0;
+            const curY = (visibleRows - 1 - curRowIdx) * (CH + GAP);
+            // Scroll so current position is near the bottom of viewport
+            wrap.scrollTop = Math.max(0, curY - 300);
+        }
+    }, 50);
+}
+
+function selectRoom(targetFloor, targetCol) {
+    if (targetFloor !== state.mapCursorFloor + 1) return;
+    if (!getReachableCols(state.mapCursorPath).includes(targetCol)) return;
+
+    const map = state.currentMap;
+    const rowIndex = targetFloor - state.mapStartFloor;
+    if (rowIndex < 0 || rowIndex >= map.length) return;
+    if (targetCol < 0 || targetCol >= map[rowIndex].length) return;
+    const cell = map[rowIndex][targetCol];
+    if (!cell) return;
+
+    // Move cursor
+    state.mapCursorFloor = targetFloor;
+    state.mapCursorPath = targetCol;
+    state.floor = targetFloor;
+
+    try {
+        resolveRoom(cell);
+    } catch (e) {
+        console.error('resolveRoom error:', e.message, e.stack);
+        alert('进入房间失败：' + e.message);
+    }
+}
+
+function resolveRoom(cell) {
+    state.messages = [];
+    state.shield = 0;
+    state.plagueTurns = 0; // Reset permanent plague between battles
+    // Clean up any lingering skill effects on persistent cards
+    for (const card of state.player.cards) {
+        if (card._savedCost !== undefined) { card.cost = card._savedCost; delete card._savedCost; }
+    }
+    state.deck = { draw: createDeck(), hand: [], discard: [] };
+    state._battleTurnCount = 0;
+    state._sealUsedThisBattle = false;
+    state._shieldDoubledThisBattle = false;
+    // Only battle rooms get the EXP/HP reward screen
+    state.pendingReward = (cell.type === 'battle' || cell.type === 'boss');
+    state.battlePhase = 'player'; // Reset for new battle
+
+    switch (cell.type) {
+        case 'battle':
+            state.enemy = generateEnemy(state.floor);
+            initEnemyIntent();
+            state.screen = 'battle';
+            render();
+            renderStickFigure('player-sprite', 'var(--player)', false, false);
+            renderStickFigure('enemy-sprite', 'var(--enemy)', true, state.enemy ? state.enemy.isBoss : false);
+            startTurn();
+            break;
+
+        case 'elite':
+            state.enemy = generateElite(state.floor);
+            initEnemyIntent();
+            state.screen = 'battle';
+            render();
+            renderStickFigure('player-sprite', 'var(--player)', false, false);
+            renderStickFigure('enemy-sprite', 'var(--enemy)', true, false);
+            startTurn();
+            break;
+
+        case 'boss':
+            SFX.play('boss_appear');
+            state.enemy = generateEnemy(state.floor);
+            state.enemyTurnCounter = 0;
+            initEnemyIntent();
+            state.screen = 'battle';
+            render();
+            renderStickFigure('player-sprite', 'var(--player)', false, false);
+            renderStickFigure('enemy-sprite', 'var(--enemy)', true, true);
+            // Show boss intro, then start turn
+            showBossIntro(() => { startTurn(); });
+            break;
+
+        case 'question':
+            state.screen = 'question-room';
+            render();
+            break;
+
+        case 'shop':
+            state.screen = 'shop';
+            state.engraveOrigin = 'boss';
+            render();
+            break;
+
+        default:
+            advanceFloor();
+    }
+}
+
+// Helper: go to next phase (reward if battle, otherwise advance directly)
+function proceedAfterRoom() {
+    if (state.pendingReward) {
+        showReward();
+    } else {
+        advanceFloor();
+    }
+}
+
+// Make selectRoom globally accessible
+window.selectRoom = selectRoom;
+
+// =====================================================================
+// RUNE SELECTION & ENGRAVING
+// =====================================================================
+
+function showRuneSelection() {
+    state.screen = 'rune-select';
+    const choices = pickRandomRunes(BALANCE.runesPerSelection);
+    state.pendingRuneChoices = choices;
+
+    $('rune-select-title').textContent = T.runeSelectTitle;
+    $('rune-select-desc').textContent = T.runeSelectDesc;
+
+    $('rune-options').innerHTML = choices.map(rune => {
+        const tagClass = rune.tag;
+        const tagText = rune.tag === 'attack' ? T.runeTypeAttack :
+                        rune.tag === 'defense' ? T.runeTypeDefense :
+                        T.runeTypeUniversal;
+        return `
+            <div class="rune-card" onclick="selectRune('${rune.id}')">
+                <div class="rune-icon">🔮</div>
+                <div class="rune-name">${rune.name}</div>
+                <div class="rune-tag ${tagClass}">${tagText}</div>
+                <div class="rune-desc">${rune.desc}</div>
+            </div>
+        `;
+    }).join('');
+
+    showScreen('rune-select');
+}
+
+function selectRune(runeId) {
+    const rune = RUNE_DEFS[runeId];
+    if (!rune) return;
+    state.pendingRuneId = runeId;
+    showCardEngrave(rune);
+}
+
+function showCardEngrave(rune) {
+    state.screen = 'rune-engrave';
+
+    // Check if any compatible, unengraved cards exist
+    const hasCompatibleCard = state.player.cards.some(card => {
+        return isRuneCompatible(rune, card) && !card.rune;
+    });
+
+    // If no compatible cards, skip to reward
+    if (!hasCompatibleCard) {
+        addMessage('没有符合条件的卡牌可刻印，印记已丢弃', 'damage');
+        state.pendingRuneId = null;
+        showReward();
+        return;
+    }
+
+    $('rune-engrave-title').textContent = T.runeEngraveTitle;
+    $('rune-engrave-desc').textContent = T.runeEngraveDesc(rune.name);
+
+    $('card-engrave-options').innerHTML = state.player.cards.map((card, i) => {
+        const compatible = isRuneCompatible(rune, card);
+        const hasRune = !!card.rune;
+        const disabled = !compatible || hasRune;
+        const cardName = card.id === 'attack' ? T.cardAttack : T.cardDefense;
+        let hint = '';
+        if (hasRune) hint = `🔒 ${T.cardHasRune}`;
+        else if (!compatible) hint = `🚫 ${T.cardIncompatible}`;
+        else hint = '👆 点击刻印';
+
+        return `
+            <div class="engrave-card ${disabled ? 'disabled' : ''} ${hasRune ? 'hasRune' : ''}"
+                 ${!disabled ? `onclick="engraveRuneOnCard(${i})"` : ''}>
+                <div class="engrave-icon">${card.icon}</div>
+                <div class="engrave-name">${cardName}</div>
+                ${hasRune ? `<div class="engrave-rune">🔮 ${RUNE_DEFS[card.rune]?.name || card.rune}</div>` : ''}
+                <div class="engrave-hint">${hint}</div>
+            </div>
+        `;
+    }).join('');
+
+    showScreen('rune-engrave');
+}
+
+function engraveRuneOnCard(cardIndex) {
+    const rune = RUNE_DEFS[state.pendingRuneId];
+    const card = state.player.cards[cardIndex];
+    if (!rune || !card) return;
+
+    const compatible = isRuneCompatible(rune, card);
+    if (!compatible || card.rune) return;
+
+    // Engrave the rune
+    card.rune = rune.id;
+    card.runeData = {};
+    SFX.play('rune');
+
+    const cardName = card.id === 'attack' ? T.cardAttack : T.cardDefense;
+    addMessage(T.runeEngraved(rune.name, cardName), 'heal');
+
+    // Return to correct screen based on origin
+    state.pendingRuneId = null;
+    if (state.engraveOrigin === 'shop') {
+        // Go back to shop after engraving
+        state.screen = 'shop';
+        renderShop();
+    } else if (state.engraveOrigin === 'chest') {
+        // Continue after chest rune
+        state.engraveOrigin = 'boss';
+        proceedAfterRoom();
+    } else if (state.engraveOrigin === 'elite') {
+        // Elite: rune chosen, advance
+        state.engraveOrigin = 'boss';
+        advanceFloor();
+    } else {
+        // Boss rune → advance (boss already gave relic earlier)
+        advanceFloor();
+    }
+}
+
+// Unified rune confirm — reuse for boss, shop, chest
+function showRuneConfirm(rune) {
+    state.pendingConfirmRuneId = rune.id;
+    const tagText = rune.tag === 'attack' ? T.runeTypeAttack :
+                    rune.tag === 'defense' ? T.runeTypeDefense : T.runeTypeUniversal;
+    $('rune-confirm-card').innerHTML = `
+        <div class="rune-icon">🔮</div>
+        <div class="rune-name">${rune.name}</div>
+        <div class="rune-tag ${rune.tag}">${tagText}</div>
+        <div class="rune-desc">${rune.desc}</div>
+    `;
+    showScreen('rune-confirm');
+}
+
+function acceptRune() {
+    const runeId = state.pendingConfirmRuneId;
+    const rune = RUNE_DEFS[runeId];
+    if (!rune) return;
+    state.pendingRuneId = runeId;
+    showCardEngrave(rune);
+}
+
+function declineRune() {
+    state.pendingConfirmRuneId = null;
+    state.pendingRuneId = null;
+    if (state.engraveOrigin === 'shop') {
+        storeDeclinedRune();
+        state.screen = 'shop';
+        renderShop();
+    } else if (state.engraveOrigin === 'chest') {
+        storeDeclinedRune();
+        state.engraveOrigin = 'boss';
+        proceedAfterRoom();
+    } else {
+        storeDeclinedRune();
+        showReward();
+    }
+}
+
+function storeDeclinedRune() {
+    // Track declined rune so it doesn't show up again soon
+    if (!state.declinedRunes) state.declinedRunes = [];
+    if (state.pendingRuneId) {
+        state.declinedRunes.push(state.pendingRuneId);
+        if (state.declinedRunes.length > 20) state.declinedRunes.shift();
+        addMessage(`放弃了印记`, 'info');
+    }
+    state.pendingRuneId = null;
+    state.pendingConfirmRuneId = null;
+}
+
+// Unified card reward — reuse for chest
+function showCardReward() {
+    const isAttack = Math.random() < 0.5;
+    const card = isAttack
+        ? { id: 'attack', icon: '⚔️', type: 'atk', cost: 1, effect: 'dealDamage', name: T.cardAttack }
+        : { id: 'defense', icon: '🛡️', type: 'def', cost: 1, effect: 'gainShield', name: T.cardDefense };
+    state.pendingCard = card;
+    $('question-room-options').innerHTML = `
+        <div class="reward-card">
+            <div class="reward-icon">${card.icon}</div>
+            <div class="reward-title">随机卡牌</div>
+            <div class="reward-desc">${card.name} | ⚡${card.cost}</div>
+        </div>
+        <div style="display:flex;gap:12px;margin-top:12px;">
+            <button class="btn" onclick="acceptCard()">获得</button>
+            <button class="btn btn-small" onclick="declineCard()">放弃</button>
+        </div>
+    `;
+    showScreen('question-room');
+}
+
+function acceptCard() {
+    const card = state.pendingCard;
+    if (!card) return;
+    state.player.cards.push({ ...card, rune: null, runeData: {} });
+    addMessage(`${card.icon} 获得了一张${card.name}！`, 'heal');
+    state.engraveOrigin = 'boss';
+    proceedAfterRoom();
+}
+
+function declineCard() {
+    state.pendingCard = null;
+    addMessage('放弃了卡牌', 'info');
+    state.engraveOrigin = 'boss';
+    proceedAfterRoom();
+}
+
+// =====================================================================
+// QUESTION ROOM INTERACTION
+// =====================================================================
+// EVENT DEFINITIONS (one-time per run)
+// =====================================================================
+const EVENT_DEFS = [
+    {
+        id: 'runeMage', name: '流浪的符文法师', floorMin: 3,
+        desc: '流浪的符文法师正在寻找遗失的符文宝石。',
+        options: [
+            { label: '给予宝石', condition: s => hasRelic('runeGem'), effect(s) { state.player.cards.push({id:'magicBook',icon:'📖',type:'atk',cost:2,effect:'magicAttack',rune:null,runeData:{}}); addMessage('符文法师赠送了魔法书', 'heal'); }, resultText: '符文法师感谢你的慷慨，将珍藏的「符文法师的魔法书」赠予了你。' },
+            { label: '离开', effect(s) {}, resultText: '你默默地离开了符文法师。' },
+        ],
+    },
+    {
+        id: 'fallenAngel', name: '逃避追捕的堕天使', floorMin: 1,
+        desc: '黑暗天使正在追捕他们眼中的叛徒堕天使。',
+        options: [
+            { label: '帮助逃避', effect(s) { state.player.gold += 15; if (state._eventRelicReward) { giveRelic(state._eventRelicReward); addMessage('🎁 获得遗物「' + RELIC_DEFS[state._eventRelicReward].name + '」！', 'heal'); state._eventRelicReward = null; }
+    grantBattleExp(); addMessage('堕天使给了你金币和经验', 'heal'); }, resultText: '堕天使感激你的帮助，将身上所有的金币赠予了你，并分享了自己的战斗经验。' },
+            { label: '协助追捕者', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '黑暗天使'; enterEventBattle(); }, startsBattle: true, resultText: '黑暗天使感谢你的付出，但在你离开之前他偷袭了你。与精英怪「黑暗天使」发生战斗！' },
+        ],
+    },
+    {
+        id: 'unitreeRobot', name: '宇树机器人', floorMin: 1,
+        desc: '一个外形像人类的机器朝你挥手，说自己准备跳一支舞。',
+        options: [
+            { label: '默默观看', effect(s) { state.player.hp = Math.max(1, Math.floor(state.player.hp * 0.9)); addMessage('舞蹈太过辣眼', 'damage'); }, resultText: '机器人的舞蹈太过辣眼，你感到身心受创，失去了10%的生命值。' },
+            { label: '一脚踹倒', effect(s) { state.player.maxHp += 10; addMessage('宇树机器人倒下', 'heal'); }, resultText: '宇树机器人轰然倒下，你感觉神清气爽。最大生命值永久+10。' },
+        ],
+    },
+    {
+        id: 'defectBot', name: '故障机器人寻找他的朋友', floorMin: 1,
+        desc: '从某个高塔跑出来的故障机器人突然意识到他的朋友还在高塔里。',
+        options: [
+            { label: '安慰', effect(s) { state.player.gold += 91; addMessage('获得91金币', 'heal'); }, resultText: '故障机器人接受你的安慰后重整旗鼓，准备回到高塔。启程前它将身上所有的91枚金币交给了你。' },
+            { label: '朝它倒水', effect(s) { state.player.hp = Math.max(1, state.player.hp - 10); addMessage('机器人揍了你一拳', 'damage'); }, resultText: '故障机器人感到莫名其妙，愤怒地揍了你一拳。你受到了10点伤害。' },
+            { label: '支付67金币进行缝合', condition: s => state.player.gold >= 67, effect(s) { state.player.gold -= 67; state._pendingFusion = true; state._fusionOrigin = 'event'; addMessage('支付67金币', 'heal'); showFusionScreen(); }, startsFusion: true, resultText: '' },
+        ],
+    },
+    {
+        id: 'ironcladEvent', name: '失去自我而不断战斗的铁甲战士', floorMin: 1,
+        desc: '被诅咒而失去理智的战士毁灭了自己的种族。',
+        options: [
+            { label: '攻击', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '失去自我的铁甲战士'; state.enemy.eliteSpecial = 'berserk'; enterEventBattle(); }, startsBattle: true, resultText: '为了让他安息，你拔剑与他战斗！' },
+            { label: '告密', effect(s) { giveRelic('burningBlood'); addMessage('获得燃烧之血', 'heal'); }, resultText: '战士默默点了点头，将自己的鲜血给予了你。获得遗物「燃烧之血」。' },
+            { label: '离开', effect(s) {}, resultText: '你心想：离这个疯子远点吧。于是悄悄离开了。' },
+        ],
+    },
+    {
+        id: 'silentHunter', name: '追求极致的静默猎手', floorMin: 1,
+        desc: '追求极致的猎手正在与两头怪物搏斗。',
+        options: [
+            { label: '协助猎手', effect(s) { state.enemy = generateEnemy(state.floor); state._eventRelicReward = 'snakeRing'; enterEventBattle(); }, startsBattle: true, resultText: '你协助猎手与其中一头怪物展开了战斗！' },
+            { label: '攻击猎手', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '精英怪物'; enterEventBattle(); }, startsBattle: true, resultText: '猎手感到棘手，在击败一只怪物后逃走了。你被迫与剩下的精英怪物战斗。' },
+            { label: '离开', effect(s) {}, resultText: '君子不立危墙之下——你选择不参与这场混战，继续前行。' },
+        ],
+    },
+    {
+        id: 'watcherEvent', name: '情绪飘忽不定的观者大人', floorMin: 1,
+        desc: '来到另一个地方的观者仍旧保持着愤怒、平静和神格三种状态。',
+        options: [
+            { label: '与愤怒形态对话', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '愤怒的观者'; state.enemy.eliteSpecial = 'wrath'; enterEventBattle(); }, startsBattle: true, resultText: '愤怒的观者向你发起了猛烈的攻击！' },
+            { label: '与平静形态对话', effect(s) { healPlayer(Math.ceil(state.player.maxHp * 0.2)); addMessage('回复20%HP', 'heal'); }, resultText: '观者解释了自己愤怒的原因——因为速通杀戮尖塔2之后不知为何来到了这里，感到有些不快。观者为失态道歉，并给予了你回复药水。回复20%生命值。' },
+            { label: '与神格状态对话', effect(s) { for(let i=0;i<5;i++){ state.player.exp += expToNextLevel(); checkLevelUp(); } addMessage('等级+5', 'heal'); }, resultText: '观者表示从未见过如此弱小之人，当场帮你提升了五级。你感到一股强大的力量涌入体内。等级+5。' },
+        ],
+    },
+];
+
+function enterEventBattle() {
+    state.deck = { draw: createDeck(), hand: [], discard: [] };
+    state.shield = 0;
+    state.messages = [];
+    state.pendingReward = true;
+    state.battlePhase = 'player';
+    state._battleTurnCount = 0;
+    state.plagueTurns = 0;
+    initEnemyIntent();
+    state.screen = 'battle';
+    render();
+    renderStickFigure('player-sprite', 'var(--player)', false, false);
+    renderStickFigure('enemy-sprite', 'var(--enemy)', true, false);
+    startTurn();
+}
+
+// =====================================================================
+
+let _questionRoomTimer = null;
+
+function showQuestionRoom() {
+    // Prevent re-entry (race condition from multiple render() calls)
+    if (_questionRoomTimer !== null) return;
+    SFX.play('question');
+    // Distribution: 15% monster, 15% chest, 70% event
+    const roll = Math.random();
+    if (roll < 0.15) {
+        // Monster encounter
+        $('question-room-options').innerHTML = `<div class="reward-card"><div class="reward-icon">👾</div><div class="reward-title">遭遇怪物！</div><div class="reward-desc">前方出现了未知敌人…</div></div>`;
+        showScreen('question-room');
+        _questionRoomTimer = setTimeout(() => { _questionRoomTimer = null; enterQuestionBattle(); }, 1000);
+    } else if (roll < 0.3) {
+        // Chest
+        const reward = pickChestReward();
+        if (reward.id === 'randomRune') {
+            _questionRoomTimer = null; // handled manually
+            const runeIds = ALL_RUNE_IDS;
+            const randomId = runeIds[Math.floor(Math.random() * runeIds.length)];
+            const rune = RUNE_DEFS[randomId];
+            state.pendingRuneId = randomId;
+            state.engraveOrigin = 'chest';
+            showRuneConfirm(rune);
+        } else if (reward.id === 'randomCard') {
+            _questionRoomTimer = null; // handled manually
+            showCardReward();
+        } else {
+            const result = reward.apply(state);
+            $('question-room-options').innerHTML = `
+                <div class="reward-card">
+                    <div class="reward-icon">${result.icon}</div>
+                    <div class="reward-title">发现宝箱！</div>
+                    <div class="reward-desc">${result.msg}</div>
+                </div>
+            `;
+            showScreen('question-room');
+            _questionRoomTimer = setTimeout(() => {
+                _questionRoomTimer = null;
+                state.engraveOrigin = 'boss';
+                proceedAfterRoom();
+            }, 1500);
+        }
+    } else {
+        // Event (70%)
+        _questionRoomTimer = null;
+        if (!state.completedEvents) state.completedEvents = [];
+        const available = EVENT_DEFS.filter(e => !state.completedEvents.includes(e.id) && state.floor >= e.floorMin);
+        if (available.length === 0) {
+            proceedAfterRoom();
+            return;
+        }
+        const event = available[Math.floor(Math.random() * available.length)];
+        state.completedEvents.push(event.id);
+        showEvent(event);
+    }
+}
+
+function showEventResult(title, text, callback) {
+    $('question-room-options').innerHTML = `<div class="reward-card"><div class="reward-icon">📜</div><div class="reward-title">${title}</div><div class="reward-desc">${text}</div></div>`;
+    showScreen('question-room');
+    setTimeout(() => { callback(); }, 4000);
+}
+
+function showEvent(event) {
+    let html = `<h3 style="color:var(--gold);margin-bottom:8px;">${event.name}</h3>`;
+    html += `<p style="color:var(--text-dim);margin-bottom:16px;">${event.desc}</p>`;
+    for (const opt of event.options) {
+        let cantDo = opt.condition && !opt.condition(state);
+        let style = 'display:block;width:100%;margin-bottom:8px;';
+        if (cantDo) style += 'opacity:0.35;cursor:not-allowed;filter:grayscale(60%);';
+        html += `<button class="btn btn-small" style="${style}" ${cantDo ? 'disabled' : ''}
+            onclick="handleEventOption('${event.id}', ${event.options.indexOf(opt)})">${opt.label}</button>`;
+    }
+    $('question-room-options').innerHTML = html;
+    state._currentEvent = event;
+    showScreen('question-room');
+}
+
+function handleEventOption(eventId, optIdx) {
+    const event = state._currentEvent;
+    if (!event) return;
+    const opt = event.options[optIdx];
+    if (opt.condition && !opt.condition(state)) return;
+    state.engraveOrigin = 'boss';
+    // For battle/fusion options: show result text first, then trigger
+    if (opt.startsBattle || opt.startsFusion) {
+        if (opt.resultText) {
+            showEventResult(event.name, opt.resultText, () => { opt.effect(state); });
+        } else {
+            opt.effect(state);
+        }
+        return;
+    }
+    // Normal options: execute effect, then show result
+    opt.effect(state);
+    if (state.screen === 'battle' || state.screen === 'rune-engrave') return;
+    if (opt.resultText) {
+        showEventResult(event.name, opt.resultText, () => proceedAfterRoom());
+    } else {
+        proceedAfterRoom();
+    }
+}
+window.handleEventOption = handleEventOption;
+
+function enterQuestionBattle() {
+    state.enemy = generateEnemy(state.floor);
+    state.plagueTurns = 0;
+    for (const card of state.player.cards) {
+        if (card._savedCost !== undefined) { card.cost = card._savedCost; delete card._savedCost; }
+    }
+    state.deck = { draw: createDeck(), hand: [], discard: [] };
+    state.shield = 0;
+    state.messages = [];
+    state.pendingReward = true;
+    state.battlePhase = 'player';
+    initEnemyIntent();
+    state.screen = 'battle';
+    render();
+    renderStickFigure('player-sprite', 'var(--player)', false, false);
+    renderStickFigure('enemy-sprite', 'var(--enemy)', true, state.enemy.isBoss);
+    startTurn();
+}
+
+// =====================================================================
+// SHOP
+// =====================================================================
+
+function enterShop() {
+    SFX.play('shop');
+    _shopPage = 0;
+    state.screen = 'shop';
+    // Pick 2 random relics the player doesn't have yet
+    const allRelicIds = Object.keys(RELIC_DEFS);
+    const available = allRelicIds.filter(id => !hasRelic(id));
+    const shuffled = shuffle([...available]);
+    state._shopRelics = shuffled.slice(0, 2);
+    renderShop();
+}
+
+const ITEMS_PER_PAGE = 4;
+let _shopPage = 0;
+
+function shopPage(dir) {
+    _shopPage += dir;
+    renderShop();
+}
+
+function renderShop() {
+    $('shop-gold').textContent = `💰 ${state.player.gold}`;
+    const totalPages = Math.ceil(SHOP_ITEMS.length / ITEMS_PER_PAGE);
+    if (_shopPage < 0) _shopPage = 0;
+    if (_shopPage >= totalPages) _shopPage = totalPages - 1;
+    const start = _shopPage * ITEMS_PER_PAGE;
+    const pageItems = SHOP_ITEMS.slice(start, start + ITEMS_PER_PAGE);
+
+    $('shop-items').innerHTML = pageItems.map(item => {
+        let remainText = '';
+        let disabled = false;
+        if (item.maxPurchases) {
+            let bought = 0;
+            if (item.id === 'extraEnergy') bought = state.player.shopExtraEnergyBought ? 1 : 0;
+            if (item.id === 'extraDraw') bought = state.player.shopExtraDrawCount || 0;
+            const remain = item.maxPurchases - bought;
+            remainText = ` <span style="color:#888;font-size:11px;">(剩余${remain}次)</span>`;
+            if (remain <= 0) disabled = true;
+        }
+        const actualPrice = getShopPrice(item.price);
+        const canAfford = state.player.gold >= actualPrice && !disabled;
+        return `
+            <div class="shop-item">
+                <div class="shop-item-icon">${item.icon}</div>
+                <div class="shop-item-name">${item.name}${remainText}</div>
+                <div class="shop-item-desc">${item.desc}</div>
+                <div class="shop-item-price">💰 ${actualPrice}</div>
+                <button class="btn btn-small" ${!canAfford ? 'disabled' : ''}
+                        onclick="buyShopItem('${item.id}')">购买</button>
+            </div>
+        `;
+    }).join('');
+
+    // Render shop relics (2 random relics)
+    if (state._shopRelics && state._shopRelics.length > 0) {
+        const relicsHtml = state._shopRelics.map(relicId => {
+            const relic = RELIC_DEFS[relicId];
+            if (!relic) return '';
+            const relicPrice = getShopPrice(50);
+            const canAfford = state.player.gold >= relicPrice;
+            return `
+                <div class="shop-item" style="border-color:var(--gold);">
+                    <div class="shop-item-icon">${relic.icon}</div>
+                    <div class="shop-item-name" style="color:var(--gold);">${relic.name}</div>
+                    <div class="shop-item-desc">${relic.desc}</div>
+                    <div class="shop-item-price">💰 ${relicPrice}</div>
+                    <button class="btn btn-small" ${!canAfford ? 'disabled' : ''}
+                            onclick="buyShopItem('relic_${relicId}')">购买</button>
+                </div>
+            `;
+        }).join('');
+        $('shop-items').insertAdjacentHTML('beforeend', `<div style="width:100%;text-align:center;color:var(--gold);margin:8px 0;font-size:14px;">━━ 🏺 遗物 ━━</div>${relicsHtml}`);
+    }
+
+    // Page navigation
+    $('shop-page-num').textContent = `${_shopPage + 1} / ${totalPages}`;
+    $('btn-shop-prev').style.display = _shopPage > 0 ? '' : 'none';
+    $('btn-shop-next').style.display = _shopPage < totalPages - 1 ? '' : 'none';
+    showScreen('shop');
+}
+
+function buyShopItem(itemId) {
+    let item = SHOP_ITEMS.find(i => i.id === itemId);
+    let itemPrice = item ? getShopPrice(item.price) : 0;
+    // Check shop relics
+    if (!item && itemId.startsWith('relic_')) {
+        const relicId = itemId.replace('relic_', '');
+        item = { id: itemId, relicId, price: getShopPrice(50), isRelic: true };
+        itemPrice = item.price;
+    }
+    if (!item) return;
+    if (state.player.gold < itemPrice) return;
+
+    // Special handling for random rune
+    if (item.id === 'randomRune') {
+        // Pick random rune first, then check compatibility before charging gold
+        const runeIds = ALL_RUNE_IDS;
+        const randomId = runeIds[Math.floor(Math.random() * runeIds.length)];
+        const rune = RUNE_DEFS[randomId];
+        // Check if any compatible, unengraved cards exist
+        const hasCompatibleCard = state.player.cards.some(card => {
+            return isRuneCompatible(rune, card) && !card.rune;
+        });
+        if (!hasCompatibleCard) {
+            addMessage('没有可刻印的卡牌，无法购买随机印记', 'damage');
+            return;
+        }
+        state.player.gold -= itemPrice;
+        state.pendingRuneId = randomId;
+        state.engraveOrigin = 'shop';
+        showRuneConfirm(rune);
+        return;
+    }
+
+    // Card purchases
+    if (item.id === 'buyAttack') {
+        state.player.gold -= itemPrice;
+        const newCard = { id: 'attack', icon: '⚔️', type: 'atk', cost: 1, effect: 'dealDamage', rune: null, runeData: {} };
+        state.player.cards.push(newCard);
+        addMessage('⚔️ 获得了一张攻击卡牌！', 'heal');
+        SFX.play('play_card');
+        renderShop();
+        return;
+    }
+    if (item.id === 'buyDefense') {
+        state.player.gold -= itemPrice;
+        const newCard = { id: 'defense', icon: '🛡️', type: 'def', cost: 1, effect: 'gainShield', rune: null, runeData: {} };
+        state.player.cards.push(newCard);
+        addMessage('🛡️ 获得了一张防御卡牌！', 'heal');
+        SFX.play('play_card');
+        renderShop();
+        return;
+    }
+
+    // Stats / permanent upgrades
+    if (item.id === 'extraEnergy') {
+        if (state.player.shopExtraEnergyBought) { addMessage('已经购买过了！', 'damage'); return; }
+        state.player.gold -= itemPrice;
+        state.player.shopExtraEnergyBought = true;
+        addMessage('⚡ 每回合精力永久+1！', 'heal');
+        SFX.play('play_card');
+        renderShop();
+        return;
+    }
+    if (item.id === 'extraDraw') {
+        const count = state.player.shopExtraDrawCount || 0;
+        if (count >= 2) { addMessage('最多购买2次！', 'damage'); return; }
+        state.player.gold -= itemPrice;
+        state.player.shopExtraDrawCount = count + 1;
+        addMessage('🃏 每回合抽牌数永久+1！（当前额外+' + (count + 1) + '）', 'heal');
+        SFX.play('play_card');
+        renderShop();
+        return;
+    }
+    if (item.id === 'buyAtk') {
+        state.player.gold -= itemPrice;
+        state.player.attack += 1;
+        addMessage('⚔️ 攻击力永久+1！（当前 ' + state.player.attack + '）', 'heal');
+        SFX.play('play_card');
+        renderShop();
+        return;
+    }
+    if (item.id === 'buyDef') {
+        state.player.gold -= itemPrice;
+        state.player.defense += 1;
+        addMessage('🛡️ 防御力永久+1！（当前 ' + state.player.defense + '）', 'heal');
+        SFX.play('play_card');
+        renderShop();
+        return;
+    }
+    if (item.id === 'buyMaxHp') {
+        state.player.gold -= itemPrice;
+        state.player.maxHp += 5;
+        addMessage('❤️ 最大生命值永久+5！（当前 ' + state.player.maxHp + '）', 'heal');
+        SFX.play('play_card');
+        renderShop();
+        return;
+    }
+
+    // Shop relic purchase
+    if (item.isRelic && item.relicId) {
+        state.player.gold -= itemPrice;
+        if (giveRelic(item.relicId)) {
+            addMessage(`🎁 获得遗物「${RELIC_DEFS[item.relicId].name}」！`, 'heal');
+        }
+        // Remove from shop relics list
+        if (state._shopRelics) {
+            state._shopRelics = state._shopRelics.filter(r => r !== item.relicId);
+        }
+        renderShop();
+        return;
+    }
+    if (item.id === 'fuseService') {
+        state.player.gold -= itemPrice;
+        state._pendingFusion = true;
+        state._fusionOrigin = 'shop';
+        addMessage('🪡 购买印记缝合服务！', 'info');
+        showFusionScreen();
+        return;
+    }
+
+    // Apply item effect
+    state.player.gold -= itemPrice;
+    const msg = item.apply(state);
+    addMessage(msg, 'heal');
+    renderShop();
+}
+
+function leaveShop() {
+    state.engraveOrigin = 'boss';
+    proceedAfterRoom();
+}
+
+function continueAfterChest() {
+    state.chestResult = null;
+    state.engraveOrigin = 'boss';
+    proceedAfterRoom();
+}
+
+// Make functions globally accessible for onclick handlers
+window.selectRune = selectRune;
+window.engraveRuneOnCard = engraveRuneOnCard;
+window.enterShop = enterShop;
+window.buyShopItem = buyShopItem;
+window.leaveShop = leaveShop;
+window.continueAfterChest = continueAfterChest;
+
+// =====================================================================
+// UI RENDERING
+// =====================================================================
+function $(id) { return document.getElementById(id); }
+
+function showScreen(name) {
+    document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+    const el = $(`screen-${name}`);
+    if (el) el.classList.add('active');
+    // Show HUD on game screens, hide on menu/victory/gameover
+    const gameScreens = ['map', 'battle', 'question-room', 'shop', 'chest-result', 'rune-select', 'rune-engrave', 'rune-confirm', 'reward', 'attr-pick'];
+    $('hud-bar').style.display = gameScreens.includes(name) ? 'flex' : 'none';
+    if (gameScreens.includes(name)) updateHUD();
+    // Show/hide floating side panel
+    const sidePanelGameScreens = ['battle', 'map', 'shop', 'reward'];
+    const panel = document.getElementById('side-panel-overlay');
+    if (panel) {
+        if (sidePanelGameScreens.includes(name)) {
+            panel.style.display = 'flex';
+            panel.innerHTML = renderSidePanel() + renderCardBackpack();
+        } else {
+            panel.style.display = 'none';
+        }
+    }
+}
+
+function showEffects() {
+    const combatInfo = `
+        <div class="effect-entry" style="border-left-color:var(--gold);">
+            <div class="eff-name" style="color:var(--gold);">⚔️ 战斗系统</div>
+            <div class="eff-desc">
+                <b>⚡ 精力：</b>每回合2点（+商店/遗物加成），卡牌消耗1-3点<br>
+                <b>🃏 抽牌：</b>每回合2张（+商店/遗物加成）<br>
+                <b>🛡️ 护盾：</b>优先抵挡伤害，每回合开始清零<br>
+                <b>🗡️ 攻击卡：</b>造成伤害，先消耗怪物防御池再扣HP<br>
+                <b>🛡️ 防御卡：</b>获得护盾值（=防御力±印记加成）<br>
+                <b>💀 怪物意图：</b>每回合显示敌人行动（⚔️攻击/🛡️防御/技能），第一回合防御=0<br>
+                <b>💀 防御池：</b>怪物防御是可消耗的池，攻击先消耗防御→余量扣HP<br>
+                <b>⭐ 精英怪：</b>更强怪物，特殊机制，击败获得遗物+印记<br>
+                <b>💀 楼层主：</b>25/50/75/100层，独特技能，击败获得遗物+印记<br>
+            </div>
+        </div>
+        <div class="effect-entry" style="border-left-color:var(--energy);">
+            <div class="eff-name" style="color:var(--energy);">📈 成长系统</div>
+            <div class="eff-desc">
+                <b>经验：</b>1-25层:10 / 26-50:7 / 51-75:5 / 76-100:3<br>
+                <b>升级：</b>最大HP+10，攻防通过战斗奖励提升<br>
+                <b>金币：</b>普通怪:3+层×0.5 / Boss:10+层数（商店价随楼层×1+层×0.02）<br>
+                <b>遗物：</b>15种遗物，击败精英/Boss获得，商店可购买2个随机遗物<br>
+                <b>印记缝合：</b>商店100g购买服务，将印记转移到另一张已有印记的卡牌<br>
+                <b>事件：</b>问号房70%概率触发，每局每个事件最多1次<br>
+            </div>
+        </div>
+    `;
+    $('effects-list').innerHTML = combatInfo + ALL_RUNE_IDS.map(id => {
+        const r = RUNE_DEFS[id];
+        const tagText = r.tag === 'attack' ? '攻击' : r.tag === 'defense' ? '防御' : '通用';
+        return `
+            <div class="effect-entry">
+                <div class="eff-name">${r.name} <span class="eff-tag ${r.tag}">${tagText}</span></div>
+                <div class="eff-desc">${r.desc}</div>
+            </div>
+        `;
+    }).join('');
+    $('modal-effects').style.display = 'flex';
+}
+
+function closeEffects(e) {
+    $('modal-effects').style.display = 'none';
+}
+
+function showBossIntro(onComplete) {
+    const enemy = state.enemy;
+    if (!enemy || !enemy.intro) { onComplete(); return; }
+    $('boss-intro-text').textContent = `💀 ${enemy.name}\n\n${enemy.intro}`;
+    $('modal-boss-intro').style.display = 'flex';
+    setTimeout(() => {
+        $('modal-boss-intro').style.display = 'none';
+        onComplete();
+    }, 1800);
+}
+
+function viewBossSkill() {
+    const enemy = state.enemy;
+    if (!enemy || !enemy.isBoss) return;
+    $('boss-skill-title').textContent = `${enemy.skillIcon} ${enemy.skillName}`;
+    $('boss-skill-desc').textContent = enemy.skillDesc || '';
+    $('modal-boss-skill').style.display = 'flex';
+}
+
+function closeBossSkill(e) {
+    $('modal-boss-skill').style.display = 'none';
+}
+
+window.showEffects = showEffects;
+window.closeEffects = closeEffects;
+window.viewBossSkill = viewBossSkill;
+window.closeBossSkill = closeBossSkill;
+
+function renderSidePanel() {
+    const p = state.player;
+    const maxEnergy = state.maxEnergy + (p.shopExtraEnergyBought ? 1 : 0) + (hasRelic('runeGem') ? 1 : 0);
+    // Relics
+    let relicHTML = '<div class="panel-title">🏆 遗物</div><div class="side-relics">';
+    if (p.relics && p.relics.length > 0) {
+        for (const rid of p.relics) {
+            const r = RELIC_DEFS[rid];
+            if (r) relicHTML += `<span class="side-relic" title="${r.name}" onclick="showRelicDetail('${rid}')">${r.icon}</span>`;
+        }
+    } else {
+        relicHTML += '<span style="color:#555;font-size:9px;">暂无</span>';
+    }
+    relicHTML += '</div>';
+    // Player stats
+    const statsHTML = `<div class="panel-title">📊 属性</div>
+        <div class="stat-row"><span class="stat-label">❤️HP</span><span class="stat-value">${p.hp}/${p.maxHp}</span></div>
+        <div class="stat-row"><span class="stat-label">⚔️攻击</span><span class="stat-value">${p.attack}</span></div>
+        <div class="stat-row"><span class="stat-label">🛡️防御</span><span class="stat-value">${p.defense}</span></div>
+        <div class="stat-row"><span class="stat-label">⭐等级</span><span class="stat-value">${p.level}</span></div>
+        <div class="stat-row"><span class="stat-label">📈经验</span><span class="stat-value">${p.exp}/${expToNextLevel()}</span></div>
+        <div class="stat-row"><span class="stat-label">💰金币</span><span class="stat-value">${p.gold}</span></div>`;
+    return `<div class="side-panel">${relicHTML}${statsHTML}</div>`;
+}
+
+function injectSidePanel(screenName) {
+    const panel = document.getElementById('side-panel-overlay');
+    if (!panel) return;
+    const gameScreens = ['battle', 'map', 'shop', 'reward', 'question-room', 'rune-select', 'rune-engrave', 'attr-pick'];
+    if (gameScreens.includes(screenName)) {
+        panel.style.display = 'flex';
+        panel.innerHTML = renderSidePanel() + renderCardBackpack();
+    } else {
+        panel.style.display = 'none';
+    }
+}
+
+function renderCardBackpack() {
+    const cards = state.player.cards || [];
+    let html = '<div class="panel-title">🎒 卡牌 (' + cards.length + ')</div>';
+    for (let i = 0; i < cards.length; i++) {
+        const c = cards[i];
+        const runeName = c.rune ? (RUNE_DEFS[c.rune]?.name || c.rune) : '';
+        const fusedRunes = c._fusedRunes ? c._fusedRunes.map(r => RUNE_DEFS[r]?.name || r).join('+') : '';
+        const allRunes = [runeName, ...(c._fusedRunes || []).map(r => RUNE_DEFS[r]?.name || r)].filter(Boolean).join('+');
+        html += `<div style="font-size:9px;color:var(--text-dim);padding:1px 0;">${c.icon} ${c.id==='attack'?'攻':c.id==='magicBook'?'书':'防'}${allRunes?' 🔮'+allRunes:''} ⚡${c.cost}</div>`;
+    }
+    return html;
+}
+
+// =====================================================================
+// RUNE FUSION
+// =====================================================================
+let _fusionSource = null;
+
+function showFusionScreen() {
+    state.screen = 'rune-engrave';
+    _fusionSource = null;
+    const cards = state.player.cards;
+    // Step 1: pick source card (one with a rune to move)
+    let html = '<h2 style="color:var(--gold);">🪡 印记缝合 - 第1步</h2><p style="color:var(--text-dim);font-size:13px;">选择要移走印记的卡牌：</p><div class="card-engrave-options" style="display:flex;flex-wrap:wrap;gap:8px;">';
+    for (let i = 0; i < cards.length; i++) {
+        const c = cards[i];
+        const hasRune = c.rune || (c._fusedRunes && c._fusedRunes.length > 0);
+        if (!hasRune) continue;
+        const cardName = c.id === 'attack' ? '攻击' : (c.id === 'magicBook' ? '魔法书' : '防御');
+        const runeLabel = c.rune ? '🔮' + (RUNE_DEFS[c.rune]?.name || c.rune) : (c._fusedRunes ? c._fusedRunes.map(r => RUNE_DEFS[r]?.name || r).join('+') : '');
+        html += `<div class="engrave-card" onclick="selectFusionSource(${i})"><div>${c.icon} ${cardName}</div><div style="font-size:10px;">${runeLabel}</div></div>`;
+    }
+    html += '</div><button class="btn btn-small" onclick="closeFusion()" style="margin-top:8px;">取消</button>';
+    document.getElementById('card-engrave-options').innerHTML = html;
+    showScreen('rune-engrave');
+}
+
+function selectFusionSource(idx) {
+    _fusionSource = idx;
+    const src = state.player.cards[idx];
+    const srcRune = src.rune || (src._fusedRunes && src._fusedRunes[src._fusedRunes.length - 1]);
+    const srcRuneDef = RUNE_DEFS[srcRune];
+    const srcRuneName = srcRuneDef ? srcRuneDef.name : (srcRune || '');
+    // Step 2: pick target card (must have a rune already, type compatible)
+    let html = `<h2 style="color:var(--gold);">🪡 印记缝合 - 第2步</h2>
+        <p style="color:var(--text-dim);font-size:13px;">将「${srcRuneName}」转移到哪张卡牌？</p>
+        <p style="color:var(--text-dim);font-size:11px;">（目标卡牌必须已有至少一个印记，且类型兼容）</p>
+        <div class="card-engrave-options" style="display:flex;flex-wrap:wrap;gap:8px;">`;
+    for (let i = 0; i < state.player.cards.length; i++) {
+        if (i === idx) continue;
+        const c = state.player.cards[i];
+        const hasRune = c.rune || (c._fusedRunes && c._fusedRunes.length > 0);
+        if (!hasRune) continue;
+        const compatible = srcRuneDef ? isRuneCompatible(srcRuneDef, c) : true;
+        if (!compatible) continue;
+        const cardName = c.id === 'attack' ? '攻击' : (c.id === 'magicBook' ? '魔法书' : '防御');
+        const tgtLabel = c.rune ? '🔮' + (RUNE_DEFS[c.rune]?.name || c.rune) : (c._fusedRunes ? c._fusedRunes.map(r => RUNE_DEFS[r]?.name || r).join('+') : '');
+        html += `<div class="engrave-card" onclick="doFusion(${i})"><div>${c.icon} ${cardName}</div><div style="font-size:10px;">${tgtLabel}</div><div style="font-size:9px;color:var(--gold);">接收「${srcRuneName}」</div></div>`;
+    }
+    html += '</div><button class="btn btn-small" onclick="showFusionScreen()" style="margin-top:8px;">返回上一步</button>';
+    document.getElementById('card-engrave-options').innerHTML = html;
+    showScreen('rune-engrave');
+}
+
+function doFusion(targetIdx) {
+    if (_fusionSource === null) return;
+    const src = state.player.cards[_fusionSource];
+    const tgt = state.player.cards[targetIdx];
+    if (!src || !tgt) return;
+    // Get the rune being moved
+    let srcRuneId = null;
+    let srcRuneData = null;
+    if (src.rune) { srcRuneId = src.rune; srcRuneData = src.runeData || {}; src.rune = null; src.runeData = {}; }
+    else if (src._fusedRunes && src._fusedRunes.length > 0) { srcRuneId = src._fusedRunes.pop(); srcRuneData = (src._fusedRunesData && src._fusedRunesData.length > 0) ? (src._fusedRunesData.pop() || {}) : {}; }
+    if (!srcRuneId) return;
+    // Add to target's fused runes
+    if (!tgt._fusedRunes) tgt._fusedRunes = [];
+    if (!tgt._fusedRunesData) tgt._fusedRunesData = [];
+    tgt._fusedRunes.push(srcRuneId);
+    tgt._fusedRunesData.push(srcRuneData);
+    const runeName = RUNE_DEFS[srcRuneId]?.name || srcRuneId;
+    addMessage(`🪡 缝合完成！「${runeName}」已转移到目标卡牌`, 'heal');
+    SFX.play('rune');
+    _fusionSource = null;
+    if (state._pendingFusion) {
+        state._pendingFusion = false;
+        if (state._fusionOrigin === 'shop') { state._fusionOrigin = null; renderShop(); }
+        else { state._fusionOrigin = null; advanceFloor(); }
+    } else { render(); }
+}
+
+function closeFusion() {
+    _fusionSource = null;
+    if (state._pendingFusion) {
+        state._pendingFusion = false;
+        if (state._fusionOrigin === 'shop') { state._fusionOrigin = null; renderShop(); }
+        else { state._fusionOrigin = null; advanceFloor(); }
+    } else { render(); }
+}
+window.selectFusionSource = selectFusionSource;
+window.doFusion = doFusion;
+window.closeFusion = closeFusion;
+window.showFusionScreen = showFusionScreen;
+
+function showRelicDetail(relicId) {
+    const r = RELIC_DEFS[relicId];
+    if (!r) return;
+    $('relic-detail-content').innerHTML = `<h2 style="color:var(--gold);">${r.icon} ${r.name}</h2><p style="font-size:14px;color:var(--text-dim);margin:12px 0;">${r.desc}</p>`;
+    $('modal-relic-detail').style.display = 'flex';
+}
+function closeRelicDetail(e) { $('modal-relic-detail').style.display = 'none'; }
+window.showRelicDetail = showRelicDetail;
+window.closeRelicDetail = closeRelicDetail;
+
+// =====================================================================
+// ADMIN PANEL (` key)
+// =====================================================================
+function openAdmin() {
+    const sel = document.getElementById('admin-relic');
+    sel.innerHTML = Object.values(RELIC_DEFS).map(r => `<option value="${r.id}">${r.icon} ${r.name}</option>`).join('');
+    $('modal-admin').style.display = 'flex';
+}
+function closeAdmin(e) { $('modal-admin').style.display = 'none'; }
+function adminJumpFloor() {
+    const floor = parseInt($('admin-floor').value) || 1;
+    state.floor = Math.max(1, Math.min(100, floor));
+    startNewArea(state.floor);
+    $('modal-admin').style.display = 'none';
+}
+function adminAddRelic() {
+    const rid = document.getElementById('admin-relic').value;
+    if (giveRelic(rid)) {
+        addMessage(`[管理员] 获得遗物：${RELIC_DEFS[rid].name}`, 'heal');
+        render();
+    }
+}
+function adminModStat(stat, amount) {
+    if (stat === 'level') {
+        state.player.level += amount;
+    } else if (stat === 'gold') {
+        state.player.gold += amount;
+    } else {
+        state.player[stat] = (state.player[stat] || 0) + amount;
+        if (stat === 'maxHp') state.player.hp = Math.min(state.player.hp + amount, state.player.maxHp);
+    }
+    addMessage(`[管理员] ${stat} +${amount}`, 'heal');
+    render();
+}
+function adminHealFull() {
+    state.player.hp = state.player.maxHp;
+    addMessage('[管理员] 满血复活', 'heal');
+    render();
+}
+
+// Keyboard shortcut
+document.addEventListener('keydown', function(e) {
+    if (e.key === '`' || e.key === 'Backquote') {
+        e.preventDefault();
+        const admin = $('modal-admin');
+        if (admin.style.display === 'flex') { admin.style.display = 'none'; }
+        else { openAdmin(); }
+    }
+});
+
+window.closeAdmin = closeAdmin;
+window.adminJumpFloor = adminJumpFloor;
+window.adminAddRelic = adminAddRelic;
+window.adminModStat = adminModStat;
+window.adminHealFull = adminHealFull;
+
+function updateHUD() {
+    const p = state.player;
+    $('hud-hp').textContent = `${p.hp} / ${p.maxHp}`;
+    $('hud-gold').textContent = `${p.gold}`;
+    $('hud-floor').textContent = T.floor(state.floor);
+}
+
+function addMessage(text, cls = '') {
+    state.messages.push({ text, cls });
+    if (state.messages.length > 5) state.messages.shift();
+    const log = $('message-log');
+    if (log) {
+        log.innerHTML = state.messages.map(m => `<div class="msg ${m.cls}">${m.text}</div>`).join('');
+        log.scrollTop = log.scrollHeight;
+    }
+}
+
+function shakeElement(id) {
+    const el = $(id);
+    if (!el) return;
+    el.classList.remove('shake');
+    void el.offsetWidth; // trigger reflow
+    el.classList.add('shake');
+}
+
+function animateDamage(panelId, amount, type) {
+    const panel = $(panelId);
+    if (!panel) return;
+    const float = document.createElement('div');
+    float.className = 'damage-float';
+    float.textContent = (type === 'damage' ? '-' : '+') + amount;
+    float.style.color = type === 'damage' ? 'var(--enemy)' : 'var(--hp-green)';
+    float.style.left = '50%';
+    float.style.top = '30%';
+    panel.style.position = 'relative';
+    panel.appendChild(float);
+    setTimeout(() => float.remove(), 1000);
+}
+
+function renderStickFigure(containerId, color, isEnemy, isBoss) {
+    const container = $(containerId);
+    if (!container) return;
+    const w = isBoss ? 110 : isEnemy ? 90 : 80;
+    const h = isBoss ? 150 : isEnemy ? 130 : 120;
+    const scale = isBoss ? 1.3 : isEnemy ? 1.1 : 1.0;
+    const s = scale;
+
+    const skinColor = isEnemy ? '#c62828' : '#ffcc80';
+    const bodyColor = isEnemy ? '#4a0000' : '#1976d2';
+    const eyeColor = isEnemy ? '#ff0' : '#333';
+
+    let svg = `<svg width="${w}" height="${h}" viewBox="0 0 100 130" xmlns="http://www.w3.org/2000/svg">`;
+
+    if (isBoss) {
+        // Horns for boss
+        svg += `<line x1="30" y1="22" x2="18" y2="2" stroke="#333" stroke-width="3" stroke-linecap="round"/>`;
+        svg += `<line x1="56" y1="22" x2="68" y2="2" stroke="#333" stroke-width="3" stroke-linecap="round"/>`;
+    }
+
+    // Head
+    svg += `<circle cx="43" cy="28" r="14" fill="${skinColor}" stroke="#333" stroke-width="2"/>`;
+
+    // Eyes
+    if (isEnemy) {
+        svg += `<circle cx="38" cy="26" r="3" fill="${eyeColor}"/>`;
+        svg += `<circle cx="48" cy="26" r="3" fill="${eyeColor}"/>`;
+    } else {
+        svg += `<circle cx="38" cy="26" r="2" fill="${eyeColor}"/>`;
+        svg += `<circle cx="48" cy="26" r="2" fill="${eyeColor}"/>`;
+    }
+
+    // Mouth
+    if (isBoss) {
+        svg += `<path d="M35 34 Q43 42 51 34" stroke="#333" stroke-width="2" fill="none"/>`;
+    } else {
+        svg += `<line x1="38" y1="34" x2="48" y2="34" stroke="#333" stroke-width="1.5"/>`;
+    }
+
+    // Body
+    svg += `<line x1="43" y1="42" x2="43" y2="80" stroke="${bodyColor}" stroke-width="4" stroke-linecap="round"/>`;
+
+    // Arms
+    if (!isEnemy) {
+        // Player: one arm raised (holding sword)
+        svg += `<line x1="43" y1="52" x2="25" y2="38" stroke="${skinColor}" stroke-width="3" stroke-linecap="round"/>`;
+        // Sword
+        svg += `<line x1="25" y1="38" x2="18" y2="22" stroke="#bbb" stroke-width="2" stroke-linecap="round"/>`;
+        svg += `<line x1="16" y1="26" x2="22" y2="20" stroke="#bbb" stroke-width="2"/>`;
+        // Other arm
+        svg += `<line x1="43" y1="52" x2="60" y2="68" stroke="${skinColor}" stroke-width="3" stroke-linecap="round"/>`;
+    } else {
+        // Enemy: arms raised menacingly
+        svg += `<line x1="43" y1="50" x2="20" y2="38" stroke="${skinColor}" stroke-width="3.5" stroke-linecap="round"/>`;
+        svg += `<line x1="43" y1="50" x2="66" y2="38" stroke="${skinColor}" stroke-width="3.5" stroke-linecap="round"/>`;
+        // Claws
+        if (isBoss) {
+            svg += `<line x1="20" y1="38" x2="14" y2="32" stroke="#333" stroke-width="2"/>`;
+            svg += `<line x1="20" y1="38" x2="16" y2="44" stroke="#333" stroke-width="2"/>`;
+            svg += `<line x1="66" y1="38" x2="72" y2="32" stroke="#333" stroke-width="2"/>`;
+            svg += `<line x1="66" y1="38" x2="70" y2="44" stroke="#333" stroke-width="2"/>`;
+        }
+    }
+
+    // Legs
+    svg += `<line x1="43" y1="78" x2="30" y2="108" stroke="${skinColor}" stroke-width="3.5" stroke-linecap="round"/>`;
+    svg += `<line x1="43" y1="78" x2="56" y2="108" stroke="${skinColor}" stroke-width="3.5" stroke-linecap="round"/>`;
+
+    svg += `</svg>`;
+    container.innerHTML = svg;
+}
+
+function updateBattleUI() {
+    // Player
+    const p = state.player;
+    $('player-hp-bar').style.width = (p.hp / p.maxHp * 100) + '%';
+    $('player-hp-text').textContent = `${p.hp} / ${p.maxHp}`;
+    $('player-stats').innerHTML = `
+        <div class="stat-row"><span class="label">等级</span><span class="value">${p.level}</span></div>
+        <div class="stat-row"><span class="label">攻击</span><span class="value">${p.attack}</span></div>
+        <div class="stat-row"><span class="label">防御</span><span class="value">${p.defense}</span></div>
+        <div class="stat-row"><span class="label">经验</span><span class="value">${p.exp}/${expToNextLevel()}</span></div>
+        <div class="stat-row"><span class="label">金币</span><span class="value">${p.gold}</span></div>
+    `;
+    $('header-gold').textContent = `💰 ${p.gold}`;
+    $('shield-display').textContent = `🛡️ ${state.shield}`;
+    const maxEnergy = state.maxEnergy + (state.player.shopExtraEnergyBought ? 1 : 0) + (hasRelic('runeGem') ? 1 : 0);
+    $('energy-display').textContent = `⚡ ${state.energy}/${maxEnergy}`;
+
+    // Enemy
+    if (state.enemy) {
+        const e = state.enemy;
+        $('enemy-name').textContent = e.name;
+        // Intent display: defense / skill / attack
+        if (state.enemyIntentType === 'defense') {
+            $('enemy-intent').textContent = state.enemyIntentLabel;
+            $('enemy-intent').classList.remove('skill-intent');
+            $('enemy-intent').style.color = 'var(--shield)';
+        } else if (state.enemyIntentType === 'skill') {
+            $('enemy-intent').textContent = state.enemyIntentLabel;
+            $('enemy-intent').classList.add('skill-intent');
+            $('enemy-intent').style.color = '';
+        } else {
+            $('enemy-intent').textContent = `⚔️ ${state.enemyCurrentAtk || 0}`;
+            $('enemy-intent').classList.remove('skill-intent');
+            $('enemy-intent').style.color = '';
+        }
+        $('enemy-intent').style.display = state.battlePhase === 'player' ? '' : 'none';
+        // Show view-skill button only for boss battles
+        $('btn-view-skill').style.display = (e.isBoss) ? '' : 'none';
+        $('enemy-hp-bar').style.width = (e.hp / e.maxHp * 100) + '%';
+        $('enemy-hp-text').textContent = `${e.hp} / ${e.maxHp}`;
+        $('enemy-stats').innerHTML = `
+            <div class="stat-row"><span class="label">攻击</span><span class="value">${e.attack}</span></div>
+            <div class="stat-row"><span class="label">防御</span><span class="value">${e.defense}</span></div>
+            <div class="stat-row" style="color:var(--shield);font-weight:900;"><span class="label">🛡️ 本回合防御</span><span class="value">${state.enemyCurrentDef}</span></div>
+        `;
+    }
+
+    // Cards
+    renderHand();
+
+    // Deck info
+    $('deck-info').textContent = T.deckInfo(state.deck.draw.length, state.deck.discard.length);
+
+    // Floor
+    $('battle-floor').textContent = T.floor(state.floor);
+
+    // Update end turn button state
+    updateEndTurnButton();
+}
+
+function updateEndTurnButton() {
+    const btn = $('btn-end-turn');
+    if (!btn) return;
+    if (state.battlePhase === 'player') {
+        btn.disabled = false;
+        btn.style.opacity = '1';
+        btn.style.cursor = 'pointer';
+    } else {
+        btn.disabled = true;
+        btn.style.opacity = '0.5';
+        btn.style.cursor = 'not-allowed';
+    }
+}
+
+function renderHand() {
+    const handEl = $('card-hand');
+    const cards = state.deck.hand;
+    const maxSlots = Math.max(4, cards.length);
+    let html = '';
+    for (let i = 0; i < maxSlots; i++) {
+        if (i < cards.length) {
+            const card = cards[i];
+            // Calculate display cost (heavyStrike +2, freeEnergy = 0)
+            const displayCost = card.rune === 'freeEnergy' ? 0 : (card.rune === 'heavyStrike' ? card.cost + 2 : card.cost);
+            const disabled = (state.energy < displayCost) ? 'disabled' : '';
+            const typeClass = card.type === 'atk' ? 'atk-card' : 'def-card';
+            const typeLabel = card.type === 'atk' ? 'ATTACK' : 'DEFENSE';
+            const typeLabelClass = card.type === 'atk' ? 'atk' : 'def';
+            const name = card.id === 'attack' ? T.cardAttack : T.cardDefense;
+            const desc = card.id === 'attack'
+                ? T.cardAttackDesc(state.player.attack)
+                : T.cardDefenseDesc(state.player.defense);
+            const runeIndicator = (() => {
+                if (!card.rune) return '';
+                const runeName = RUNE_DEFS[card.rune]?.name || card.rune;
+                const heldInfo = (card.rune === 'waitAndRest' && card.runeData?.heldTurns)
+                    ? ` (${card.runeData.heldTurns}回合 +${card.runeData.heldTurns * 10}%)`
+                    : '';
+                return `<div class="card-rune" title="${runeName}">🔮 ${runeName}${heldInfo}</div>`;
+            })();
+            html += `
+                <div class="card-slot"><div class="card ${typeClass} ${disabled}" onclick="playCard(${i})">
+                    <div class="card-cost">⚡${displayCost}</div>
+                    <div class="card-icon">${card.icon}</div>
+                    <div class="card-title">${name}</div>
+                    <div class="card-desc">${desc}</div>
+                    ${runeIndicator}
+                    <div class="card-type-label ${typeLabelClass}">${typeLabel}</div>
+                </div></div>
+            `;
+        } else {
+            html += '<div class="card-slot"></div>';
+        }
+    }
+    handEl.innerHTML = html;
+}
+
+function showRewardSummary() {
+    state.screen = 'reward';
+    $('reward-floor-text').textContent = T.floor(state.floor);
+    const opts = document.querySelector('#screen-reward .reward-options');
+    if (opts) opts.innerHTML = `
+        <div class="reward-card"><div class="reward-icon">💰</div><div class="reward-title">金币</div><div class="reward-desc">+${state._lastGoldGain || 0}</div></div>
+        <div class="reward-card"><div class="reward-icon">📈</div><div class="reward-title">经验</div><div class="reward-desc">+${state._lastExpGain || 0}</div></div>
+    `;
+    showScreen('reward');
+    setTimeout(() => advanceFloor(), 3000);
+}
+
+function showReward() {
+    SFX.play('reward');
+    state.screen = 'reward';
+    state.attrRefreshCount = 0;
+    const floorEl = $('reward-floor-text'); if (floorEl) floorEl.textContent = T.floor(state.floor);
+    const healEl = $('reward-heal-desc'); if (healEl) healEl.textContent = T.rewardHealDesc(Math.ceil(state.player.maxHp * BALANCE.healPercent));
+    showScreen('reward');
+}
+
+function render() {
+    switch (state.screen) {
+        case 'menu':
+            showScreen('menu');
+            $('btn-continue').style.display = loadGame() ? '' : 'none';
+            break;
+        case 'battle':
+            showScreen('battle');
+            updateBattleUI();
+            break;
+        case 'map':
+            showMap();
+            break;
+        case 'question-room':
+            showQuestionRoom();
+            break;
+        case 'shop':
+            renderShop();
+            break;
+        case 'chest-result':
+            showScreen('chest-result');
+            break;
+        case 'reward':
+            showReward();
+            break;
+        case 'attr-pick':
+            showScreen('attr-pick');
+            break;
+        case 'rune-select':
+            showScreen('rune-select');
+            break;
+        case 'rune-engrave':
+            showScreen('rune-engrave');
+            break;
+        case 'rune-confirm':
+            showScreen('rune-confirm');
+            break;
+        case 'victory':
+            showScreen('victory');
+            // Dynamic victory text: V0.1 (25 floors) vs V0.2 (50 floors)
+            const vicTitle = state.floor > 30 ? T.victoryV2 : T.victory;
+            const vicDesc = state.floor > 30 ? T.victoryV2Desc : T.victoryDesc;
+            document.querySelector('#screen-victory h2').textContent = vicTitle;
+            document.querySelector('#screen-victory p').textContent = vicDesc;
+            $('victory-stats').innerHTML = `
+                <div class="stat-row"><span class="label">最终等级</span><span class="value">${state.player.level}</span></div>
+                <div class="stat-row"><span class="label">最大生命</span><span class="value">${state.player.maxHp}</span></div>
+                <div class="stat-row"><span class="label">攻击力</span><span class="value">${state.player.attack}</span></div>
+                <div class="stat-row"><span class="label">防御力</span><span class="value">${state.player.defense}</span></div>
+            `;
+            break;
+        case 'gameover':
+            showScreen('gameover');
+            $('gameover-stats').innerHTML = `
+                <div class="stat-row"><span class="label">到达层数</span><span class="value">第 ${state.floor} 层</span></div>
+                <div class="stat-row"><span class="label">最终等级</span><span class="value">${state.player.level}</span></div>
+                <div class="stat-row"><span class="label">攻击力</span><span class="value">${state.player.attack}</span></div>
+                <div class="stat-row"><span class="label">防御力</span><span class="value">${state.player.defense}</span></div>
+            `;
+            break;
+    }
+}
+
+// =====================================================================
+// EVENT HANDLERS & INITIALIZATION
+// =====================================================================
+function bindEvents() {
+    $('btn-start').addEventListener('click', () => { clearSave(); startGame(); });
+    $('btn-continue').addEventListener('click', continueGame);
+    $('btn-quit-battle').addEventListener('click', backToMenu);
+    $('btn-end-turn').addEventListener('click', endPlayerTurn);
+    $('btn-victory-menu').addEventListener('click', backToMenu);
+    $('btn-gameover-menu').addEventListener('click', backToMenu);
+    // Reward heal is now triggered via onclick in HTML
+    $('btn-leave-shop').addEventListener('click', leaveShop);
+    $('btn-chest-continue').addEventListener('click', continueAfterChest);
+    $('btn-effects').addEventListener('click', showEffects);
+}
+
+function startGame() {
+    try {
+        SFX.play('click');
+        state = freshState();
+        startNewArea(1);
+    } catch (e) {
+        console.error('startGame error:', e.message, e.stack);
+        alert('游戏启动失败：' + e.message);
+    }
+}
+
+function selectReward(type) {
+    applyReward(type);
+    advanceFloor();
+}
+
+function showAttrPick() {
+    state.screen = 'attr-pick';
+    state.pendingAttrType = null;
+    $('attr-pick-gold').textContent = `💰 金币：${state.player.gold}`;
+    showScreen('attr-pick');
+}
+
+function pickAttr(type) {
+    if (type === 'attack') {
+        state.player.attack += 1;
+        addMessage(`💪 攻击力 +1！`, 'heal');
+    } else {
+        state.player.defense += 1;
+        addMessage(`🛡️ 防御力 +1！`, 'heal');
+    }
+    advanceFloor();
+}
+
+function backToMenu() {
+    clearSave();
+    state = freshState();
+    state.screen = 'menu';
+    render();
+}
+
+// Make playCard globally accessible for onclick handlers
+window.playCard = playCard;
+
+// =====================================================================
+// BOOT
+// =====================================================================
+// Global error display
+window.addEventListener('error', function(e) {
+    const el = document.getElementById('error-overlay');
+    if (el) { el.style.display='block'; el.textContent = '❌ ' + e.message + ' (line '+e.lineno+')'; }
+});
+
+document.addEventListener('DOMContentLoaded', () => {
+    try {
+        SFX.init();
+        bindEvents();
+        state = freshState();
+        render();
+        console.log('Game initialized successfully');
+    } catch (e) {
+        console.error('Game init error:', e.message, e.stack);
+        // Show error on screen
+        const app = document.getElementById('app');
+        if (app) {
+            app.innerHTML = `<div style="color:red;padding:20px;text-align:center;">
+                <h2>初始化错误</h2>
+                <pre>${e.message}\n${e.stack || ''}</pre>
+            </div>`;
+        }
+    }
+});
+</script>
+</body>
+</html>
