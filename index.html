@@ -844,14 +844,14 @@ const BOSS_DEFS = {
         intro: '「世界毁灭，再重塑——这才是我最享受的戏法。」',
         skillName: '变化',
         skillIcon: '🎭',
-        skillDesc: '使玩家所有卡牌的精力消耗随机变为0–3点，持续1回合。',
+        skillDesc: '所有卡牌精力消耗随机变为0–3点，持续到战斗结束。',
         floorRange: [1, 35],
         skillEffect(state) {
             for (const card of [...state.deck.hand, ...state.deck.draw, ...state.deck.discard]) {
                 card._savedCost = card.cost;
                 card.cost = randInt(0, 3);
             }
-            addMessage('🎭 万变魔君使用了「变化」：所有卡牌消耗被随机改变！', 'damage');
+            addMessage('🎭 万变魔君使用了「变化」：所有卡牌消耗永久随机改变！', 'damage');
         },
         skillCleanup(state) {
             for (const card of [...state.deck.hand, ...state.deck.draw, ...state.deck.discard]) {
@@ -906,11 +906,11 @@ const BOSS_DEFS = {
         intro: '「瘟疫是生命的礼赞，腐烂是慈父的诗篇。」',
         skillName: '瘟疫',
         skillIcon: '☠️',
-        skillDesc: '玩家下一回合每使用一张卡牌，额外失去最大HP的5%。',
+        skillDesc: '每使用一张卡牌额外失去最大HP的5%，持续到战斗结束。',
         floorRange: [60, 100],
         skillEffect(state) {
-            state.plagueTurns = 1;
-            addMessage('☠️ 大不净者使用了「瘟疫」：下回合每出一张卡扣5%最大HP！', 'damage');
+            state.plagueTurns = 999;
+            addMessage('☠️ 大不净者使用了「瘟疫」：本场战斗每出一张卡扣5%最大HP！', 'damage');
         },
     },
     fourGodsChosen: {
@@ -1720,8 +1720,7 @@ function discardCard(card) {
 function startTurn() {
     if (state.screen !== 'battle' || state.battlePhase === 'over') return;
 
-    // Decrement plague turns
-    if (state.plagueTurns > 0) state.plagueTurns--;
+    // Plague is permanent after Great Unclean One uses it
 
     // Handle skipCardPlayTurns (守秘者享乐)
     if (state.skipCardPlayTurns > 0) {
@@ -1921,19 +1920,26 @@ function playCard(handIndex) {
 function initEnemyIntent() {
     state.enemyCurrentDef = 0;
     if (state.enemy && state.enemy.isBoss) {
-        const roll = Math.random();
-        if (roll < 0.2) {
-            state.enemyIntentType = 'defense';
-            state.enemyIntentLabel = '🛡️ 防御';
-            state.enemyCurrentAtk = 0;
-        } else if (roll < 0.5) {
+        // Shapeshifter & Great Unclean: first intent is always skill
+        if (state.enemy.bossId === 'shapeshifter' || state.enemy.bossId === 'greatUnclean') {
             state.enemyIntentType = 'skill';
             state.enemyIntentLabel = state.enemy.skillIcon + ' ' + state.enemy.skillName;
             state.enemyCurrentAtk = 0;
         } else {
-            state.enemyIntentType = 'attack';
-            state.enemyIntentLabel = '';
-            state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + Math.random() * 0.6));
+            const roll = Math.random();
+            if (roll < 0.2) {
+                state.enemyIntentType = 'defense';
+                state.enemyIntentLabel = '🛡️ 防御';
+                state.enemyCurrentAtk = 0;
+            } else if (roll < 0.5) {
+                state.enemyIntentType = 'skill';
+                state.enemyIntentLabel = state.enemy.skillIcon + ' ' + state.enemy.skillName;
+                state.enemyCurrentAtk = 0;
+            } else {
+                state.enemyIntentType = 'attack';
+                state.enemyIntentLabel = '';
+                state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + Math.random() * 0.6));
+            }
         }
     } else {
         if (Math.random() < 0.4) {
@@ -1952,11 +1958,6 @@ function endPlayerTurn() {
     if (state.battlePhase !== 'player') return;
     state.battlePhase = 'enemy';
 
-    // Clean up shapeshifter skill (restore costs in all card piles)
-    for (const card of [...state.deck.hand, ...state.deck.draw, ...state.deck.discard]) {
-        if (card._savedCost !== undefined) { card.cost = card._savedCost; delete card._savedCost; }
-    }
-
     updateBattleUI();
     discardHand();
     enemyAttack();
@@ -1965,19 +1966,32 @@ function endPlayerTurn() {
 function generateNextIntent() {
     if (state.enemy && state.enemy.isBoss) {
         state.enemyTurnCounter++;
-        const roll = Math.random();
-        if (roll < 0.2) {
-            state.enemyIntentType = 'defense';
-            state.enemyIntentLabel = '🛡️ 防御';
-            state.enemyCurrentAtk = 0;
-        } else if (roll < 0.5) {
-            state.enemyIntentType = 'skill';
-            state.enemyIntentLabel = (state.enemy.skillIcon || '') + ' ' + (state.enemy.skillName || '');
-            state.enemyCurrentAtk = 0;
+        // Shapeshifter & Great Unclean: skill already used, only attack/defense
+        if (state.enemy._skillUsed) {
+            if (Math.random() < 0.3) {
+                state.enemyIntentType = 'defense';
+                state.enemyIntentLabel = '🛡️ 防御';
+                state.enemyCurrentAtk = 0;
+            } else {
+                state.enemyIntentType = 'attack';
+                state.enemyIntentLabel = '';
+                state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + Math.random() * 0.6));
+            }
         } else {
-            state.enemyIntentType = 'attack';
-            state.enemyIntentLabel = '';
-            state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + Math.random() * 0.6));
+            const roll = Math.random();
+            if (roll < 0.2) {
+                state.enemyIntentType = 'defense';
+                state.enemyIntentLabel = '🛡️ 防御';
+                state.enemyCurrentAtk = 0;
+            } else if (roll < 0.5) {
+                state.enemyIntentType = 'skill';
+                state.enemyIntentLabel = (state.enemy.skillIcon || '') + ' ' + (state.enemy.skillName || '');
+                state.enemyCurrentAtk = 0;
+            } else {
+                state.enemyIntentType = 'attack';
+                state.enemyIntentLabel = '';
+                state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + Math.random() * 0.6));
+            }
         }
     } else {
         if (Math.random() < 0.4) {
@@ -2019,6 +2033,7 @@ function enemyAttack() {
         if (enemy.bossId && BOSS_DEFS[enemy.bossId]) {
             const bossDef = BOSS_DEFS[enemy.bossId];
             if (bossDef.skillEffect) bossDef.skillEffect(state);
+            state.enemy._skillUsed = true;
         }
         updateBattleUI();
         if (state.player.hp <= 0) {
