@@ -2523,8 +2523,13 @@ function selectRoom(targetFloor, targetCol) {
 
 function resolveRoom(cell) {
     state.messages = [];
-    state.deck = { draw: createDeck(), hand: [], discard: [] };
     state.shield = 0;
+    state.plagueTurns = 0; // Reset permanent plague between battles
+    // Clean up any lingering skill effects on persistent cards
+    for (const card of state.player.cards) {
+        if (card._savedCost !== undefined) { card.cost = card._savedCost; delete card._savedCost; }
+    }
+    state.deck = { draw: createDeck(), hand: [], discard: [] };
     // Only battle rooms get the EXP/HP reward screen
     state.pendingReward = (cell.type === 'battle' || cell.type === 'boss');
     state.battlePhase = 'player'; // Reset for new battle
@@ -2842,6 +2847,10 @@ function showQuestionRoom() {
 
 function enterQuestionBattle() {
     state.enemy = generateEnemy(state.floor);
+    state.plagueTurns = 0;
+    for (const card of state.player.cards) {
+        if (card._savedCost !== undefined) { card.cost = card._savedCost; delete card._savedCost; }
+    }
     state.deck = { draw: createDeck(), hand: [], discard: [] };
     state.shield = 0;
     state.messages = [];
