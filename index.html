@@ -1605,7 +1605,7 @@ const SHOP_ITEMS = [
         name: '攻击卡牌',
         icon: '⚔️',
         desc: '获得1张攻击卡牌',
-        price: 20,
+        price: 12,
         apply(state) { return null; },
     },
     {
@@ -1613,7 +1613,7 @@ const SHOP_ITEMS = [
         name: '防御卡牌',
         icon: '🛡️',
         desc: '获得1张防御卡牌',
-        price: 20,
+        price: 12,
         apply(state) { return null; },
     },
     {
@@ -3901,8 +3901,9 @@ function selectFusionSource(idx) {
         const c = state.player.cards[i];
         const hasRune = c.rune || (c._fusedRunes && c._fusedRunes.length > 0);
         if (!hasRune) continue;
-        // Max 2 runes per card
-        if (c.rune && c._fusedRunes && c._fusedRunes.length > 0) continue;
+        // Max 2 runes per card (count total)
+        const cRuneCount = (c.rune ? 1 : 0) + (c._fusedRunes ? c._fusedRunes.length : 0);
+        if (cRuneCount >= 2) continue;
         const compatible = srcRuneDef ? isRuneCompatible(srcRuneDef, c) : true;
         if (!compatible) continue;
         const cardName = c.id === 'attack' ? '攻击' : (c.id === 'magicBook' ? '魔法书' : '防御');
@@ -3925,8 +3926,9 @@ function doFusion(targetIdx) {
     if (src.rune) { srcRuneId = src.rune; srcRuneData = src.runeData || {}; src.rune = null; src.runeData = {}; }
     else if (src._fusedRunes && src._fusedRunes.length > 0) { srcRuneId = src._fusedRunes.pop(); srcRuneData = (src._fusedRunesData && src._fusedRunesData.length > 0) ? (src._fusedRunesData.pop() || {}) : {}; }
     if (!srcRuneId) return;
-    // Limit: max 2 runes per card (1 primary + 1 fused)
-    if (tgt.rune && tgt._fusedRunes && tgt._fusedRunes.length > 0) {
+    // Limit: max 2 runes per card (count primary + fused)
+    const tgtRuneCount = (tgt.rune ? 1 : 0) + (tgt._fusedRunes ? tgt._fusedRunes.length : 0);
+    if (tgtRuneCount >= 2) {
         addMessage('⚠️ 目标卡牌已有两个印记，无法继续缝合', 'damage');
         return;
     }
