@@ -1060,7 +1060,14 @@ function relicStatBonus(base, stat) {
 }
 function giveRelic(id) {
     if (!state.player.relics) state.player.relics = [];
-    if (!state.player.relics.includes(id)) { state.player.relics.push(id); return true; }
+    if (!state.player.relics.includes(id)) {
+        state.player.relics.push(id);
+        if (id === 'blackstoneShard') {
+            state._hasFreeFusion = true;
+            addMessage('🏰 黑石要塞的残片：获得一次免费印记缝合机会！', 'heal');
+        }
+        return true;
+    }
     return false;
 }
 
@@ -1784,6 +1791,7 @@ function freshState() {
         mapCursorFloor: 1,
         mapCursorPath: 0,
         pendingReward: true,
+        _hasFreeFusion: false,
     };
 }
 
@@ -3163,6 +3171,10 @@ function engraveRuneOnCard(cardIndex) {
 // Unified rune confirm — reuse for boss, shop, chest
 function showRuneConfirm(rune) {
     state.pendingConfirmRuneId = rune.id;
+    // Check if any compatible card is available (no rune yet, type matches)
+    const hasCompatible = state.player.cards.some(card => {
+        return isRuneCompatible(rune, card) && !card.rune;
+    });
     const tagText = rune.tag === 'attack' ? T.runeTypeAttack :
                     rune.tag === 'defense' ? T.runeTypeDefense : T.runeTypeUniversal;
     $('rune-confirm-card').innerHTML = `
@@ -3170,7 +3182,14 @@ function showRuneConfirm(rune) {
         <div class="rune-name">${rune.name}</div>
         <div class="rune-tag ${rune.tag}">${tagText}</div>
         <div class="rune-desc">${rune.desc}</div>
+        ${!hasCompatible ? '<div style="color:var(--damage);font-size:12px;margin-top:8px;">⚠️ 没有可刻印的卡牌</div>' : ''}
     `;
+    const acceptBtn = $('btn-accept-rune');
+    if (acceptBtn) {
+        acceptBtn.disabled = !hasCompatible;
+        if (!hasCompatible) acceptBtn.style.opacity = '0.4';
+        else acceptBtn.style.opacity = '1';
+    }
     showScreen('rune-confirm');
 }
 
@@ -3836,6 +3855,9 @@ function renderCardBackpack() {
         const allRunes = [runeName, ...(c._fusedRunes || []).map(r => RUNE_DEFS[r]?.name || r)].filter(Boolean).join('+');
         html += `<div style="font-size:9px;color:var(--text-dim);padding:1px 0;">${c.icon} ${c.id==='attack'?'攻':c.id==='magicBook'?'书':'防'}${allRunes?' 🔮'+allRunes:''} ⚡${c.cost}</div>`;
     }
+    if (state._hasFreeFusion) {
+        html += '<button class="btn btn-small" onclick="startFreeFusion()" style="margin-top:4px;width:100%;background:var(--gold);color:#000;font-weight:700;font-size:10px;">🏰 免费缝合</button>';
+    }
     return html;
 }
 
@@ -3879,6 +3901,8 @@ function selectFusionSource(idx) {
         const c = state.player.cards[i];
         const hasRune = c.rune || (c._fusedRunes && c._fusedRunes.length > 0);
         if (!hasRune) continue;
+        // Max 2 runes per card
+        if (c.rune && c._fusedRunes && c._fusedRunes.length > 0) continue;
         const compatible = srcRuneDef ? isRuneCompatible(srcRuneDef, c) : true;
         if (!compatible) continue;
         const cardName = c.id === 'attack' ? '攻击' : (c.id === 'magicBook' ? '魔法书' : '防御');
@@ -3901,6 +3925,11 @@ function doFusion(targetIdx) {
     if (src.rune) { srcRuneId = src.rune; srcRuneData = src.runeData || {}; src.rune = null; src.runeData = {}; }
     else if (src._fusedRunes && src._fusedRunes.length > 0) { srcRuneId = src._fusedRunes.pop(); srcRuneData = (src._fusedRunesData && src._fusedRunesData.length > 0) ? (src._fusedRunesData.pop() || {}) : {}; }
     if (!srcRuneId) return;
+    // Limit: max 2 runes per card (1 primary + 1 fused)
+    if (tgt.rune && tgt._fusedRunes && tgt._fusedRunes.length > 0) {
+        addMessage('⚠️ 目标卡牌已有两个印记，无法继续缝合', 'damage');
+        return;
+    }
     // Add to target's fused runes
     if (!tgt._fusedRunes) tgt._fusedRunes = [];
     if (!tgt._fusedRunesData) tgt._fusedRunesData = [];
@@ -3925,10 +3954,17 @@ function closeFusion() {
         else { state._fusionOrigin = null; advanceFloor(); }
     } else { render(); }
 }
+function startFreeFusion() {
+    state._hasFreeFusion = false;
+    state._pendingFusion = true;
+    state._fusionOrigin = 'relic';
+    showFusionScreen();
+}
 window.selectFusionSource = selectFusionSource;
 window.doFusion = doFusion;
 window.closeFusion = closeFusion;
 window.showFusionScreen = showFusionScreen;
+window.startFreeFusion = startFreeFusion;
 
 function showRelicDetail(relicId) {
     const r = RELIC_DEFS[relicId];
