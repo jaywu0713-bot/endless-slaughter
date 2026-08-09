@@ -823,10 +823,7 @@ const BALANCE = {
             { id: 'defense', icon: '🛡️', type: 'def', cost: 1, effect: 'gainShield', rune: null, runeData: {} },
         ],
     },
-    monster: {
-        early: { hpMin: 15, hpMax: 52, attackMin: 1, attackMax: 8 },
-        late: { hpMin: 52, hpMax: 112, attackMin: 7, attackMax: 16 },
-    },
+    monster: {}, // HP/ATK now calculated in-tier in generateEnemy
     bosses: {
         25: { hp: 95, attack: 17 },
         50: { hp: 140, attack: 26 },
@@ -1641,9 +1638,21 @@ function generateEnemy(floor) {
             allSkills: bossData ? (bossData.allSkills || null) : null,
         };
     }
-    const range = floor <= 50 ? BALANCE.monster.early : BALANCE.monster.late;
-    const hp = randInt(range.hpMin, range.hpMax);
-    const atk = randInt(range.attackMin, range.attackMax);
+    // 4-tier HP/ATK scaling
+    let hp, atk;
+    if (floor <= 25) {
+        hp = randInt(10, 30) + Math.floor(floor * 1.5);
+        atk = randInt(1, 4) + Math.floor(floor * 0.22);
+    } else if (floor <= 50) {
+        hp = randInt(20, 50) + Math.floor(floor * 1.5);
+        atk = randInt(3, 7) + Math.floor(floor * 0.3);
+    } else if (floor <= 75) {
+        hp = randInt(40, 80) + Math.floor(floor * 1.8);
+        atk = randInt(5, 10) + Math.floor(floor * 0.38);
+    } else {
+        hp = randInt(60, 110) + Math.floor(floor * 2);
+        atk = randInt(8, 14) + Math.floor(floor * 0.45);
+    }
     const def = floor <= 20
         ? Math.floor(floor * 1) + randInt(-1, 2)
         : Math.floor(floor * 1.8) + randInt(-2, 3);
