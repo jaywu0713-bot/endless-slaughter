@@ -3,6 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='80' font-size='80'>⚔️</text></svg>">
 <title>无尽杀戮</title>
 <style>
 /* ==================== RESET & BASE ==================== */
@@ -4242,6 +4243,7 @@ function showReward() {
     const floorEl = $('reward-floor-text'); if (floorEl) floorEl.textContent = T.floor(state.floor);
     const healEl = $('reward-heal-desc'); if (healEl) healEl.textContent = T.rewardHealDesc(Math.ceil(state.player.maxHp * BALANCE.healPercent));
     showScreen('reward');
+    setTimeout(() => advanceFloor(), 2000);
 }
 
 function render() {
