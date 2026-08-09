@@ -806,6 +806,7 @@ const BALANCE = {
         levelUpBonus: { maxHp: 10 },
         shopExtraEnergyBought: false,
         shopExtraDrawCount: 0,
+        relics: [],
         initialCards: [
             { id: 'attack', icon: '⚔️', type: 'atk', cost: 1, effect: 'dealDamage', rune: null, runeData: {} },
             { id: 'attack', icon: '⚔️', type: 'atk', cost: 1, effect: 'dealDamage', rune: null, runeData: {} },
@@ -924,6 +925,111 @@ const BOSS_DEFS = {
     },
 };
 
+// =====================================================================
+// RELIC DEFINITIONS (data-driven)
+// =====================================================================
+const RELIC_DEFS = {
+    runeGem: {
+        id: 'runeGem', name: '符文宝石', icon: '💎',
+        desc: '一块看似普通的宝石，内部封存着某种强大的力量。每回合精力值+1。',
+    },
+    blackstoneShard: {
+        id: 'blackstoneShard', name: '黑石要塞的残片', icon: '🏰',
+        desc: '远古文明留下的巨大黑色堡垒。获得后可进行一次免费印记缝合。',
+    },
+    burningBlood: {
+        id: 'burningBlood', name: '燃烧之血', icon: '🔥',
+        desc: '此血来自一名不知疲倦的战士。每场战斗结束后回复最大HP的5%。',
+    },
+    snakeRing: {
+        id: 'snakeRing', name: '蛇之戒指', icon: '💍',
+        desc: '来自一名猎手的友谊。每场战斗第一回合额外抽1张牌。',
+    },
+};
+
+function hasRelic(id) { return state.player.relics && state.player.relics.includes(id); }
+function giveRelic(id) {
+    if (!state.player.relics) state.player.relics = [];
+    if (!state.player.relics.includes(id)) { state.player.relics.push(id); return true; }
+    return false;
+}
+
+// =====================================================================
+// ELITE DEFINITIONS (data-driven)
+// =====================================================================
+const ELITE_DEFS = {
+    darkAngel: {
+        id: 'darkAngel', name: '黑暗天使', icon: '😈',
+        hpMult: 2.6, atkMult: 2.0,
+    },
+    ironclad: {
+        id: 'ironclad', name: '失去自我的铁甲战士', icon: '⚔️',
+        hpMult: 1.75, atkMult: 1.35,
+        special: 'berserk', // loses 10% HP per turn, lower HP = higher ATK
+    },
+    wrathWatcher: {
+        id: 'wrathWatcher', name: '愤怒的观者', icon: '👁️',
+        hpMult: 1.75, atkMult: 2.7,
+        special: 'wrath', // takes 2x damage
+    },
+};
+
+function generateElite(floor) {
+    const eliteKeys = Object.keys(ELITE_DEFS);
+    const key = eliteKeys[Math.floor(Math.random() * eliteKeys.length)];
+    const cfg = ELITE_DEFS[key];
+    // Generate normal monster stats first, then multiply
+    let hpBase, atkBase;
+    if (floor <= 25) {
+        hpBase = randInt(10, 30) + Math.floor(floor * 1.5);
+        atkBase = randInt(1, 4) + Math.floor(floor * 0.22);
+    } else if (floor <= 50) {
+        hpBase = randInt(20, 50) + Math.floor(floor * 1.5);
+        atkBase = randInt(3, 7) + Math.floor(floor * 0.3);
+    } else if (floor <= 75) {
+        hpBase = randInt(40, 80) + Math.floor(floor * 1.8);
+        atkBase = randInt(5, 10) + Math.floor(floor * 0.38);
+    } else {
+        hpBase = randInt(60, 110) + Math.floor(floor * 2);
+        atkBase = randInt(8, 14) + Math.floor(floor * 0.45);
+    }
+    const defBase = floor <= 20
+        ? Math.floor(floor * 1) + randInt(-1, 2)
+        : Math.floor(floor * 1.8) + randInt(-2, 3);
+    return {
+        name: cfg.name,
+        maxHp: Math.floor(hpBase * cfg.hpMult),
+        hp: Math.floor(hpBase * cfg.hpMult),
+        attack: Math.floor(atkBase * cfg.atkMult),
+        defense: Math.max(1, Math.floor(defBase * 1.5)),
+        isElite: true,
+        eliteId: cfg.id,
+        eliteIcon: cfg.icon,
+        eliteSpecial: cfg.special || null,
+    };
+}
+
+function showEliteReward() {
+    state.player.exp += 5;
+    addMessage('获得 5 点经验！', 'heal');
+    // Show one random rune, player can accept or decline
+    const runeIds = ALL_RUNE_IDS;
+    const randomId = runeIds[Math.floor(Math.random() * runeIds.length)];
+    const rune = RUNE_DEFS[randomId];
+    state.pendingRuneId = randomId;
+    state.engraveOrigin = 'elite';
+    showRuneConfirm(rune);
+}
+
+function showRelicSelection() {
+    const available = Object.values(RELIC_DEFS).filter(r => !hasRelic(r.id));
+    if (available.length === 0) { advanceFloor(); return; }
+    const relic = available[Math.floor(Math.random() * available.length)];
+    addMessage(`🎁 获得了遗物「${relic.name}」！`, 'heal');
+    giveRelic(relic.id);
+    advanceFloor();
+}
+
 // Helper: pick a random boss for the given floor range
 function pickBossForFloor(floor) {
     if (floor === 100) return { ...BOSS_DEFS.fourGodsChosen };
@@ -955,8 +1061,9 @@ const MAP_CONFIG = {
 
 const ROOM_TYPES = {
     battle: { id: 'battle', name: '战斗', icon: '⚔️', color: '#ef5350', desc: '普通怪物' },
+    elite:  { id: 'elite', name: '精英', icon: '⭐', color: '#ff9800', desc: '精英怪物' },
     boss:   { id: 'boss', name: '楼层主', icon: '💀', color: '#ff5722', desc: '强力敌人' },
-    question: { id: 'question', name: '问号房', icon: '❓', color: '#ffd700', desc: '商店或宝箱' },
+    question: { id: 'question', name: '问号房', icon: '❓', color: '#ffd700', desc: '事件、怪物或宝箱' },
     shop:   { id: 'shop', name: '商店', icon: '🛒', color: '#4caf50', desc: '购买物品' },
 };
 
@@ -1713,27 +1820,32 @@ function startTurn() {
     // Handle skipCardPlayTurns (守秘者享乐)
     if (state.skipCardPlayTurns > 0) {
         state.skipCardPlayTurns--;
+        state._battleTurnCount = (state._battleTurnCount || 0) + 1;
         state.battlePhase = 'player';
         state.shield = 0;
         state.turnFlags = { damageReduction: false, damageReductionCard: null, counterAttack: false, counterAttackCard: null };
-        state.energy = state.maxEnergy + (state.player.shopExtraEnergyBought ? 1 : 0);
-        const drawCount = BALANCE.player.drawPerTurn + (state.player.shopExtraDrawCount || 0);
+        const extraEnergy = (state.player.shopExtraEnergyBought ? 1 : 0) + (hasRelic('runeGem') ? 1 : 0);
+        state.energy = state.maxEnergy + extraEnergy;
+        const firstTurnBonus = (state._battleTurnCount === 1 && hasRelic('snakeRing')) ? 1 : 0;
+        const drawCount = BALANCE.player.drawPerTurn + (state.player.shopExtraDrawCount || 0) + firstTurnBonus;
         const drawn = drawCards(drawCount);
         if (drawn.length > 0) {
             SFX.play('draw');
             addMessage(T.msgDraw, 'info');
         }
         addMessage(`😵 享乐效果：本回合无法出牌（剩余${state.skipCardPlayTurns}回合）`, 'info');
-        // Disable all cards automatically
         updateBattleUI();
         return;
     }
 
     state.battlePhase = 'player';
-    state.shield = 0; // Shield resets each turn
+    state._battleTurnCount = (state._battleTurnCount || 0) + 1;
+    state.shield = 0;
     state.turnFlags = { damageReduction: false, damageReductionCard: null, counterAttack: false, counterAttackCard: null };
-    state.energy = state.maxEnergy + (state.player.shopExtraEnergyBought ? 1 : 0);
-    const drawCount = BALANCE.player.drawPerTurn + (state.player.shopExtraDrawCount || 0);
+    const extraEnergy = (state.player.shopExtraEnergyBought ? 1 : 0) + (hasRelic('runeGem') ? 1 : 0);
+    state.energy = state.maxEnergy + extraEnergy;
+    const firstTurnBonus = (state._battleTurnCount === 1 && hasRelic('snakeRing')) ? 1 : 0;
+    const drawCount = BALANCE.player.drawPerTurn + (state.player.shopExtraDrawCount || 0) + firstTurnBonus;
     const drawn = drawCards(drawCount);
     if (drawn.length > 0) {
         SFX.play('draw');
@@ -2048,7 +2160,6 @@ function enemyAttack() {
             return;
         }
         generateNextIntent();
-        generateNextIntent();
         setTimeout(() => startTurn(), 600);
         return;
     }
@@ -2156,14 +2267,23 @@ function onEnemyDefeated() {
     addMessage(`${T.msgEnemyDeath(state.enemy.name)}`, 'info');
     addMessage(`💰 获得 ${goldDrop} 金币！`, 'heal');
     grantBattleExp();
+    if (hasRelic('burningBlood')) {
+        const healAmt = Math.max(1, Math.ceil(state.player.maxHp * 0.05));
+        healPlayer(healAmt);
+        addMessage(`🔥 燃烧之血：回复 ${healAmt} 点生命`, 'heal');
+    }
     updateBattleUI();
 
-    // Boss floors trigger rune selection
+    // Boss floors trigger rune selection, normal monsters auto-advance
     if (isBossFloor(state.floor)) {
         SFX.play('boss_defeat');
         setTimeout(() => showRuneSelection(), 600);
+    } else if (state.enemy && state.enemy.isElite) {
+        // Elite: show rune selection (1 rune), then advance
+        setTimeout(() => showEliteReward(), 600);
     } else {
-        setTimeout(() => showReward(), 600);
+        // Normal monster: auto-advance, no reward screen
+        setTimeout(() => advanceFloor(), 600);
     }
 }
 
@@ -2190,8 +2310,14 @@ function applyReward(type) {
 
 // Auto-grant EXP after every battle
 function grantBattleExp() {
-    state.player.exp += 5;
-    addMessage(`获得 5 点经验！`, 'heal');
+    // Tiered EXP: 1-25: 10, 26-50: 7, 51-75: 5, 76-100: 3
+    let expGain;
+    if (state.floor <= 25) expGain = 10;
+    else if (state.floor <= 50) expGain = 7;
+    else if (state.floor <= 75) expGain = 5;
+    else expGain = 3;
+    state.player.exp += expGain;
+    addMessage(`获得 ${expGain} 点经验！`, 'heal');
     checkLevelUp();
 }
 
@@ -2555,6 +2681,7 @@ function resolveRoom(cell) {
         if (card._savedCost !== undefined) { card.cost = card._savedCost; delete card._savedCost; }
     }
     state.deck = { draw: createDeck(), hand: [], discard: [] };
+    state._battleTurnCount = 0;
     // Only battle rooms get the EXP/HP reward screen
     state.pendingReward = (cell.type === 'battle' || cell.type === 'boss');
     state.battlePhase = 'player'; // Reset for new battle
@@ -3266,7 +3393,7 @@ function updateBattleUI() {
     `;
     $('header-gold').textContent = `💰 ${p.gold}`;
     $('shield-display').textContent = `🛡️ ${state.shield}`;
-    const maxEnergy = state.maxEnergy + (state.player.shopExtraEnergyBought ? 1 : 0);
+    const maxEnergy = state.maxEnergy + (state.player.shopExtraEnergyBought ? 1 : 0) + (hasRelic('runeGem') ? 1 : 0);
     $('energy-display').textContent = `⚡ ${state.energy}/${maxEnergy}`;
 
     // Enemy
