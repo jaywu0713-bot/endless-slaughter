@@ -1509,6 +1509,14 @@ const SHOP_ITEMS = [
         apply(state) { return null; },
     },
     {
+        id: 'fuseService',
+        name: '印记缝合服务',
+        icon: '🪡',
+        desc: '将一张卡牌的印记转移到另一张已有印记的卡牌上',
+        price: 100,
+        apply(state) { return null; },
+    },
+    {
         id: 'buyAtk',
         name: '攻击力 +1',
         icon: '⚔️',
@@ -1946,7 +1954,23 @@ function playCard(handIndex) {
     }
 
     // Apply card effect
-    if (card.effect === 'dealDamage') {
+    if (card.effect === 'magicAttack') {
+        // Magic book: ATK + level*3, ignores defense
+        let dmg = state.player.attack + state.player.level * 3;
+        if (hooks.modifyDamage) dmg = hooks.modifyDamage(state, card, dmg);
+        state.enemy.hp -= dmg;
+        addMessage(`📖 魔法书：造成 ${dmg} 点伤害（无视防御）！`, 'damage');
+        animateDamage('enemy-sprite', dmg, 'damage');
+        shakeElement('enemy-sprite');
+        SFX.play('attack');
+        if (hooks.onDamage) hooks.onDamage(state, card, dmg);
+        if (state.enemy.hp <= 0) {
+            state.enemy.hp = 0; state.battlePhase = 'over';
+            if (hooks.onKill) hooks.onKill(state, card);
+            SFX.play('enemy_death'); updateBattleUI();
+            setTimeout(() => onEnemyDefeated(), 400); return;
+        }
+    } else if (card.effect === 'dealDamage') {
         let dmg = state.player.attack;
         if (hooks.modifyDamage) {
             dmg = hooks.modifyDamage(state, card, dmg);
@@ -2305,9 +2329,16 @@ function onEnemyDefeated() {
     }
     updateBattleUI();
 
-    // Boss floors trigger rune selection, normal monsters auto-advance
+    // Boss: relic + rune selection. Normal: auto-advance
     if (isBossFloor(state.floor)) {
         SFX.play('boss_defeat');
+        // Give random relic if available
+        const availableRelics = Object.values(RELIC_DEFS).filter(r => !hasRelic(r.id));
+        if (availableRelics.length > 0) {
+            const relic = availableRelics[Math.floor(Math.random() * availableRelics.length)];
+            giveRelic(relic.id);
+            addMessage(`🎁 Boss遗物：「${relic.name}」！${relic.desc}`, 'heal');
+        }
         setTimeout(() => showRuneSelection(), 600);
     } else if (state.enemy && state.enemy.isElite) {
         // Elite: show rune selection (1 rune), then advance
@@ -2989,7 +3020,7 @@ const EVENT_DEFS = [
         id: 'runeMage', name: '流浪的符文法师', floorMin: 3,
         desc: '流浪的符文法师正在寻找遗失的符文宝石。',
         options: [
-            { label: '给予宝石', condition: s => hasRelic('runeGem'), effect(s) { giveRelic('runeGem'); addMessage('符文法师感谢你，赠送了「符文法师的魔法书」！', 'heal'); state.player.cards.push({id:'magicBook',icon:'📖',type:'atk',cost:2,effect:'magicAttack',rune:null,runeData:{}}); }},
+            { label: '给予宝石', condition: s => hasRelic('runeGem'), effect(s) { addMessage('符文法师感谢你，赠送了「符文法师的魔法书」！', 'heal'); state.player.cards.push({id:'magicBook',icon:'📖',type:'atk',cost:2,effect:'magicAttack',rune:null,runeData:{}}); }},
             { label: '离开', effect(s) { addMessage('你离开了符文法师', 'info'); }},
         ],
     },
@@ -3314,6 +3345,14 @@ function buyShopItem(itemId) {
         addMessage('❤️ 最大生命值永久+5！（当前 ' + state.player.maxHp + '）', 'heal');
         SFX.play('play_card');
         renderShop();
+        return;
+    }
+
+    if (item.id === 'fuseService') {
+        state.player.gold -= item.price;
+        state._pendingFusion = true;
+        renderShop();
+        addMessage('🪡 请选择来源卡牌和目标卡牌进行印记缝合', 'info');
         return;
     }
 
