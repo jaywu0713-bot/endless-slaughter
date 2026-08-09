@@ -1913,6 +1913,25 @@ function initEnemyIntent() {
             state.enemyIntentType = 'skill';
             state.enemyIntentLabel = state.enemy.skillIcon + ' ' + state.enemy.skillName;
             state.enemyCurrentAtk = 0;
+        } else if (state.enemy.bossId === 'fourGodsChosen') {
+            // Four Gods: 70% skill, 15% attack, 15% defense
+            const roll = Math.random();
+            if (roll < 0.7) {
+                state.enemyIntentType = 'skill';
+                state.enemyIntentLabel = state.enemy.skillIcon + ' ' + state.enemy.skillName;
+                state.enemyCurrentAtk = 0;
+            } else if (roll < 0.85) {
+                state.enemyIntentType = 'defense';
+                state.enemyIntentLabel = '🛡️ 防御';
+                state.enemyCurrentAtk = 0;
+            } else {
+                state.enemyIntentType = 'attack';
+                const skills = state.enemy.allSkills || [];
+                const randSkill = skills[Math.floor(Math.random() * skills.length)];
+                const skillBoss = BOSS_DEFS[randSkill];
+                state.enemyIntentLabel = skillBoss ? skillBoss.skillIcon + ' ' + skillBoss.skillName : '';
+                state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + Math.random() * 0.6));
+            }
         } else {
             const roll = Math.random();
             if (roll < 0.2) {
@@ -1954,8 +1973,26 @@ function endPlayerTurn() {
 function generateNextIntent() {
     if (state.enemy && state.enemy.isBoss) {
         state.enemyTurnCounter++;
-        // Shapeshifter & Great Unclean: skill already used, only attack/defense
-        if (state.enemy._skillUsed) {
+        // Four Gods: 70% skill, 15% attack, 15% defense (can use skills repeatedly)
+        if (state.enemy.bossId === 'fourGodsChosen') {
+            const roll = Math.random();
+            if (roll < 0.7) {
+                state.enemyIntentType = 'skill';
+                state.enemyIntentLabel = (state.enemy.skillIcon || '') + ' ' + (state.enemy.skillName || '');
+                state.enemyCurrentAtk = 0;
+            } else if (roll < 0.85) {
+                state.enemyIntentType = 'defense';
+                state.enemyIntentLabel = '🛡️ 防御';
+                state.enemyCurrentAtk = 0;
+            } else {
+                state.enemyIntentType = 'attack';
+                const skills = state.enemy.allSkills || [];
+                const randSkill = skills[Math.floor(Math.random() * skills.length)];
+                const skillBoss = BOSS_DEFS[randSkill];
+                state.enemyIntentLabel = skillBoss ? skillBoss.skillIcon + ' ' + skillBoss.skillName : '';
+                state.enemyCurrentAtk = Math.floor(state.enemy.attack * (0.7 + Math.random() * 0.6));
+            }
+        } else if (state.enemy._skillUsed) {
             if (Math.random() < 0.3) {
                 state.enemyIntentType = 'defense';
                 state.enemyIntentLabel = '🛡️ 防御';
