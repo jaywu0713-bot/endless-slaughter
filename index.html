@@ -2018,14 +2018,44 @@ function getCardHooks(card) {
     }
     // Fused runes hooks
     if (card._fusedRunes) {
-        for (const rid of card._fusedRunes) {
+        for (let i = 0; i < card._fusedRunes.length; i++) {
+            const rid = card._fusedRunes[i];
             if (RUNE_DEFS[rid] && RUNE_DEFS[rid].hooks) {
                 const fh = RUNE_DEFS[rid].hooks;
+                // Get this fused rune's persistent data (e.g. dominator kills)
+                const fusedData = (card._fusedRunesData && card._fusedRunesData[i]) || {};
                 // Chain hooks: call original then fused
                 for (const key of Object.keys(fh)) {
                     const orig = hooks[key];
-                    const fused = fh[key];
-                    hooks[key] = orig ? function(...args) { orig.apply(this, args); fused.apply(this, args); } : fused;
+                    // Wrap raw hook to inject correct runeData for this fused rune
+                    const injectData = function(rawHook) {
+                        return function(...args) {
+                            const savedData = card.runeData;
+                            card.runeData = fusedData;
+                            const result = rawHook.apply(this, args);
+                            card.runeData = savedData;
+                            return result;
+                        };
+                    };
+                    const fused = injectData(fh[key]);
+                    hooks[key] = orig ? function(...args) {
+                        const r1 = orig.apply(this, args);
+                        // Transform hooks (modifyDamage/modifyShield/modifyIncomingDamage):
+                        // pass the result of the first hook to the second
+                        if (args.length >= 3 && typeof r1 === 'number') {
+                            const passArgs = [...args];
+                            passArgs[2] = r1;
+                            return fused.apply(this, passArgs);
+                        }
+                        // onPlay hook: merge returned objects
+                        if (typeof r1 === 'object' && r1 !== null) {
+                            const r2 = fused.apply(this, args) || {};
+                            return { ...r1, ...r2 };
+                        }
+                        // Void hooks: just call both
+                        fused.apply(this, args);
+                        return r1;
+                    } : fused;
                 }
             }
         }
@@ -3436,6 +3466,11 @@ function enterShop() {
     SFX.play('shop');
     _shopPage = 0;
     state.screen = 'shop';
+    // Pick 2 random relics the player doesn't have yet
+    const allRelicIds = Object.keys(RELIC_DEFS);
+    const available = allRelicIds.filter(id => !hasRelic(id));
+    const shuffled = shuffle([...available]);
+    state._shopRelics = shuffled.slice(0, 2);
     renderShop();
 }
 
@@ -3466,18 +3501,40 @@ function renderShop() {
             remainText = ` <span style="color:#888;font-size:11px;">(剩余${remain}次)</span>`;
             if (remain <= 0) disabled = true;
         }
-        const canAfford = state.player.gold >= (item.displayPrice || item.price) && !disabled;
+        const actualPrice = getShopPrice(item.price);
+        const canAfford = state.player.gold >= actualPrice && !disabled;
         return `
             <div class="shop-item">
                 <div class="shop-item-icon">${item.icon}</div>
                 <div class="shop-item-name">${item.name}${remainText}</div>
                 <div class="shop-item-desc">${item.desc}</div>
-                <div class="shop-item-price">💰 ${item.displayPrice || item.price}</div>
+                <div class="shop-item-price">💰 ${actualPrice}</div>
                 <button class="btn btn-small" ${!canAfford ? 'disabled' : ''}
                         onclick="buyShopItem('${item.id}')">购买</button>
             </div>
         `;
     }).join('');
+
+    // Render shop relics (2 random relics)
+    if (state._shopRelics && state._shopRelics.length > 0) {
+        const relicsHtml = state._shopRelics.map(relicId => {
+            const relic = RELIC_DEFS[relicId];
+            if (!relic) return '';
+            const relicPrice = getShopPrice(50);
+            const canAfford = state.player.gold >= relicPrice;
+            return `
+                <div class="shop-item" style="border-color:var(--gold);">
+                    <div class="shop-item-icon">${relic.icon}</div>
+                    <div class="shop-item-name" style="color:var(--gold);">${relic.name}</div>
+                    <div class="shop-item-desc">${relic.desc}</div>
+                    <div class="shop-item-price">💰 ${relicPrice}</div>
+                    <button class="btn btn-small" ${!canAfford ? 'disabled' : ''}
+                            onclick="buyShopItem('relic_${relicId}')">购买</button>
+                </div>
+            `;
+        }).join('');
+        $('shop-items').insertAdjacentHTML('beforeend', `<div style="width:100%;text-align:center;color:var(--gold);margin:8px 0;font-size:14px;">━━ 🏺 遗物 ━━</div>${relicsHtml}`);
+    }
 
     // Page navigation
     $('shop-page-num').textContent = `${_shopPage + 1} / ${totalPages}`;
@@ -3512,7 +3569,7 @@ function buyShopItem(itemId) {
             addMessage('没有可刻印的卡牌，无法购买随机印记', 'damage');
             return;
         }
-        state.player.gold -= item.price;
+        state.player.gold -= itemPrice;
         state.pendingRuneId = randomId;
         state.engraveOrigin = 'shop';
         showRuneConfirm(rune);
@@ -3521,7 +3578,7 @@ function buyShopItem(itemId) {
 
     // Card purchases
     if (item.id === 'buyAttack') {
-        state.player.gold -= item.price;
+        state.player.gold -= itemPrice;
         const newCard = { id: 'attack', icon: '⚔️', type: 'atk', cost: 1, effect: 'dealDamage', rune: null, runeData: {} };
         state.player.cards.push(newCard);
         addMessage('⚔️ 获得了一张攻击卡牌！', 'heal');
@@ -3530,7 +3587,7 @@ function buyShopItem(itemId) {
         return;
     }
     if (item.id === 'buyDefense') {
-        state.player.gold -= item.price;
+        state.player.gold -= itemPrice;
         const newCard = { id: 'defense', icon: '🛡️', type: 'def', cost: 1, effect: 'gainShield', rune: null, runeData: {} };
         state.player.cards.push(newCard);
         addMessage('🛡️ 获得了一张防御卡牌！', 'heal');
@@ -3542,7 +3599,7 @@ function buyShopItem(itemId) {
     // Stats / permanent upgrades
     if (item.id === 'extraEnergy') {
         if (state.player.shopExtraEnergyBought) { addMessage('已经购买过了！', 'damage'); return; }
-        state.player.gold -= item.price;
+        state.player.gold -= itemPrice;
         state.player.shopExtraEnergyBought = true;
         addMessage('⚡ 每回合精力永久+1！', 'heal');
         SFX.play('play_card');
@@ -3552,7 +3609,7 @@ function buyShopItem(itemId) {
     if (item.id === 'extraDraw') {
         const count = state.player.shopExtraDrawCount || 0;
         if (count >= 2) { addMessage('最多购买2次！', 'damage'); return; }
-        state.player.gold -= item.price;
+        state.player.gold -= itemPrice;
         state.player.shopExtraDrawCount = count + 1;
         addMessage('🃏 每回合抽牌数永久+1！（当前额外+' + (count + 1) + '）', 'heal');
         SFX.play('play_card');
@@ -3560,7 +3617,7 @@ function buyShopItem(itemId) {
         return;
     }
     if (item.id === 'buyAtk') {
-        state.player.gold -= item.price;
+        state.player.gold -= itemPrice;
         state.player.attack += 1;
         addMessage('⚔️ 攻击力永久+1！（当前 ' + state.player.attack + '）', 'heal');
         SFX.play('play_card');
@@ -3568,7 +3625,7 @@ function buyShopItem(itemId) {
         return;
     }
     if (item.id === 'buyDef') {
-        state.player.gold -= item.price;
+        state.player.gold -= itemPrice;
         state.player.defense += 1;
         addMessage('🛡️ 防御力永久+1！（当前 ' + state.player.defense + '）', 'heal');
         SFX.play('play_card');
@@ -3576,7 +3633,7 @@ function buyShopItem(itemId) {
         return;
     }
     if (item.id === 'buyMaxHp') {
-        state.player.gold -= item.price;
+        state.player.gold -= itemPrice;
         state.player.maxHp += 5;
         addMessage('❤️ 最大生命值永久+5！（当前 ' + state.player.maxHp + '）', 'heal');
         SFX.play('play_card');
@@ -3589,6 +3646,10 @@ function buyShopItem(itemId) {
         state.player.gold -= itemPrice;
         if (giveRelic(item.relicId)) {
             addMessage(`🎁 获得遗物「${RELIC_DEFS[item.relicId].name}」！`, 'heal');
+        }
+        // Remove from shop relics list
+        if (state._shopRelics) {
+            state._shopRelics = state._shopRelics.filter(r => r !== item.relicId);
         }
         renderShop();
         return;
@@ -3603,7 +3664,7 @@ function buyShopItem(itemId) {
     }
 
     // Apply item effect
-    state.player.gold -= item.price;
+    state.player.gold -= itemPrice;
     const msg = item.apply(state);
     addMessage(msg, 'heal');
     renderShop();
@@ -3835,12 +3896,15 @@ function doFusion(targetIdx) {
     if (!src || !tgt) return;
     // Get the rune being moved
     let srcRuneId = null;
-    if (src.rune) { srcRuneId = src.rune; src.rune = null; src.runeData = {}; }
-    else if (src._fusedRunes && src._fusedRunes.length > 0) { srcRuneId = src._fusedRunes.pop(); }
+    let srcRuneData = null;
+    if (src.rune) { srcRuneId = src.rune; srcRuneData = src.runeData || {}; src.rune = null; src.runeData = {}; }
+    else if (src._fusedRunes && src._fusedRunes.length > 0) { srcRuneId = src._fusedRunes.pop(); srcRuneData = (src._fusedRunesData && src._fusedRunesData.length > 0) ? (src._fusedRunesData.pop() || {}) : {}; }
     if (!srcRuneId) return;
     // Add to target's fused runes
     if (!tgt._fusedRunes) tgt._fusedRunes = [];
+    if (!tgt._fusedRunesData) tgt._fusedRunesData = [];
     tgt._fusedRunes.push(srcRuneId);
+    tgt._fusedRunesData.push(srcRuneData);
     const runeName = RUNE_DEFS[srcRuneId]?.name || srcRuneId;
     addMessage(`🪡 缝合完成！「${runeName}」已转移到目标卡牌`, 'heal');
     SFX.play('rune');
