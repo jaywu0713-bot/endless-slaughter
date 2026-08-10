@@ -334,15 +334,15 @@ body {
 .shop-gold { font-size: 18px; font-weight: 700; color: var(--energy); }
 #shop-items { display: flex; gap: 16px; flex-wrap: wrap; justify-content: center; }
 .shop-item {
-    width: 200px; padding: 20px; border-radius: 12px;
+    width: 150px; padding: 10px; border-radius: 8px;
     border: 2px solid #555; background: var(--panel-light);
     text-align: center; transition: all 0.2s;
 }
-.shop-item .shop-item-icon { font-size: 36px; margin-bottom: 6px; }
-.shop-item .shop-item-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
-.shop-item .shop-item-desc { font-size: 12px; color: var(--text-dim); margin-bottom: 10px; }
-.shop-item .shop-item-price { font-size: 16px; font-weight: 700; color: var(--energy); margin-bottom: 10px; }
-.shop-item .btn { padding: 8px 24px; font-size: 14px; }
+.shop-item .shop-item-icon { font-size: 22px; margin-bottom: 2px; }
+.shop-item .shop-item-name { font-size: 12px; font-weight: 700; margin-bottom: 2px; }
+.shop-item .shop-item-desc { font-size: 9px; color: var(--text-dim); margin-bottom: 5px; }
+.shop-item .shop-item-price { font-size: 11px; font-weight: 700; color: var(--energy); margin-bottom: 5px; }
+.shop-item .btn { padding: 3px 12px; font-size: 10px; }
 .shop-item .btn:disabled { opacity: 0.35; cursor: not-allowed; }
 
 /* ==================== CHEST RESULT ==================== */
@@ -540,6 +540,13 @@ body {
     <div id="modal-boss-intro" class="modal-overlay" style="display:none;">
         <div class="modal-content" style="border-color:var(--enemy);">
             <div class="boss-intro-text" id="boss-intro-text"></div>
+        </div>
+    </div>
+
+    <!-- ELITE INTRO MODAL -->
+    <div id="modal-elite-intro" class="modal-overlay" style="display:none;">
+        <div class="modal-content" style="border-color:var(--gold);">
+            <div class="boss-intro-text" id="elite-intro-text" style="font-size:18px;"></div>
         </div>
     </div>
 
@@ -1075,27 +1082,42 @@ function giveRelic(id) {
 // ELITE DEFINITIONS (data-driven)
 // =====================================================================
 const ELITE_DEFS = {
+    // ── Normal elites (no special mechanics, used for map & generic events) ──
+    eliteGuard: {
+        id: 'eliteGuard', name: '精英守卫', icon: '💀',
+        category: 'normal', hpMult: 1.75, atkMult: 1.35,
+    },
+    eliteWarrior: {
+        id: 'eliteWarrior', name: '精英战士', icon: '🗡️',
+        category: 'normal', hpMult: 1.85, atkMult: 1.25,
+    },
+    // ── Special elites (unique mechanics, used for named events) ──
     darkAngel: {
         id: 'darkAngel', name: '黑暗天使', icon: '😈',
-        hpMult: 2.6, atkMult: 2.0,
+        category: 'special', hpMult: 2.6, atkMult: 2.0,
+        mechanicName: '黑暗之力',
+        mechanicDesc: '属性大幅提升：生命×2.6，攻击力×2.0。纯粹的数值碾压。',
     },
     ironclad: {
         id: 'ironclad', name: '失去自我的铁甲战士', icon: '⚔️',
-        hpMult: 1.75, atkMult: 1.35,
-        special: 'berserk', // loses 10% HP per turn, lower HP = higher ATK
+        category: 'special', hpMult: 1.75, atkMult: 1.35,
+        special: 'berserk',
+        mechanicName: '狂暴',
+        mechanicDesc: '每回合失去10%最大HP，但HP越低攻击力越高。持续削血，越战越勇。',
     },
     wrathWatcher: {
         id: 'wrathWatcher', name: '愤怒的观者', icon: '👁️',
-        hpMult: 1.75, atkMult: 2.7,
-        special: 'wrath', // takes 2x damage
+        category: 'special', hpMult: 1.75, atkMult: 2.7,
+        special: 'wrath',
+        mechanicName: '愤怒姿态',
+        mechanicDesc: '受到的伤害×2。观者在愤怒中放弃了防御，但攻击力极高（×2.7）。',
     },
 };
 
-function generateElite(floor) {
-    const eliteKeys = Object.keys(ELITE_DEFS);
-    const key = eliteKeys[Math.floor(Math.random() * eliteKeys.length)];
-    const cfg = ELITE_DEFS[key];
-    // Generate normal monster stats first, then multiply
+const NORMAL_ELITE_IDS = Object.keys(ELITE_DEFS).filter(k => ELITE_DEFS[k].category === 'normal');
+const SPECIAL_ELITE_IDS = Object.keys(ELITE_DEFS).filter(k => ELITE_DEFS[k].category === 'special');
+
+function buildElite(floor, cfg) {
     let hpBase, atkBase;
     if (floor <= 25) {
         hpBase = randInt(10, 30) + Math.floor(floor * 1.5);
@@ -1123,7 +1145,25 @@ function generateElite(floor) {
         eliteId: cfg.id,
         eliteIcon: cfg.icon,
         eliteSpecial: cfg.special || null,
+        eliteMechanicName: cfg.mechanicName || '',
+        eliteMechanicDesc: cfg.mechanicDesc || '',
     };
+}
+
+function generateNormalElite(floor) {
+    const key = NORMAL_ELITE_IDS[Math.floor(Math.random() * NORMAL_ELITE_IDS.length)];
+    return buildElite(floor, ELITE_DEFS[key]);
+}
+
+function generateSpecialElite(floor, eliteId) {
+    const cfg = ELITE_DEFS[eliteId];
+    if (!cfg || cfg.category !== 'special') return generateNormalElite(floor);
+    return buildElite(floor, cfg);
+}
+
+// Backwards-compatible wrapper (used by old code paths that expect random elite)
+function generateElite(floor) {
+    return generateNormalElite(floor);
 }
 
 function showEliteReward() {
@@ -3002,13 +3042,17 @@ function resolveRoom(cell) {
             break;
 
         case 'elite':
-            state.enemy = generateElite(state.floor);
+            state.enemy = generateNormalElite(state.floor);
             initEnemyIntent();
             state.screen = 'battle';
             render();
             renderStickFigure('player-sprite', 'var(--player)', false, false);
             renderStickFigure('enemy-sprite', 'var(--enemy)', true, false);
-            startTurn();
+            if (state.enemy.eliteMechanicName) {
+                showEliteIntro(() => { startTurn(); });
+            } else {
+                startTurn();
+            }
             break;
 
         case 'boss':
@@ -3285,7 +3329,7 @@ const EVENT_DEFS = [
         options: [
             { label: '帮助逃避', effect(s) { state.player.gold += 15; if (state._eventRelicReward) { giveRelic(state._eventRelicReward); addMessage('🎁 获得遗物「' + RELIC_DEFS[state._eventRelicReward].name + '」！', 'heal'); state._eventRelicReward = null; }
     grantBattleExp(); addMessage('堕天使给了你金币和经验', 'heal'); }, resultText: '堕天使感激你的帮助，将身上所有的金币赠予了你，并分享了自己的战斗经验。' },
-            { label: '协助追捕者', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '黑暗天使'; enterEventBattle(); }, startsBattle: true, resultText: '黑暗天使感谢你的付出，但在你离开之前他偷袭了你。与精英怪「黑暗天使」发生战斗！' },
+            { label: '协助追捕者', effect(s) { state.enemy = generateSpecialElite(state.floor, 'darkAngel'); enterEventBattle(); }, startsBattle: true, resultText: '黑暗天使感谢你的付出，但在你离开之前他偷袭了你。与精英怪「黑暗天使」发生战斗！' },
         ],
     },
     {
@@ -3309,7 +3353,7 @@ const EVENT_DEFS = [
         id: 'ironcladEvent', name: '失去自我而不断战斗的铁甲战士', floorMin: 1,
         desc: '被诅咒而失去理智的战士毁灭了自己的种族。',
         options: [
-            { label: '攻击', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '失去自我的铁甲战士'; state.enemy.eliteSpecial = 'berserk'; enterEventBattle(); }, startsBattle: true, resultText: '为了让他安息，你拔剑与他战斗！' },
+            { label: '攻击', effect(s) { state.enemy = generateSpecialElite(state.floor, 'ironclad'); enterEventBattle(); }, startsBattle: true, resultText: '为了让他安息，你拔剑与他战斗！' },
             { label: '告密', effect(s) { giveRelic('burningBlood'); addMessage('获得燃烧之血', 'heal'); }, resultText: '战士默默点了点头，将自己的鲜血给予了你。获得遗物「燃烧之血」。' },
             { label: '离开', effect(s) {}, resultText: '你心想：离这个疯子远点吧。于是悄悄离开了。' },
         ],
@@ -3319,7 +3363,7 @@ const EVENT_DEFS = [
         desc: '追求极致的猎手正在与两头怪物搏斗。',
         options: [
             { label: '协助猎手', effect(s) { state.enemy = generateEnemy(state.floor); state._eventRelicReward = 'snakeRing'; enterEventBattle(); }, startsBattle: true, resultText: '你协助猎手与其中一头怪物展开了战斗！' },
-            { label: '攻击猎手', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '精英怪物'; enterEventBattle(); }, startsBattle: true, resultText: '猎手感到棘手，在击败一只怪物后逃走了。你被迫与剩下的精英怪物战斗。' },
+            { label: '攻击猎手', effect(s) { state.enemy = generateNormalElite(state.floor); enterEventBattle(); }, startsBattle: true, resultText: '猎手感到棘手，在击败一只怪物后逃走了。你被迫与剩下的精英怪物战斗。' },
             { label: '离开', effect(s) {}, resultText: '君子不立危墙之下——你选择不参与这场混战，继续前行。' },
         ],
     },
@@ -3327,7 +3371,7 @@ const EVENT_DEFS = [
         id: 'watcherEvent', name: '情绪飘忽不定的观者大人', floorMin: 1,
         desc: '来到另一个地方的观者仍旧保持着愤怒、平静和神格三种状态。',
         options: [
-            { label: '与愤怒形态对话', effect(s) { state.enemy = generateElite(state.floor); state.enemy.name = '愤怒的观者'; state.enemy.eliteSpecial = 'wrath'; enterEventBattle(); }, startsBattle: true, resultText: '愤怒的观者向你发起了猛烈的攻击！' },
+            { label: '与愤怒形态对话', effect(s) { state.enemy = generateSpecialElite(state.floor, 'wrathWatcher'); enterEventBattle(); }, startsBattle: true, resultText: '愤怒的观者向你发起了猛烈的攻击！' },
             { label: '与平静形态对话', effect(s) { healPlayer(Math.ceil(state.player.maxHp * 0.2)); addMessage('回复20%HP', 'heal'); }, resultText: '观者解释了自己愤怒的原因——因为速通杀戮尖塔2之后不知为何来到了这里，感到有些不快。观者为失态道歉，并给予了你回复药水。回复20%生命值。' },
             { label: '与神格状态对话', effect(s) { for(let i=0;i<5;i++){ state.player.exp += expToNextLevel(); checkLevelUp(); } addMessage('等级+5', 'heal'); }, resultText: '观者表示从未见过如此弱小之人，当场帮你提升了五级。你感到一股强大的力量涌入体内。等级+5。' },
         ],
@@ -3341,13 +3385,19 @@ function enterEventBattle() {
     state.pendingReward = true;
     state.battlePhase = 'player';
     state._battleTurnCount = 0;
+    state._sealUsedThisBattle = false;
+    state._shieldDoubledThisBattle = false;
     state.plagueTurns = 0;
     initEnemyIntent();
     state.screen = 'battle';
     render();
     renderStickFigure('player-sprite', 'var(--player)', false, false);
     renderStickFigure('enemy-sprite', 'var(--enemy)', true, false);
-    startTurn();
+    if (state.enemy && state.enemy.eliteMechanicName) {
+        showEliteIntro(() => { startTurn(); });
+    } else {
+        startTurn();
+    }
 }
 
 // =====================================================================
@@ -3502,11 +3552,29 @@ function shopPage(dir) {
 
 function renderShop() {
     $('shop-gold').textContent = `💰 ${state.player.gold}`;
-    const totalPages = Math.ceil(SHOP_ITEMS.length / ITEMS_PER_PAGE);
+    // Build full item list: regular items + shop relics
+    let allItems = [...SHOP_ITEMS];
+    if (state._shopRelics && state._shopRelics.length > 0) {
+        for (const relicId of state._shopRelics) {
+            const relic = RELIC_DEFS[relicId];
+            if (relic) {
+                allItems.push({
+                    id: 'relic_' + relicId,
+                    name: relic.name,
+                    icon: relic.icon,
+                    desc: relic.desc,
+                    price: 80,
+                    isRelic: true,
+                    relicId: relicId,
+                });
+            }
+        }
+    }
+    const totalPages = Math.ceil(allItems.length / ITEMS_PER_PAGE);
     if (_shopPage < 0) _shopPage = 0;
     if (_shopPage >= totalPages) _shopPage = totalPages - 1;
     const start = _shopPage * ITEMS_PER_PAGE;
-    const pageItems = SHOP_ITEMS.slice(start, start + ITEMS_PER_PAGE);
+    const pageItems = allItems.slice(start, start + ITEMS_PER_PAGE);
 
     $('shop-items').innerHTML = pageItems.map(item => {
         let remainText = '';
@@ -3516,15 +3584,16 @@ function renderShop() {
             if (item.id === 'extraEnergy') bought = state.player.shopExtraEnergyBought ? 1 : 0;
             if (item.id === 'extraDraw') bought = state.player.shopExtraDrawCount || 0;
             const remain = item.maxPurchases - bought;
-            remainText = ` <span style="color:#888;font-size:11px;">(剩余${remain}次)</span>`;
+            remainText = ` <span style="color:#888;font-size:9px;">(剩${remain}次)</span>`;
             if (remain <= 0) disabled = true;
         }
         const actualPrice = getShopPrice(item.price);
         const canAfford = state.player.gold >= actualPrice && !disabled;
+        const isRelic = item.isRelic;
         return `
-            <div class="shop-item">
+            <div class="shop-item"${isRelic ? ' style="border-color:var(--gold);"' : ''}>
                 <div class="shop-item-icon">${item.icon}</div>
-                <div class="shop-item-name">${item.name}${remainText}</div>
+                <div class="shop-item-name"${isRelic ? ' style="color:var(--gold);"' : ''}>${item.name}${remainText}</div>
                 <div class="shop-item-desc">${item.desc}</div>
                 <div class="shop-item-price">💰 ${actualPrice}</div>
                 <button class="btn btn-small" ${!canAfford ? 'disabled' : ''}
@@ -3532,27 +3601,6 @@ function renderShop() {
             </div>
         `;
     }).join('');
-
-    // Render shop relics (2 random relics)
-    if (state._shopRelics && state._shopRelics.length > 0) {
-        const relicsHtml = state._shopRelics.map(relicId => {
-            const relic = RELIC_DEFS[relicId];
-            if (!relic) return '';
-            const relicPrice = getShopPrice(80);
-            const canAfford = state.player.gold >= relicPrice;
-            return `
-                <div class="shop-item" style="border-color:var(--gold);">
-                    <div class="shop-item-icon">${relic.icon}</div>
-                    <div class="shop-item-name" style="color:var(--gold);">${relic.name}</div>
-                    <div class="shop-item-desc">${relic.desc}</div>
-                    <div class="shop-item-price">💰 ${relicPrice}</div>
-                    <button class="btn btn-small" ${!canAfford ? 'disabled' : ''}
-                            onclick="buyShopItem('relic_${relicId}')">购买</button>
-                </div>
-            `;
-        }).join('');
-        $('shop-items').insertAdjacentHTML('beforeend', `<div style="width:100%;text-align:center;color:var(--gold);margin:8px 0;font-size:14px;">━━ 🏺 遗物 ━━</div>${relicsHtml}`);
-    }
 
     // Page navigation
     $('shop-page-num').textContent = `${_shopPage + 1} / ${totalPages}`;
@@ -3787,6 +3835,17 @@ function showBossIntro(onComplete) {
         $('modal-boss-intro').style.display = 'none';
         onComplete();
     }, 1800);
+}
+
+function showEliteIntro(onComplete) {
+    const enemy = state.enemy;
+    if (!enemy || !enemy.eliteMechanicName) { onComplete(); return; }
+    $('elite-intro-text').textContent = `⭐ ${enemy.name}\n\n【${enemy.eliteMechanicName}】\n${enemy.eliteMechanicDesc}`;
+    $('modal-elite-intro').style.display = 'flex';
+    setTimeout(() => {
+        $('modal-elite-intro').style.display = 'none';
+        onComplete();
+    }, 2000);
 }
 
 function viewBossSkill() {
