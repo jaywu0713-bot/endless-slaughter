@@ -1585,7 +1585,7 @@ const SHOP_ITEMS = [
         name: '回复生命',
         icon: '💚',
         desc: '回复最大HP的15%',
-        price: 12,
+        price: 6,
         apply(state) {
             const heal = Math.ceil(state.player.maxHp * 0.15);
             healPlayer(heal);
@@ -1647,7 +1647,7 @@ const SHOP_ITEMS = [
         name: '攻击力 +1',
         icon: '⚔️',
         desc: '永久增加1点攻击力',
-        price: 10,
+        price: 5,
         apply(state) { return null; },
     },
     {
@@ -1655,7 +1655,7 @@ const SHOP_ITEMS = [
         name: '防御力 +1',
         icon: '🛡️',
         desc: '永久增加1点防御力',
-        price: 10,
+        price: 5,
         apply(state) { return null; },
     },
     {
@@ -1663,7 +1663,7 @@ const SHOP_ITEMS = [
         name: '生命上限 +5',
         icon: '❤️',
         desc: '永久增加5点最大生命值',
-        price: 10,
+        price: 5,
         apply(state) { return null; },
     },
 ];
@@ -3030,9 +3030,7 @@ function resolveRoom(cell) {
             break;
 
         case 'shop':
-            state.screen = 'shop';
-            state.engraveOrigin = 'boss';
-            render();
+            enterShop();
             break;
 
         default:
@@ -3540,7 +3538,7 @@ function renderShop() {
         const relicsHtml = state._shopRelics.map(relicId => {
             const relic = RELIC_DEFS[relicId];
             if (!relic) return '';
-            const relicPrice = getShopPrice(50);
+            const relicPrice = getShopPrice(80);
             const canAfford = state.player.gold >= relicPrice;
             return `
                 <div class="shop-item" style="border-color:var(--gold);">
@@ -3569,7 +3567,7 @@ function buyShopItem(itemId) {
     // Check shop relics
     if (!item && itemId.startsWith('relic_')) {
         const relicId = itemId.replace('relic_', '');
-        item = { id: itemId, relicId, price: getShopPrice(50), isRelic: true };
+        item = { id: itemId, relicId, price: getShopPrice(80), isRelic: true };
         itemPrice = item.price;
     }
     if (!item) return;
