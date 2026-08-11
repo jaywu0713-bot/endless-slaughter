@@ -573,6 +573,11 @@ body {
                     <button class="btn btn-small" onclick="adminAddRelic()">添加</button>
                 </div>
                 <div style="display:flex;gap:8px;align-items:center;">
+                    <span style="color:var(--text-dim);min-width:60px;">触发事件</span>
+                    <select id="admin-event" style="width:160px;background:#222;color:#fff;border:1px solid #555;padding:4px;border-radius:4px;"></select>
+                    <button class="btn btn-small" onclick="adminTriggerEvent()">进入</button>
+                </div>
+                <div style="display:flex;gap:8px;align-items:center;">
                     <span style="color:var(--text-dim);min-width:60px;">修改属性</span>
                 </div>
                 <div style="display:flex;gap:4px;flex-wrap:wrap;">
@@ -4426,6 +4431,8 @@ window.closeRelicDetail = closeRelicDetail;
 function openAdmin() {
     const sel = document.getElementById('admin-relic');
     sel.innerHTML = Object.values(RELIC_DEFS).map(r => `<option value="${r.id}">${r.icon} ${r.name}</option>`).join('');
+    const evtSel = document.getElementById('admin-event');
+    evtSel.innerHTML = EVENT_DEFS.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
     $('modal-admin').style.display = 'flex';
 }
 function closeAdmin(e) { $('modal-admin').style.display = 'none'; }
@@ -4454,6 +4461,20 @@ function adminModStat(stat, amount) {
     addMessage(`[管理员] ${stat} +${amount}`, 'heal');
     render();
 }
+function adminTriggerEvent() {
+    const eid = document.getElementById('admin-event').value;
+    const event = EVENT_DEFS.find(e => e.id === eid);
+    if (!event) return;
+    // Remove from completed events so it can be re-triggered
+    state.completedEvents = state.completedEvents.filter(id => id !== eid);
+    // Ensure we're in a valid state for the event
+    state.engraveOrigin = 'boss';
+    state.pendingReward = false;
+    $('modal-admin').style.display = 'none';
+    showEvent(event);
+}
+window.adminTriggerEvent = adminTriggerEvent;
+
 function adminHealFull() {
     state.player.hp = state.player.maxHp;
     addMessage('[管理员] 满血复活', 'heal');
