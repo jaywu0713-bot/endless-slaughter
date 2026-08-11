@@ -983,8 +983,12 @@ const BOSS_DEFS = {
         intro: '「这里是终点吗？」',
         skillName: '四神之力',
         skillIcon: '👑',
-        skillDesc: '可使用万变魔君、嗜血狂魔、守秘者、大不净者的所有技能。',
+        skillDesc: '继承四位楼层主的力量：嗜血狂魔ATK×2、万变魔君DEF×1.5、大不净者HP×3、守秘者攻防兼备。瘟疫常驻，技能轮转释放。',
         floorRange: [100, 100],
+        atkMult: 2,
+        defMult: 1.5,
+        hpMult: 3,
+        simultAttackDefend: true,
         allSkills: ['shapeshifter', 'bloodrage', 'secretKeeper', 'greatUnclean'],
         _skillIndex: 0,
         skillEffect(state) {
@@ -2454,22 +2458,18 @@ function initEnemyIntent() {
             state.enemyIntentLabel = state.enemy.skillIcon + ' ' + state.enemy.skillName;
             state.enemyCurrentAtk = 0;
         } else if (state.enemy.bossId === 'fourGodsChosen') {
-            // Four Gods: 70% skill, 15% attack, 15% defense
+            // Four Gods: 70% skill (show specific name), 30% both (atk+def)
             const roll = Math.random();
             if (roll < 0.7) {
                 state.enemyIntentType = 'skill';
-                state.enemyIntentLabel = state.enemy.skillIcon + ' ' + state.enemy.skillName;
-                state.enemyCurrentAtk = 0;
-            } else if (roll < 0.85) {
-                state.enemyIntentType = 'defense';
-                state.enemyIntentLabel = '🛡️ 防御';
+                const skills = state.enemy.allSkills || [];
+                const nextSkillId = skills[(state.enemy._skillIndex || 0) % skills.length];
+                const nextSkillBoss = BOSS_DEFS[nextSkillId];
+                state.enemyIntentLabel = (nextSkillBoss ? nextSkillBoss.skillIcon : '') + ' ' + (nextSkillBoss ? nextSkillBoss.skillName : '');
                 state.enemyCurrentAtk = 0;
             } else {
-                state.enemyIntentType = 'attack';
-                const skills = state.enemy.allSkills || [];
-                const randSkill = skills[Math.floor(Math.random() * skills.length)];
-                const skillBoss = BOSS_DEFS[randSkill];
-                state.enemyIntentLabel = skillBoss ? skillBoss.skillIcon + ' ' + skillBoss.skillName : '';
+                state.enemyIntentType = 'both';
+                state.enemyIntentLabel = '⚔️🛡️ 攻防兼备';
                 state.enemyCurrentAtk = calcEnemyAtk();
             }
         } else {
@@ -2513,23 +2513,19 @@ function endPlayerTurn() {
 function generateNextIntent() {
     if (state.enemy && state.enemy.isBoss) {
         state.enemyTurnCounter++;
-        // Four Gods: 70% skill, 15% attack, 15% defense (can use skills repeatedly)
+        // Four Gods: 70% skill (show specific next skill), 30% both (can use skills repeatedly)
         if (state.enemy.bossId === 'fourGodsChosen') {
             const roll = Math.random();
             if (roll < 0.7) {
                 state.enemyIntentType = 'skill';
-                state.enemyIntentLabel = (state.enemy.skillIcon || '') + ' ' + (state.enemy.skillName || '');
-                state.enemyCurrentAtk = 0;
-            } else if (roll < 0.85) {
-                state.enemyIntentType = 'defense';
-                state.enemyIntentLabel = '🛡️ 防御';
+                const skills = state.enemy.allSkills || [];
+                const nextSkillId = skills[(state.enemy._skillIndex || 0) % skills.length];
+                const nextSkillBoss = BOSS_DEFS[nextSkillId];
+                state.enemyIntentLabel = (nextSkillBoss ? nextSkillBoss.skillIcon : '') + ' ' + (nextSkillBoss ? nextSkillBoss.skillName : '');
                 state.enemyCurrentAtk = 0;
             } else {
-                state.enemyIntentType = 'attack';
-                const skills = state.enemy.allSkills || [];
-                const randSkill = skills[Math.floor(Math.random() * skills.length)];
-                const skillBoss = BOSS_DEFS[randSkill];
-                state.enemyIntentLabel = skillBoss ? skillBoss.skillIcon + ' ' + skillBoss.skillName : '';
+                state.enemyIntentType = 'both';
+                state.enemyIntentLabel = '⚔️🛡️ 攻防兼备';
                 state.enemyCurrentAtk = calcEnemyAtk();
             }
         } else if (state.enemy._skillUsed) {
@@ -3295,6 +3291,10 @@ function resolveRoom(cell) {
             SFX.play('boss_appear');
             state.enemy = generateEnemy(state.floor);
             state.enemyTurnCounter = 0;
+            // Four Gods Chosen: permanent plague from battle start
+            if (state.enemy.bossId === 'fourGodsChosen') {
+                state.plagueTurns = 999;
+            }
             initEnemyIntent();
             state.screen = 'battle';
             render();
