@@ -1571,6 +1571,8 @@ const RUNE_DEFS = {
             onPlay(state, card) {
                 const heldTurns = (card.runeData && card.runeData.heldTurns) || 0;
                 if (!card.runeData) card.runeData = {};
+                // Save for modify hooks (which run after onPlay), then reset
+                card.runeData._consumeHeld = heldTurns;
                 card.runeData.heldTurns = 0;
                 if (heldTurns > 0) {
                     addMessage(`⏳ 以逸待劳：释放 ${heldTurns} 回合积蓄！（+${heldTurns * 10}%效果）`, 'info');
@@ -1578,11 +1580,11 @@ const RUNE_DEFS = {
                 return {};
             },
             modifyDamage(state, card, baseDamage) {
-                const heldTurns = (card.runeData && card.runeData.heldTurns) || 0;
+                const heldTurns = (card.runeData && card.runeData._consumeHeld) || 0;
                 return Math.floor(baseDamage * (1 + heldTurns * 0.1));
             },
             modifyShield(state, card, baseShield) {
-                const heldTurns = (card.runeData && card.runeData.heldTurns) || 0;
+                const heldTurns = (card.runeData && card.runeData._consumeHeld) || 0;
                 return Math.floor(baseShield * (1 + heldTurns * 0.1));
             },
         },
@@ -2099,10 +2101,21 @@ function drawCards(count) {
 function discardHand() {
     const kept = [];
     for (const card of state.deck.hand) {
-        if (card.rune === 'waitAndRest') {
+        const hasWaitAndRest = card.rune === 'waitAndRest' ||
+            (card._fusedRunes && card._fusedRunes.includes('waitAndRest'));
+        if (hasWaitAndRest) {
             // Card stays in hand, increment held-turns counter for +10% per turn
-            if (!card.runeData) card.runeData = {};
-            card.runeData.heldTurns = (card.runeData.heldTurns || 0) + 1;
+            if (card.rune === 'waitAndRest') {
+                if (!card.runeData) card.runeData = {};
+                card.runeData.heldTurns = (card.runeData.heldTurns || 0) + 1;
+            }
+            // Also increment for fused rune version
+            if (card._fusedRunes && card._fusedRunes.includes('waitAndRest')) {
+                const fi = card._fusedRunes.indexOf('waitAndRest');
+                if (!card._fusedRunesData) card._fusedRunesData = [];
+                if (!card._fusedRunesData[fi]) card._fusedRunesData[fi] = {};
+                card._fusedRunesData[fi].heldTurns = (card._fusedRunesData[fi].heldTurns || 0) + 1;
+            }
             kept.push(card);
         } else {
             state.deck.discard.push(card);
@@ -4729,7 +4742,9 @@ function renderHand() {
                     for (let fi = 0; fi < card._fusedRunes.length; fi++) {
                         const rid = card._fusedRunes[fi];
                         const rName = RUNE_DEFS[rid]?.name || rid;
-                        allRunes.push({ name: rName, extra: '' });
+                        const fd = (card._fusedRunesData && card._fusedRunesData[fi]) || {};
+                        const fusedHeld = (rid === 'waitAndRest' && fd.heldTurns) ? `+${fd.heldTurns * 10}%` : '';
+                        allRunes.push({ name: rName, extra: fusedHeld });
                     }
                 }
                 if (allRunes.length === 0) return '';
