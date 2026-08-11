@@ -209,10 +209,10 @@ body {
 
 /* ==================== CARD HAND ==================== */
 .card-area { width: 100%; }
-.card-hand { display: flex; justify-content: flex-start; gap: 12px; padding: 8px 0; }
-.card-slot { width: 130px; min-height: 170px; }
+.card-hand { display: flex; justify-content: flex-start; gap: 8px; padding: 8px 0; }
+.card-slot { width: 110px; min-height: 150px; }
 .card {
-    width: 130px; min-height: 170px; border-radius: 10px; padding: 12px;
+    width: 110px; min-height: 150px; border-radius: 10px; padding: 8px;
     background: var(--card-bg); border: 2px solid #333;
     display: flex; flex-direction: column; justify-content: space-between;
     cursor: pointer; transition: all 0.2s; position: relative;
@@ -225,24 +225,22 @@ body {
 .card.def-card:hover:not(.disabled) { box-shadow: 0 8px 24px rgba(66,165,245,0.3); }
 .card.disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(50%); }
 .card-cost {
-    position: absolute; top: -8px; left: -8px;
-    width: 28px; height: 28px; border-radius: 50%;
+    position: absolute; top: -6px; left: -6px;
+    width: 22px; height: 22px; border-radius: 50%;
     background: var(--energy); color: #333;
     display: flex; align-items: center; justify-content: center;
-    font-size: 14px; font-weight: 900;
+    font-size: 12px; font-weight: 900;
 }
-.card-icon { font-size: 36px; text-align: center; }
-.card-title { font-size: 16px; font-weight: 700; text-align: center; }
-.card-desc { font-size: 11px; color: var(--text-dim); text-align: center; line-height: 1.4; }
-.card-type-label { font-size: 10px; text-align: center; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
+.card-icon { font-size: 28px; text-align: center; }
+.card-title { font-size: 14px; font-weight: 700; text-align: center; }
+.card-desc { font-size: 10px; color: var(--text-dim); text-align: center; line-height: 1.4; }
+.card-type-label { font-size: 9px; text-align: center; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
 .card-type-label.atk { color: var(--card-atk); }
 .card-type-label.def { color: var(--card-def); }
 
 .card-rune {
-    font-size: 10px; text-align: center; font-weight: 700;
-    color: #ce93d8; background: rgba(156,39,176,0.15);
-    border-radius: 4px; padding: 1px 6px; margin: 2px 0;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    display: flex; flex-wrap: wrap; gap: 2px; justify-content: center;
+    padding: 1px 4px; margin: 2px 0;
 }
 
 .deck-info { text-align: center; font-size: 11px; color: var(--text-dim); margin-top: 4px; }
@@ -409,14 +407,14 @@ body {
     .battle-header .btn { padding: 3px 8px; font-size: 10px; }
 
     /* Cards: smaller, flexible */
-    .card { width: calc(25% - 8px); min-width: 70px; max-width: 110px; min-height: 130px; padding: 6px; }
-    .card-icon { font-size: 18px; }
-    .card-title { font-size: 11px; }
-    .card-desc { font-size: 9px; }
-    .card-cost { width: 22px; height: 22px; font-size: 10px; top: -6px; left: -6px; }
-    .card-type-label { font-size: 8px; padding: 1px 4px; }
-    .card-rune { font-size: 9px; }
-    .card-hand { gap: 4px; }
+    .card { width: calc(25% - 6px); min-width: 60px; max-width: 90px; min-height: 110px; padding: 5px; }
+    .card-icon { font-size: 16px; }
+    .card-title { font-size: 10px; }
+    .card-desc { font-size: 8px; }
+    .card-cost { width: 18px; height: 18px; font-size: 9px; top: -5px; left: -5px; }
+    .card-type-label { font-size: 7px; padding: 1px 3px; }
+    .card-rune { gap: 1px; }
+    .card-hand { gap: 3px; }
 
     /* Sprites: smaller */
     .char-sprite { width: 50px; height: 80px; }
@@ -617,7 +615,7 @@ body {
         <div class="title">无尽杀戮</div>
         <div class="subtitle">组建卡组，击杀怪物</div>
         <div class="menu-instructions">
-            <p><b>⚔️ 战斗：</b>回合制卡牌对战。每回合抽2张牌、恢复2点精力。怪物有防御池——攻击优先消耗防御再扣HP。每回合可看到敌人的意图（攻击/防御/技能）。</p>
+            <p><b>⚔️ 战斗：</b>回合制卡牌对战。每回合抽3张牌、恢复2点精力。怪物有防御池——攻击优先消耗防御再扣HP。每回合可看到敌人的意图（攻击/防御/技能）。</p>
             <p><b>🗺️ 路线：</b>每层在地图上选择房间。⚔️普通战斗 · ⭐精英怪 · ❓事件 · 🛒商店 · 💀楼层主。沿金色连线移动。</p>
             <p><b>❓ 事件：</b>多样的剧情遭遇，做出选择获得不同结果。每个事件每局最多遇到一次。</p>
             <p><b>🛒 商店：</b>购买卡牌、属性、遗物、印记缝合等服务。价格随楼层上涨。每局随机上架2个遗物。</p>
@@ -866,7 +864,7 @@ const BALANCE = {
     player: {
         initial: { level: 1, maxHp: 50, hp: 50, attack: 7, defense: 4, exp: 0, gold: 0 },
         maxEnergy: 2,
-        drawPerTurn: 2,
+        drawPerTurn: 3,
         levelUpBonus: { maxHp: 10 },
         shopExtraEnergyBought: false,
         shopExtraDrawCount: 0,
@@ -901,6 +899,7 @@ const BOSS_DEFS = {
         skillIcon: '🎭',
         skillDesc: '所有卡牌精力消耗随机变为0–3点，持续到战斗结束。',
         floorRange: [1, 35],
+        defMult: 1.5,
         skillEffect(state) {
             for (const card of [...state.deck.hand, ...state.deck.draw, ...state.deck.discard]) {
                 card._savedCost = card.cost;
@@ -922,6 +921,7 @@ const BOSS_DEFS = {
         skillIcon: '🩸',
         skillDesc: 'Boss当前HP降低30%，随后对玩家造成自身攻击力×2的伤害（可被护盾抵挡）。',
         floorRange: [25, 60],
+        atkMult: 2,
         skillEffect(state) {
             const selfDmg = Math.floor(state.enemy.hp * 0.3);
             state.enemy.hp -= selfDmg;
@@ -948,8 +948,11 @@ const BOSS_DEFS = {
         intro: '「我有如此景象可供你一睹！」',
         skillName: '享乐',
         skillIcon: '😵',
-        skillDesc: '玩家接下来3回合无法出牌（照常回能量和抽牌）。',
+        skillDesc: '玩家接下来3回合无法出牌（照常回能量和抽牌）。享乐后每个回合可以同时防御和攻击。',
         floorRange: [40, 80],
+        atkMult: 0.7,
+        defMult: 0.7,
+        simultAttackDefend: true,
         skillEffect(state) {
             state.skipCardPlayTurns = 3;
             addMessage('😵 守秘者使用了「享乐」：接下来3回合无法出牌！', 'damage');
@@ -963,6 +966,7 @@ const BOSS_DEFS = {
         skillIcon: '☠️',
         skillDesc: '每使用一张卡牌额外失去最大HP的5%，持续到战斗结束。',
         floorRange: [60, 100],
+        hpMult: 3,
         skillEffect(state) {
             state.plagueTurns = 999;
             addMessage('☠️ 大不净者使用了「瘟疫」：本场战斗每出一张卡扣5%最大HP！', 'damage');
@@ -996,66 +1000,98 @@ const RELIC_DEFS = {
     runeGem: {
         id: 'runeGem', name: '符文宝石', icon: '💎',
         desc: '一块看似普通的宝石，内部封存着某种强大的力量。每回合精力值+1。',
+        source: 'any',
     },
     blackstoneShard: {
         id: 'blackstoneShard', name: '黑石要塞的残片', icon: '🏰',
         desc: '远古文明留下的巨大黑色堡垒。获得后可进行一次免费印记缝合。',
+        source: 'any',
     },
     burningBlood: {
         id: 'burningBlood', name: '燃烧之血', icon: '🔥',
         desc: '此血来自一名不知疲倦的战士。每场战斗结束后回复最大HP的5%。',
+        source: 'event',
     },
     snakeRing: {
         id: 'snakeRing', name: '蛇之戒指', icon: '💍',
         desc: '来自一名猎手的友谊。每场战斗第一回合额外抽1张牌。',
+        source: 'event',
     },
     hexCrystal: {
         id: 'hexCrystal', name: '海克斯水晶', icon: '💠',
         desc: '蕴含巨大能量的水晶，科技与魔法在其中交汇。每场战斗第一个回合额外+1精力。',
+        source: 'any',
     },
     voidShard: {
         id: 'voidShard', name: '虚空碎片', icon: '🌑',
         desc: '来自世界之外的碎片。生命值低于50%时，攻击力和防御力+10%。',
+        source: 'any',
     },
     soulStone: {
         id: 'soulStone', name: '灵魂石', icon: '💎',
         desc: '曾经属于某个死去的灵魂。生命值归零时复活并回复50%HP，使用后消失。不可再次获得。',
+        source: 'any',
     },
     emperorSeal: {
         id: 'emperorSeal', name: '帝皇圣印', icon: '👑',
         desc: '在这个黑暗的时代，信仰本身就是一种武器。每场战斗第一次受到致命伤害时，伤害降至1点。',
+        source: 'any',
     },
     chaosMark: {
         id: 'chaosMark', name: '混沌印记', icon: '🌀',
         desc: '力量从来不会无偿给予。攻击力和防御力+10%，但每场战斗结束失去2%最大HP。',
+        source: 'any',
     },
     blessedBlood: {
         id: 'blessedBlood', name: '赐予恩惠的神血', icon: '🩸',
         desc: '只要还愿意继续前进，弱小也终能变成力量。获得经验值时额外+20%。',
+        source: 'any',
     },
     hestiaBlessing: {
         id: 'hestiaBlessing', name: '赫斯缇雅的恩惠', icon: '🔥',
         desc: '神明无法替你战斗，但她会一直注视着你。每次升级时额外回复5%最大HP。',
+        source: 'any',
     },
     dungeonTreasure: {
         id: 'dungeonTreasure', name: '地下城的宝藏', icon: '💎',
         desc: '越是深入地下，等待冒险者的东西就越珍贵。击败怪物后额外获得10%金币。',
+        source: 'any',
     },
     medicKit: {
         id: 'medicKit', name: '医疗探员的急救包', icon: '🏥',
         desc: '真正优秀的医疗探员总能让队友活着离开。每场战斗结束后回复最大HP的3%。',
+        source: 'any',
     },
     engineerToolbox: {
         id: 'engineerToolbox', name: '工程探员的工具箱', icon: '🧰',
         desc: '战场上没有绝对无法解决的问题。每场战斗第一次获得护盾时护盾翻倍。',
+        source: 'any',
     },
     scoutGoggles: {
         id: 'scoutGoggles', name: '侦察探员的战术目镜', icon: '🥽',
         desc: '先看清敌人，才能决定下一步。进入战斗时若敌人意图为攻击则额外抽1张牌。',
+        source: 'any',
+    },
+    terraStar: {
+        id: 'terraStar', name: '泰拉之星', icon: '⭐',
+        desc: '来自帝国士兵的谢礼。获得时立即提升10级。',
+        source: 'event',
+    },
+    africaStar: {
+        id: 'africaStar', name: '非洲之星', icon: '💠',
+        desc: '某位突击探员的珍贵遗物。获得时立即获得500金币。',
+        source: 'event',
     },
 };
 
-function getShopPrice(basePrice) { return Math.floor(basePrice * (1 + state.floor * 0.02)); }
+function getShopPrice(basePrice, itemId) {
+    let price = Math.floor(basePrice * (1 + state.floor * 0.02));
+    // After floor 50: attack/defense purchase price ×1.5
+    if (state.floor > 50 && (itemId === 'buyAtk' || itemId === 'buyDef')) {
+        price = Math.floor(price * 1.5);
+    }
+    return price;
+}
 function hasRelic(id) { return state.player.relics && state.player.relics.includes(id); }
 function relicStatBonus(base, stat) {
     // Void shard: +10% ATK/DEF when HP < 50%
@@ -1073,9 +1109,28 @@ function giveRelic(id) {
             state._hasFreeFusion = true;
             addMessage('🏰 黑石要塞的残片：获得一次免费印记缝合机会！', 'heal');
         }
+        if (id === 'africaStar') {
+            state.player.gold += 500;
+            addMessage('💠 非洲之星：获得500金币！', 'heal');
+        }
+        if (id === 'terraStar') {
+            for (let i = 0; i < 10; i++) {
+                state.player.level++;
+                state.player.maxHp += BALANCE.player.levelUpBonus.maxHp;
+                healPlayer(BALANCE.player.levelUpBonus.maxHp);
+                if (hasRelic('hestiaBlessing')) healPlayer(Math.ceil(state.player.maxHp * 0.05));
+            }
+            addMessage('⭐ 泰拉之星：等级提升10级！', 'heal');
+        }
         return true;
     }
     return false;
+}
+
+function getAvailableRelics(sources) {
+    return Object.values(RELIC_DEFS).filter(r =>
+        !hasRelic(r.id) && sources.includes(r.source || 'any')
+    );
 }
 
 // =====================================================================
@@ -1112,10 +1167,42 @@ const ELITE_DEFS = {
         mechanicName: '愤怒姿态',
         mechanicDesc: '受到的伤害×2。观者在愤怒中放弃了防御，但攻击力极高（×2.7）。',
     },
+    commander: {
+        id: 'commander', name: '胜者为王指挥官', icon: '🎖️',
+        category: 'special', hpMult: 1.75, atkMult: 1.35,
+        special: 'commander',
+        mechanicName: '战术指令',
+        mechanicDesc: '每回合在「攻击姿态（ATK×2）」和「防御姿态（DEF×2）」之间随机选择，意图清晰可见。',
+    },
+    adventurer: {
+        id: 'adventurer', name: '第一级冒险者', icon: '🗺️',
+        category: 'special', hpMult: 1.75, atkMult: 1.35,
+        special: 'adventurer',
+        mechanicName: '恩惠',
+        mechanicDesc: '每次玩家结束回合，所有属性提升20%（基于基础属性线性增长）。显示当前成长等级。',
+    },
+    alchemist: {
+        id: 'alchemist', name: '祖安炼金师', icon: '🧪',
+        category: 'special', hpMult: 1.75, atkMult: 1.35,
+        special: 'alchemist',
+        mechanicName: '剧毒',
+        mechanicDesc: '每回合结束：对玩家造成5%最大HP伤害，同时自身回复10%最大HP。',
+    },
+    psychic: {
+        id: 'psychic', name: '灵能者', icon: '🧠',
+        category: 'special', hpMult: 1.75, atkMult: 2.5,
+        special: 'psychic',
+        mechanicName: '灵能',
+        mechanicDesc: '蓄力2回合（期间不攻击不防御），蓄力完成后释放攻击力×3的强力攻击。',
+    },
 };
 
 const NORMAL_ELITE_IDS = Object.keys(ELITE_DEFS).filter(k => ELITE_DEFS[k].category === 'normal');
 const SPECIAL_ELITE_IDS = Object.keys(ELITE_DEFS).filter(k => ELITE_DEFS[k].category === 'special');
+
+// Global elite strengthening (Section 6)
+const ELITE_GLOBAL_HP_MULT = 2;
+const ELITE_GLOBAL_ATK_MULT = 1.5;
 
 function buildElite(floor, cfg) {
     let hpBase, atkBase;
@@ -1137,9 +1224,9 @@ function buildElite(floor, cfg) {
         : Math.floor(floor * 1.8) + randInt(-2, 3);
     return {
         name: cfg.name,
-        maxHp: Math.floor(hpBase * cfg.hpMult),
-        hp: Math.floor(hpBase * cfg.hpMult),
-        attack: Math.floor(atkBase * cfg.atkMult),
+        maxHp: Math.floor(hpBase * cfg.hpMult * ELITE_GLOBAL_HP_MULT),
+        hp: Math.floor(hpBase * cfg.hpMult * ELITE_GLOBAL_HP_MULT),
+        attack: Math.floor(atkBase * cfg.atkMult * ELITE_GLOBAL_ATK_MULT),
         defense: Math.max(1, Math.floor(defBase * 1.5)),
         isElite: true,
         eliteId: cfg.id,
@@ -1188,7 +1275,7 @@ function showEliteReward() {
 }
 
 function showRelicSelection() {
-    const available = Object.values(RELIC_DEFS).filter(r => !hasRelic(r.id));
+    const available = getAvailableRelics(['any', 'boss']);
     if (available.length === 0) { advanceFloor(); return; }
     const relic = available[Math.floor(Math.random() * available.length)];
     addMessage(`🎁 获得了遗物「${relic.name}」！`, 'heal');
@@ -1636,8 +1723,8 @@ const SHOP_ITEMS = [
         id: 'randomRune',
         name: '随机印记',
         icon: '🔮',
-        desc: '获得一个随机印记并刻印',
-        price: 20,
+        desc: '从3个随机印记中选择一个刻印',
+        price: 30,
         apply(state) { return null; },
     },
     {
@@ -1832,6 +1919,8 @@ function freshState() {
         mapCursorPath: 0,
         pendingReward: true,
         _hasFreeFusion: false,
+        _eventExtraGold: 0,
+        _eventLevelBonus: 0,
     };
 }
 
@@ -1916,12 +2005,15 @@ function generateEnemy(floor) {
     if (isBossFloor(floor)) {
         const bossCfg = BALANCE.bosses[floor];
         const bossData = pickBossForFloor(floor);
+        const bossAtkMult = bossData ? (bossData.atkMult || 1) : 1;
+        const bossDefMult = bossData ? (bossData.defMult || 1) : 1;
+        const bossHpMult = bossData ? (bossData.hpMult || 1) : 1;
         return {
             name: bossData ? bossData.name : T.enemyBoss,
-            maxHp: bossCfg.hp,
-            hp: bossCfg.hp,
-            attack: bossCfg.attack,
-            defense: Math.floor(floor * 2),
+            maxHp: Math.floor(bossCfg.hp * bossHpMult),
+            hp: Math.floor(bossCfg.hp * bossHpMult),
+            attack: Math.floor(bossCfg.attack * bossAtkMult),
+            defense: Math.floor(Math.floor(floor * 2) * bossDefMult),
             isBoss: true,
             bossId: bossData ? bossData.id : null,
             skillName: bossData ? bossData.skillName : '',
@@ -1929,6 +2021,7 @@ function generateEnemy(floor) {
             skillIcon: bossData ? bossData.skillIcon : '',
             intro: bossData ? bossData.intro : '',
             allSkills: bossData ? (bossData.allSkills || null) : null,
+            simultAttackDefend: bossData ? (bossData.simultAttackDefend || false) : false,
         };
     }
     // 4-tier HP/ATK scaling
@@ -2019,7 +2112,42 @@ function startTurn() {
         state.enemy.hp = Math.max(1, state.enemy.hp - loss);
         addMessage(`⚔️ 铁甲战士失去 ${loss} 点生命（狂暴）`, 'damage');
     }
-    // Plague is permanent after Great Unclean One uses it
+
+    // Alchemist poison: deal 5% maxHP to player, heal 10% maxHP to self
+    if (state.enemy && state.enemy.eliteSpecial === 'alchemist') {
+        const poisonDmg = Math.max(1, Math.ceil(state.player.maxHp * 0.05));
+        state.player.hp -= poisonDmg;
+        const healAmt = Math.ceil(state.enemy.maxHp * 0.1);
+        state.enemy.hp = Math.min(state.enemy.maxHp, state.enemy.hp + healAmt);
+        addMessage(`🧪 剧毒：你受到 ${poisonDmg} 点伤害！炼金师回复 ${healAmt} HP`, 'damage');
+        animateDamage('player-sprite', poisonDmg, 'damage');
+        if (state.player.hp <= 0) {
+            state.player.hp = 0;
+            state.battlePhase = 'over';
+            updateBattleUI();
+            setTimeout(() => onPlayerDeath(), 500);
+            return;
+        }
+    }
+
+    // Adventurer growth: +20% of base stats per turn (linear)
+    if (state.enemy && state.enemy.eliteSpecial === 'adventurer') {
+        if (!state.enemy._adventurerBaseAtk) {
+            // First turn: store base stats, no growth
+            state.enemy._adventurerBaseAtk = state.enemy.attack;
+            state.enemy._adventurerBaseDef = state.enemy.defense;
+            state.enemy._adventurerBaseMaxHp = state.enemy.maxHp;
+            state.enemy._adventurerBaseHp = state.enemy.hp;
+            state.enemy._adventurerLevel = 1;
+        } else {
+            state.enemy._adventurerLevel++;
+            state.enemy.attack = Math.floor(state.enemy._adventurerBaseAtk * (1 + 0.2 * (state.enemy._adventurerLevel - 1)));
+            state.enemy.defense = Math.floor(state.enemy._adventurerBaseDef * (1 + 0.2 * (state.enemy._adventurerLevel - 1)));
+            state.enemy.maxHp = Math.floor(state.enemy._adventurerBaseMaxHp * (1 + 0.2 * (state.enemy._adventurerLevel - 1)));
+            state.enemy.hp = Math.min(state.enemy.maxHp, Math.floor(state.enemy._adventurerBaseHp * (1 + 0.2 * (state.enemy._adventurerLevel - 1))));
+            addMessage(`🗺️ 冒险者提升至 Lv.${state.enemy._adventurerLevel}！所有属性+20%`, 'damage');
+        }
+    }
 
     // Handle skipCardPlayTurns (守秘者享乐)
     if (state.skipCardPlayTurns > 0) {
@@ -2294,6 +2422,26 @@ function playCard(handIndex) {
 // Set initial intent at battle start (turn 1 defense is always 0)
 function initEnemyIntent() {
     state.enemyCurrentDef = 0;
+    // Elite special mechanics override
+    if (state.enemy && state.enemy.eliteSpecial === 'psychic') {
+        state.enemy._psychicCharge = 2;
+        state.enemyIntentType = 'skill';
+        state.enemyIntentLabel = `🧠 灵能蓄力中 (${state.enemy._psychicCharge}回合)`;
+        state.enemyCurrentAtk = 0;
+        return;
+    }
+    if (state.enemy && state.enemy.eliteSpecial === 'commander') {
+        if (Math.random() < 0.5) {
+            state.enemyIntentType = 'attack';
+            state.enemyIntentLabel = '⚔️ 攻击姿态 (ATK×2)';
+            state.enemyCurrentAtk = Math.floor(calcEnemyAtk() * 2);
+        } else {
+            state.enemyIntentType = 'defense';
+            state.enemyIntentLabel = '🛡️ 防御姿态 (DEF×2)';
+            state.enemyCurrentAtk = 0;
+        }
+        return;
+    }
     if (state.enemy && state.enemy.isBoss) {
         // Shapeshifter & Great Unclean: first intent is always skill
         if (state.enemy.bossId === 'shapeshifter' || state.enemy.bossId === 'greatUnclean') {
@@ -2380,7 +2528,12 @@ function generateNextIntent() {
                 state.enemyCurrentAtk = calcEnemyAtk();
             }
         } else if (state.enemy._skillUsed) {
-            if (Math.random() < 0.3) {
+            // 守秘者: after skill, always use simultaneous attack+defend
+            if (state.enemy.simultAttackDefend) {
+                state.enemyIntentType = 'both';
+                state.enemyIntentLabel = '⚔️🛡️ 攻防兼备';
+                state.enemyCurrentAtk = calcEnemyAtk();
+            } else if (Math.random() < 0.3) {
                 state.enemyIntentType = 'defense';
                 state.enemyIntentLabel = '🛡️ 防御';
                 state.enemyCurrentAtk = 0;
@@ -2405,6 +2558,29 @@ function generateNextIntent() {
                 state.enemyCurrentAtk = calcEnemyAtk();
             }
         }
+    } else if (state.enemy && state.enemy.eliteSpecial === 'psychic') {
+        // Psychic charge mechanic
+        state.enemy._psychicCharge--;
+        if (state.enemy._psychicCharge <= 0) {
+            state.enemyIntentType = 'attack';
+            state.enemyIntentLabel = '🧠 灵能释放 (ATK×3)';
+            state.enemyCurrentAtk = Math.floor(calcEnemyAtk() * 3);
+            state.enemy._psychicCharge = 2; // reset for next cycle
+        } else {
+            state.enemyIntentType = 'skill';
+            state.enemyIntentLabel = `🧠 灵能蓄力中 (${state.enemy._psychicCharge}回合)`;
+            state.enemyCurrentAtk = 0;
+        }
+    } else if (state.enemy && state.enemy.eliteSpecial === 'commander') {
+        if (Math.random() < 0.5) {
+            state.enemyIntentType = 'attack';
+            state.enemyIntentLabel = '⚔️ 攻击姿态 (ATK×2)';
+            state.enemyCurrentAtk = Math.floor(calcEnemyAtk() * 2);
+        } else {
+            state.enemyIntentType = 'defense';
+            state.enemyIntentLabel = '🛡️ 防御姿态 (DEF×2)';
+            state.enemyCurrentAtk = 0;
+        }
     } else {
         if (Math.random() < 0.4) {
             state.enemyIntentType = 'defense';
@@ -2422,9 +2598,39 @@ function enemyAttack() {
     const enemy = state.enemy;
     state.enemyCurrentDef = 0;  // Reset defense each enemy turn
 
+    // Simultaneous attack+defend (守秘者 both intent)
+    if (state.enemyIntentType === 'both') {
+        // Step 1: Gain defense
+        state.enemyCurrentDef = Math.floor(enemy.defense * 1.5);
+        addMessage(`🛡️ ${enemy.name} 进入防御姿态！（获得 ${state.enemyCurrentDef} 点防御）`, 'info');
+        // Step 2: Then attack
+        const result = applyDamageToPlayer(state.enemyCurrentAtk);
+        updateBattleUI();
+        if (state.player.hp <= 0) {
+            state.player.hp = 0;
+            state.battlePhase = 'over';
+            updateBattleUI();
+            setTimeout(() => onPlayerDeath(), 500);
+            return;
+        }
+        // Check if enemy died from counter attack
+        if (state.enemy && state.enemy.hp <= 0) {
+            state.enemy.hp = 0;
+            state.battlePhase = 'over';
+            updateBattleUI();
+            setTimeout(() => onEnemyDefeated(), 400);
+            return;
+        }
+        generateNextIntent();
+        setTimeout(() => startTurn(), 600);
+        return;
+    }
+
     // Defense intent — monster gains defense NOW, no attack
     if (state.enemyIntentType === 'defense') {
-        state.enemyCurrentDef = Math.floor(enemy.defense * 1.5);
+        // Commander: double defense
+        const defMult = (enemy.eliteSpecial === 'commander') ? 2 : 1;
+        state.enemyCurrentDef = Math.floor(enemy.defense * 1.5 * defMult);
         addMessage(`🛡️ ${enemy.name} 进入防御姿态！（获得 ${state.enemyCurrentDef} 点防御）`, 'info');
         SFX.play('shield');
         updateBattleUI();
@@ -2435,6 +2641,15 @@ function enemyAttack() {
             setTimeout(() => onEnemyDefeated(), 400);
             return;
         }
+        generateNextIntent();
+        setTimeout(() => startTurn(), 600);
+        return;
+    }
+
+    // Psychic elite: skill intent = charging, do nothing
+    if (enemy.eliteSpecial === 'psychic' && state.enemyIntentType === 'skill') {
+        addMessage(`🧠 灵能者正在蓄力...`, 'info');
+        updateBattleUI();
         generateNextIntent();
         setTimeout(() => startTurn(), 600);
         return;
@@ -2461,58 +2676,8 @@ function enemyAttack() {
         return;
     }
 
-    // Use pre-calculated turn attack (shared roll with defense, inverse correlation)
-    const rawEnemyDmg = state.enemyCurrentAtk;
-    let netDmg = rawEnemyDmg;
-
-    // Apply damage reduction if a defense card with that rune was played
-    if (state.turnFlags.damageReduction && state.turnFlags.damageReductionCard) {
-        const drHooks = getCardHooks(state.turnFlags.damageReductionCard);
-        if (drHooks.modifyIncomingDamage) {
-            netDmg = drHooks.modifyIncomingDamage(state, state.turnFlags.damageReductionCard, netDmg);
-        }
-    }
-
-    // Apply shield
-    let blocked = 0;
-    if (state.shield > 0) {
-        blocked = Math.min(state.shield, netDmg);
-        state.shield -= blocked;
-        netDmg -= blocked;
-        if (blocked > 0) {
-            addMessage(T.msgShieldBlock(blocked), 'info');
-        }
-    }
-
-    // Apply damage to player
-    // Emperor's Seal: first lethal hit → 1 damage
-    if (hasRelic('emperorSeal') && !state._sealUsedThisBattle && (state.player.hp - netDmg) <= 0 && netDmg > 0) {
-        netDmg = Math.max(0, state.player.hp - 1);
-        state._sealUsedThisBattle = true;
-        addMessage('👑 帝皇圣印：致命伤害降至1点！', 'heal');
-    }
-    state.player.hp -= netDmg;
-    if (netDmg > 0) {
-        addMessage(T.msgEnemyAttack(enemy.name, netDmg), 'damage');
-    } else if (rawEnemyDmg > 0) {
-        addMessage(`🛡️ ${enemy.name} 的攻击被护盾完全吸收！`, 'info');
-    }
-    if (netDmg > 0) {
-        animateDamage('player-sprite', netDmg, 'damage');
-        shakeElement('player-sprite');
-        SFX.play('hit');
-    } else {
-        SFX.play('enemy_attack');
-    }
-
-    // Apply counter attack if active
-    if (state.turnFlags.counterAttack && state.turnFlags.counterAttackCard && state.enemy) {
-        const caHooks = getCardHooks(state.turnFlags.counterAttackCard);
-        if (caHooks.onEnemyAttack) {
-            caHooks.onEnemyAttack(state, state.turnFlags.counterAttackCard, rawEnemyDmg);
-        }
-    }
-
+    // Normal attack
+    applyDamageToPlayer(state.enemyCurrentAtk);
     updateBattleUI();
 
     if (state.player.hp <= 0) {
@@ -2537,6 +2702,55 @@ function enemyAttack() {
     setTimeout(() => startTurn(), 600);
 }
 
+// Extract damage application logic for reuse (used by 'attack' and 'both' intents)
+function applyDamageToPlayer(rawDmg) {
+    let netDmg = rawDmg;
+    const enemy = state.enemy;
+
+    // Apply damage reduction if a defense card with that rune was played
+    if (state.turnFlags.damageReduction && state.turnFlags.damageReductionCard) {
+        const drHooks = getCardHooks(state.turnFlags.damageReductionCard);
+        if (drHooks.modifyIncomingDamage) {
+            netDmg = drHooks.modifyIncomingDamage(state, state.turnFlags.damageReductionCard, netDmg);
+        }
+    }
+
+    // Apply shield
+    if (state.shield > 0) {
+        const blocked = Math.min(state.shield, netDmg);
+        state.shield -= blocked;
+        netDmg -= blocked;
+        if (blocked > 0) {
+            addMessage(T.msgShieldBlock(blocked), 'info');
+        }
+    }
+
+    // Emperor's Seal: first lethal hit → 1 damage
+    if (hasRelic('emperorSeal') && !state._sealUsedThisBattle && (state.player.hp - netDmg) <= 0 && netDmg > 0) {
+        netDmg = Math.max(0, state.player.hp - 1);
+        state._sealUsedThisBattle = true;
+        addMessage('👑 帝皇圣印：致命伤害降至1点！', 'heal');
+    }
+    state.player.hp -= netDmg;
+    if (netDmg > 0) {
+        addMessage(T.msgEnemyAttack(enemy.name, netDmg), 'damage');
+        animateDamage('player-sprite', netDmg, 'damage');
+        shakeElement('player-sprite');
+        SFX.play('hit');
+    } else if (rawDmg > 0) {
+        addMessage(`🛡️ ${enemy.name} 的攻击被护盾完全吸收！`, 'info');
+        SFX.play('enemy_attack');
+    }
+
+    // Apply counter attack if active
+    if (state.turnFlags.counterAttack && state.turnFlags.counterAttackCard && state.enemy) {
+        const caHooks = getCardHooks(state.turnFlags.counterAttackCard);
+        if (caHooks.onEnemyAttack) {
+            caHooks.onEnemyAttack(state, state.turnFlags.counterAttackCard, rawDmg);
+        }
+    }
+}
+
 function onEnemyDefeated() {
     if (state.screen !== 'battle') return;
     state.battlePhase = 'over';
@@ -2552,6 +2766,23 @@ function onEnemyDefeated() {
     addMessage(`💰 获得 ${goldDrop} 金币！`, 'heal');
     const prevExp = state.player.exp;
     if (state._eventRelicReward) { giveRelic(state._eventRelicReward); addMessage('🎁 获得遗物「' + RELIC_DEFS[state._eventRelicReward].name + '」！', 'heal'); state._eventRelicReward = null; }
+    // Event extra gold
+    if (state._eventExtraGold) {
+        state.player.gold += state._eventExtraGold;
+        addMessage(`💰 额外获得 ${state._eventExtraGold} 金币！`, 'heal');
+        state._eventExtraGold = 0;
+    }
+    // Event level bonus
+    if (state._eventLevelBonus) {
+        for (let i = 0; i < state._eventLevelBonus; i++) {
+            state.player.level++;
+            state.player.maxHp += BALANCE.player.levelUpBonus.maxHp;
+            healPlayer(BALANCE.player.levelUpBonus.maxHp);
+            if (hasRelic('hestiaBlessing')) healPlayer(Math.ceil(state.player.maxHp * 0.05));
+        }
+        addMessage(`⭐ 事件奖励：等级 +${state._eventLevelBonus}！`, 'heal');
+        state._eventLevelBonus = 0;
+    }
     grantBattleExp();
     state._lastExpGain = state.player.exp - prevExp;
     if (hasRelic('chaosMark')) {
@@ -2581,7 +2812,7 @@ function onEnemyDefeated() {
         state._lastExpGain *= 2;
         // Give random relic
         let bossRelic = null;
-        const availableRelics = Object.values(RELIC_DEFS).filter(r => !hasRelic(r.id));
+        const availableRelics = getAvailableRelics(['any', 'boss']);
         if (availableRelics.length > 0) {
             bossRelic = availableRelics[Math.floor(Math.random() * availableRelics.length)];
             giveRelic(bossRelic.id);
@@ -2605,7 +2836,7 @@ function onEnemyDefeated() {
         // Elite: show rune selection (1 rune), then advance
         // Elite: give random relic
         let eliteRelic = null;
-        const eliteAvailable = Object.values(RELIC_DEFS).filter(r => !hasRelic(r.id));
+        const eliteAvailable = getAvailableRelics(['any', 'boss']);
         if (eliteAvailable.length > 0) {
             eliteRelic = eliteAvailable[Math.floor(Math.random() * eliteAvailable.length)];
             giveRelic(eliteRelic.id);
@@ -3165,7 +3396,7 @@ function showCardEngrave(rune) {
                  ${!disabled ? `onclick="engraveRuneOnCard(${i})"` : ''}>
                 <div class="engrave-icon">${card.icon}</div>
                 <div class="engrave-name">${cardName}</div>
-                ${hasRune ? `<div class="engrave-rune">🔮 ${RUNE_DEFS[card.rune]?.name || card.rune}</div>` : ''}
+                ${hasRune ? `<div class="engrave-rune" style="display:flex;flex-wrap:wrap;gap:2px;justify-content:center;">${[card.rune, ...(card._fusedRunes||[])].filter(Boolean).map(r => `<span style="font-size:9px;padding:1px 4px;background:rgba(156,39,176,0.2);border-radius:3px;">🔮${RUNE_DEFS[r]?.name||r}</span>`).join('')}</div>` : ''}
                 <div class="engrave-hint">${hint}</div>
             </div>
         `;
@@ -3376,6 +3607,130 @@ const EVENT_DEFS = [
             { label: '与神格状态对话', effect(s) { for(let i=0;i<5;i++){ state.player.exp += expToNextLevel(); checkLevelUp(); } addMessage('等级+5', 'heal'); }, resultText: '观者表示从未见过如此弱小之人，当场帮你提升了五级。你感到一股强大的力量涌入体内。等级+5。' },
         ],
     },
+    {
+        id: 'voidWhisper', name: '来自虚空的低语', floorMin: 5,
+        desc: '地面出现一道漆黑的裂缝，某种来自裂缝另一端的力量正在注视着你。',
+        options: [
+            {
+                label: '触碰裂缝', warning: '将失去5%生命值',
+                effect(s) {
+                    const loss = Math.max(1, Math.ceil(s.player.maxHp * 0.05));
+                    s.player.hp = Math.max(1, s.player.hp - loss);
+                    s.player.attack += 10;
+                    addMessage(`🌑 触碰裂缝：攻击力+10，但失去 ${loss} 点生命`, 'heal');
+                },
+                resultText: '虚空的力量进入了你的身体。攻击力永久+10，但你失去了部分生命值。',
+            },
+            {
+                label: '封印裂缝',
+                effect(s) {
+                    s.player.defense += 5;
+                    s.player.exp += 50;
+                    checkLevelUp();
+                    addMessage('🔒 封印裂缝：防御力+5，获得50经验！', 'heal');
+                },
+                resultText: '你成功阻止了虚空继续扩张。防御力永久+5，获得50经验。',
+            },
+            { label: '远离这里', effect(s) {}, resultText: '你决定不与未知的力量接触。' },
+        ],
+    },
+    {
+        id: 'woundedAgent', name: '负伤的突击探员', floorMin: 1,
+        desc: '一名负伤的突击探员躲在废墟后方，身上的装备已经所剩无几。',
+        options: [
+            {
+                label: '帮助他',
+                effect(s) { if (giveRelic('africaStar')) { addMessage('探员告知你某处地方有惊喜作为感谢', 'heal'); } },
+                resultText: '你帮助了负伤的探员。探员告知你某处地方藏有惊喜——你获得遗物「非洲之星」！立即获得500金币。',
+            },
+            {
+                label: '抢走装备后离开',
+                effect(s) {
+                    const avail = getAvailableRelics(['any', 'boss']);
+                    if (avail.length > 0) {
+                        const r = avail[Math.floor(Math.random() * avail.length)];
+                        giveRelic(r.id);
+                        addMessage(`抢走了探员的遗物：${r.name}`, 'heal');
+                    }
+                },
+                resultText: '你拿走了探员身上的装备，获得随机遗物奖励。',
+            },
+        ],
+    },
+    {
+        id: 'lastEvac', name: '最后的撤离点', floorMin: 5,
+        desc: '远处已经传来撤离载具的声音，但你的周围还有敌人正在搜索这片区域。',
+        options: [
+            {
+                label: '立即撤离',
+                effect(s) { healPlayer(Math.ceil(s.player.maxHp * 0.3)); addMessage('回复30%HP', 'heal'); },
+                resultText: '你安全离开了战场。回复30%生命值。',
+            },
+            {
+                label: '再搜一次', warning: '将失去10%生命值',
+                effect(s) {
+                    s.player.gold += 101;
+                    const loss = Math.max(1, Math.ceil(s.player.maxHp * 0.1));
+                    s.player.hp = Math.max(1, s.player.hp - loss);
+                    addMessage(`冒险搜索：获得101金币，但失去 ${loss} 点生命`, 'heal');
+                },
+                resultText: '你冒险搜索了附近区域，找到了一些金币，但也受到了伤害。',
+            },
+            {
+                label: '伏击敌人',
+                effect(s) { state.enemy = generateNormalElite(state.floor); state._eventExtraGold = 101; enterEventBattle(); },
+                startsBattle: true,
+                resultText: '你决定在撤离前解决最后一个威胁——与精英怪展开战斗！',
+            },
+        ],
+    },
+    {
+        id: 'imperialSoldier', name: '战场上的帝国士兵', floorMin: 5,
+        desc: '一名遍体鳞伤的士兵仍然守在已经失守的阵地前，他拒绝后退。',
+        options: [
+            {
+                label: '与他并肩作战',
+                effect(s) { state.enemy = generateNormalElite(state.floor); state._eventLevelBonus = 2; enterEventBattle(); },
+                startsBattle: true,
+                resultText: '你与士兵共同迎击敌人——与精英怪展开战斗！',
+            },
+            {
+                label: '给予他补给',
+                effect(s) { if (giveRelic('terraStar')) { addMessage('士兵将护符交给你作为谢礼', 'heal'); } },
+                resultText: '士兵重新站起，将自己的护符交给你。你获得遗物「泰拉之星」！立即提升10级。',
+            },
+            { label: '离开', effect(s) {}, resultText: '这不是属于我的战争。你离开了阵地。' },
+        ],
+    },
+    {
+        id: 'chaosAltar', name: '混沌祭坛', floorMin: 10,
+        desc: '废墟深处矗立着一座无法理解的祭坛，祭坛周围充满令人不安的气息。',
+        options: [
+            {
+                label: '触碰祭坛', warning: '将失去70%生命值',
+                effect(s) {
+                    s.player.attack = Math.floor(s.player.attack * 1.5);
+                    s.player.defense = Math.floor(s.player.defense * 1.5);
+                    const loss = Math.max(1, Math.ceil(s.player.maxHp * 0.7));
+                    s.player.hp = Math.max(1, s.player.hp - loss);
+                    addMessage(`⚡ 混沌之力：攻击力×1.5，防御力×1.5，但失去 ${loss} 点生命`, 'heal');
+                },
+                resultText: '未知力量回应了你。攻击力×1.5，防御力×1.5，但你失去了70%的生命值。',
+            },
+            {
+                label: '摧毁祭坛',
+                effect(s) {
+                    for (let i = 0; i < 3; i++) {
+                        s.player.exp += expToNextLevel();
+                        checkLevelUp();
+                    }
+                    addMessage('祭坛崩塌：等级+3！', 'heal');
+                },
+                resultText: '祭坛崩塌，残留的力量化为经验。你提升了3级。',
+            },
+            { label: '离开', effect(s) {}, resultText: '有些力量，不应该被触碰。你离开了祭坛。' },
+        ],
+    },
 ];
 
 function enterEventBattle() {
@@ -3473,8 +3828,11 @@ function showEvent(event) {
         let cantDo = opt.condition && !opt.condition(state);
         let style = 'display:block;width:100%;margin-bottom:8px;';
         if (cantDo) style += 'opacity:0.35;cursor:not-allowed;filter:grayscale(60%);';
+        const warningHTML = opt.warning
+            ? `<span style="display:block;color:var(--enemy);font-size:10px;margin-top:2px;">⚠️ ${opt.warning}</span>`
+            : '';
         html += `<button class="btn btn-small" style="${style}" ${cantDo ? 'disabled' : ''}
-            onclick="handleEventOption('${event.id}', ${event.options.indexOf(opt)})">${opt.label}</button>`;
+            onclick="handleEventOption('${event.id}', ${event.options.indexOf(opt)})">${opt.label}${warningHTML}</button>`;
     }
     $('question-room-options').innerHTML = html;
     state._currentEvent = event;
@@ -3534,11 +3892,10 @@ function enterShop() {
     SFX.play('shop');
     _shopPage = 0;
     state.screen = 'shop';
-    // Pick 2 random relics the player doesn't have yet
-    const allRelicIds = Object.keys(RELIC_DEFS);
-    const available = allRelicIds.filter(id => !hasRelic(id));
+    // Pick 2 random relics the player doesn't have yet (exclude event-exclusive)
+    const available = getAvailableRelics(['any', 'shop']);
     const shuffled = shuffle([...available]);
-    state._shopRelics = shuffled.slice(0, 2);
+    state._shopRelics = shuffled.slice(0, 2).map(r => r.id);
     renderShop();
 }
 
@@ -3587,7 +3944,7 @@ function renderShop() {
             remainText = ` <span style="color:#888;font-size:9px;">(剩${remain}次)</span>`;
             if (remain <= 0) disabled = true;
         }
-        const actualPrice = getShopPrice(item.price);
+        const actualPrice = getShopPrice(item.price, item.id);
         const canAfford = state.player.gold >= actualPrice && !disabled;
         const isRelic = item.isRelic;
         return `
@@ -3611,34 +3968,30 @@ function renderShop() {
 
 function buyShopItem(itemId) {
     let item = SHOP_ITEMS.find(i => i.id === itemId);
-    let itemPrice = item ? getShopPrice(item.price) : 0;
+    let itemPrice = item ? getShopPrice(item.price, item.id) : 0;
     // Check shop relics
     if (!item && itemId.startsWith('relic_')) {
         const relicId = itemId.replace('relic_', '');
-        item = { id: itemId, relicId, price: getShopPrice(80), isRelic: true };
+        item = { id: itemId, relicId, price: getShopPrice(80, itemId), isRelic: true };
         itemPrice = item.price;
     }
     if (!item) return;
     if (state.player.gold < itemPrice) return;
 
-    // Special handling for random rune
+    // Special handling for random rune: show 3 choices
     if (item.id === 'randomRune') {
-        // Pick random rune first, then check compatibility before charging gold
-        const runeIds = ALL_RUNE_IDS;
-        const randomId = runeIds[Math.floor(Math.random() * runeIds.length)];
-        const rune = RUNE_DEFS[randomId];
-        // Check if any compatible, unengraved cards exist
-        const hasCompatibleCard = state.player.cards.some(card => {
-            return isRuneCompatible(rune, card) && !card.rune;
+        const shuffled = shuffle([...ALL_RUNE_IDS]);
+        const choices = shuffled.slice(0, 3).map(id => RUNE_DEFS[id]);
+        // Check if any compatible card exists for any of the 3 runes
+        const hasAnyCompatible = state.player.cards.some(card => {
+            return choices.some(r => isRuneCompatible(r, card) && !card.rune);
         });
-        if (!hasCompatibleCard) {
-            addMessage('没有可刻印的卡牌，无法购买随机印记', 'damage');
+        if (!hasAnyCompatible) {
+            addMessage('没有可刻印的卡牌，无法购买印记', 'damage');
             return;
         }
         state.player.gold -= itemPrice;
-        state.pendingRuneId = randomId;
-        state.engraveOrigin = 'shop';
-        showRuneConfirm(rune);
+        showShopRuneSelection(choices);
         return;
     }
 
@@ -3740,6 +4093,32 @@ function leaveShop() {
     state.engraveOrigin = 'boss';
     proceedAfterRoom();
 }
+
+// Shop rune selection: show 3 runes, player picks 1
+function showShopRuneSelection(choices) {
+    state.screen = 'rune-select';
+    $('rune-select-title').textContent = '选择印记';
+    $('rune-select-desc').textContent = '从3个印记中选择一个刻在卡牌上';
+    $('rune-options').innerHTML = choices.map(rune => {
+        const tagClass = rune.tag === 'attack' ? 'atk' : (rune.tag === 'defense' ? 'def' : 'universal');
+        const tagText = rune.tag === 'attack' ? '攻击' : (rune.tag === 'defense' ? '防御' : '通用');
+        return `<div class="rune-card" onclick="selectShopRune('${rune.id}')">
+            <div class="rune-icon">🔮</div>
+            <div class="rune-name">${rune.name}</div>
+            <div class="rune-tag ${tagClass}">${tagText}</div>
+            <div class="rune-desc">${rune.desc}</div>
+        </div>`;
+    }).join('');
+    showScreen('rune-select');
+}
+window.showShopRuneSelection = showShopRuneSelection;
+
+function selectShopRune(runeId) {
+    state.pendingRuneId = runeId;
+    state.engraveOrigin = 'shop';
+    showCardEngrave(RUNE_DEFS[runeId]);
+}
+window.selectShopRune = selectShopRune;
 
 function continueAfterChest() {
     state.chestResult = null;
@@ -3909,7 +4288,7 @@ function renderCardBackpack() {
         const c = cards[i];
         const runeName = c.rune ? (RUNE_DEFS[c.rune]?.name || c.rune) : '';
         const fusedRunes = c._fusedRunes ? c._fusedRunes.map(r => RUNE_DEFS[r]?.name || r).join('+') : '';
-        const allRunes = [runeName, ...(c._fusedRunes || []).map(r => RUNE_DEFS[r]?.name || r)].filter(Boolean).join('+');
+        const allRunes = [runeName, ...(c._fusedRunes || []).map(r => RUNE_DEFS[r]?.name || r)].filter(Boolean).join(' · ');
         html += `<div style="font-size:9px;color:var(--text-dim);padding:1px 0;">${c.icon} ${c.id==='attack'?'攻':c.id==='magicBook'?'书':'防'}${allRunes?' 🔮'+allRunes:''} ⚡${c.cost}</div>`;
     }
     if (state._hasFreeFusion) {
@@ -4228,12 +4607,20 @@ function updateBattleUI() {
     // Enemy
     if (state.enemy) {
         const e = state.enemy;
-        $('enemy-name').textContent = e.name;
-        // Intent display: defense / skill / attack
+        // Enemy name with elite special info
+        let nameExtra = '';
+        if (e.eliteSpecial === 'adventurer') nameExtra = ` [Lv.${e._adventurerLevel || 1}]`;
+        if (e.eliteSpecial === 'psychic' && e._psychicCharge !== undefined) nameExtra = ` [蓄力:${e._psychicCharge}回合]`;
+        $('enemy-name').textContent = e.name + nameExtra;
+        // Intent display: defense / both / skill / attack
         if (state.enemyIntentType === 'defense') {
             $('enemy-intent').textContent = state.enemyIntentLabel;
             $('enemy-intent').classList.remove('skill-intent');
             $('enemy-intent').style.color = 'var(--shield)';
+        } else if (state.enemyIntentType === 'both') {
+            $('enemy-intent').textContent = `⚔️🛡️ ${state.enemyCurrentAtk || 0}（攻防兼备）`;
+            $('enemy-intent').classList.remove('skill-intent');
+            $('enemy-intent').style.color = 'var(--gold)';
         } else if (state.enemyIntentType === 'skill') {
             $('enemy-intent').textContent = state.enemyIntentLabel;
             $('enemy-intent').classList.add('skill-intent');
@@ -4301,12 +4688,24 @@ function renderHand() {
                 ? T.cardAttackDesc(state.player.attack)
                 : T.cardDefenseDesc(state.player.defense);
             const runeIndicator = (() => {
-                if (!card.rune) return '';
-                const runeName = RUNE_DEFS[card.rune]?.name || card.rune;
-                const heldInfo = (card.rune === 'waitAndRest' && card.runeData?.heldTurns)
-                    ? ` (${card.runeData.heldTurns}回合 +${card.runeData.heldTurns * 10}%)`
-                    : '';
-                return `<div class="card-rune" title="${runeName}">🔮 ${runeName}${heldInfo}</div>`;
+                const allRunes = [];
+                if (card.rune) {
+                    const rName = RUNE_DEFS[card.rune]?.name || card.rune;
+                    const heldInfo = (card.rune === 'waitAndRest' && card.runeData?.heldTurns)
+                        ? `+${card.runeData.heldTurns * 10}%` : '';
+                    allRunes.push({ name: rName, extra: heldInfo });
+                }
+                if (card._fusedRunes) {
+                    for (let fi = 0; fi < card._fusedRunes.length; fi++) {
+                        const rid = card._fusedRunes[fi];
+                        const rName = RUNE_DEFS[rid]?.name || rid;
+                        allRunes.push({ name: rName, extra: '' });
+                    }
+                }
+                if (allRunes.length === 0) return '';
+                return `<div class="card-rune">${allRunes.map(r =>
+                    `<span style="font-size:9px;padding:1px 4px;background:rgba(156,39,176,0.2);border-radius:3px;white-space:nowrap;">🔮${r.name}${r.extra}</span>`
+                ).join('')}</div>`;
             })();
             html += `
                 <div class="card-slot"><div class="card ${typeClass} ${disabled}" onclick="playCard(${i})">
