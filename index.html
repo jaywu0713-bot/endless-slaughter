@@ -983,7 +983,7 @@ const BOSS_DEFS = {
         intro: '「这里是终点吗？」',
         skillName: '四神之力',
         skillIcon: '👑',
-        skillDesc: '继承四位楼层主的力量：嗜血狂魔ATK×2、万变魔君DEF×1.5、大不净者HP×3、守秘者攻防兼备。瘟疫常驻，技能轮转释放。',
+        skillDesc: '继承四位楼层主的力量。瘟疫常驻（每出牌扣5%HP），每个技能仅释放一次（变化→鲜血暴怒→享乐→瘟疫），技能耗尽后每回合攻防兼备。',
         floorRange: [100, 100],
         atkMult: 2,
         defMult: 1.5,
@@ -1255,6 +1255,12 @@ function generateSpecialElite(floor, eliteId) {
     const cfg = ELITE_DEFS[eliteId];
     if (!cfg || cfg.category !== 'special') return generateNormalElite(floor);
     return buildElite(floor, cfg);
+}
+
+// Map elite rooms: pick from special elite pool (replaces normal elites on map)
+function generateMapElite(floor) {
+    const key = SPECIAL_ELITE_IDS[Math.floor(Math.random() * SPECIAL_ELITE_IDS.length)];
+    return buildElite(floor, ELITE_DEFS[key]);
 }
 
 // Backwards-compatible wrapper (used by old code paths that expect random elite)
@@ -2458,12 +2464,13 @@ function initEnemyIntent() {
             state.enemyIntentLabel = state.enemy.skillIcon + ' ' + state.enemy.skillName;
             state.enemyCurrentAtk = 0;
         } else if (state.enemy.bossId === 'fourGodsChosen') {
-            // Four Gods: 70% skill (show specific name), 30% both (atk+def)
+            // Four Gods: 70% skill (one use each, 4 max), 30% both (atk+def)
+            const si = BOSS_DEFS.fourGodsChosen._skillIndex;
             const roll = Math.random();
-            if (roll < 0.7) {
+            if (roll < 0.7 && si < 4) {
                 state.enemyIntentType = 'skill';
                 const skills = state.enemy.allSkills || [];
-                const nextSkillId = skills[(state.enemy._skillIndex || 0) % skills.length];
+                const nextSkillId = skills[si % skills.length];
                 const nextSkillBoss = BOSS_DEFS[nextSkillId];
                 state.enemyIntentLabel = (nextSkillBoss ? nextSkillBoss.skillIcon : '') + ' ' + (nextSkillBoss ? nextSkillBoss.skillName : '');
                 state.enemyCurrentAtk = 0;
@@ -2513,13 +2520,14 @@ function endPlayerTurn() {
 function generateNextIntent() {
     if (state.enemy && state.enemy.isBoss) {
         state.enemyTurnCounter++;
-        // Four Gods: 70% skill (show specific next skill), 30% both (can use skills repeatedly)
+        // Four Gods: 70% skill (one use each, 4 max), 30% both
         if (state.enemy.bossId === 'fourGodsChosen') {
+            const si = BOSS_DEFS.fourGodsChosen._skillIndex;
             const roll = Math.random();
-            if (roll < 0.7) {
+            if (roll < 0.7 && si < 4) {
                 state.enemyIntentType = 'skill';
                 const skills = state.enemy.allSkills || [];
-                const nextSkillId = skills[(state.enemy._skillIndex || 0) % skills.length];
+                const nextSkillId = skills[si % skills.length];
                 const nextSkillBoss = BOSS_DEFS[nextSkillId];
                 state.enemyIntentLabel = (nextSkillBoss ? nextSkillBoss.skillIcon : '') + ' ' + (nextSkillBoss ? nextSkillBoss.skillName : '');
                 state.enemyCurrentAtk = 0;
@@ -3274,7 +3282,7 @@ function resolveRoom(cell) {
             break;
 
         case 'elite':
-            state.enemy = generateNormalElite(state.floor);
+            state.enemy = generateMapElite(state.floor);
             initEnemyIntent();
             state.screen = 'battle';
             render();
@@ -3291,9 +3299,10 @@ function resolveRoom(cell) {
             SFX.play('boss_appear');
             state.enemy = generateEnemy(state.floor);
             state.enemyTurnCounter = 0;
-            // Four Gods Chosen: permanent plague from battle start
+            // Four Gods Chosen: permanent plague from battle start + reset skill index
             if (state.enemy.bossId === 'fourGodsChosen') {
                 state.plagueTurns = 999;
+                BOSS_DEFS.fourGodsChosen._skillIndex = 0;
             }
             initEnemyIntent();
             state.screen = 'battle';
