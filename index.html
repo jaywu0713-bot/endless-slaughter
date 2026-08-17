@@ -228,6 +228,10 @@ body {
 .card-type-label.junk { color: #888; }
 .card.blood-card { border-color: #b71c1c; }
 .card-type-label.blood { color: #ef5350; }
+.card.energy-card { border-color: #ffd740; }
+.card-type-label.energy { color: #ffd740; }
+.card.draw-card { border-color: #4fc3f7; }
+.card-type-label.draw { color: #4fc3f7; }
 .card-cost {
     position: absolute; top: -6px; left: -6px;
     width: 22px; height: 22px; border-radius: 50%;
@@ -744,7 +748,7 @@ body {
             <div class="reward-card" onclick="pickBlessing('wealth')">
                 <div class="reward-icon">💰</div>
                 <div class="reward-title">财富的代价</div>
-                <div class="reward-desc" style="color:var(--enemy);">⚠️ 获得100金币，但获得一张「空白卡牌」</div>
+                <div class="reward-desc" style="color:var(--enemy);">⚠️ 获得200金币，但获得一张「空白卡牌」</div>
             </div>
         </div>
     </div>
@@ -830,8 +834,9 @@ body {
     <div id="screen-rune-confirm" class="screen">
         <h2>🔮 获得印记</h2>
         <div id="rune-confirm-card" class="rune-card" style="margin-bottom:16px;"></div>
-        <div style="display:flex;gap:12px;">
+        <div style="display:flex;gap:12px;flex-wrap:wrap;justify-content:center;">
             <button class="btn" id="btn-accept-rune" onclick="acceptRune()">获得</button>
+            <button class="btn btn-small" id="btn-recycle-rune" onclick="recycleRune()" style="display:none;">🪙 回收 +50金币</button>
             <button class="btn btn-small" onclick="declineRune()">放弃</button>
         </div>
     </div>
@@ -1100,7 +1105,7 @@ const RELIC_DEFS = {
     },
     chaosMark: {
         id: 'chaosMark', name: '混沌印记', icon: '🌀',
-        desc: '力量从来不会无偿给予。攻击力和防御力+10%，但每场战斗结束失去2%最大HP。',
+        desc: '力量从来不会无偿给予。攻击力和防御力+20%，但每场战斗结束失去2%最大HP。',
         source: 'any',
     },
     blessedBlood: {
@@ -1153,6 +1158,31 @@ const RELIC_DEFS = {
         desc: '并肩作战留下的创伤。之后获得的所有经验减少10%。',
         source: 'event',
     },
+    goldShovel: {
+        id: 'goldShovel', name: '金铲铲', icon: '🪙',
+        desc: '它曾经属于一位喜欢收集稀有宝物的约德尔人。获得印记时可以选择将其回收为50金币。',
+        source: 'any',
+    },
+    villageHeroMedal: {
+        id: 'villageHeroMedal', name: '村庄英雄的勋章', icon: '🎖️',
+        desc: '这曾经属于一个保护了村庄的人。商店中的所有商品价格降低25%。',
+        source: 'any',
+    },
+    netherAlloyShard: {
+        id: 'netherAlloyShard', name: '下界合金碎片', icon: '🔩',
+        desc: '来自下界某处的合金，世界上数一数二的坚硬物质。防御力+10%。',
+        source: 'any',
+    },
+    ururuMissile: {
+        id: 'ururuMissile', name: '乌鲁鲁的巡飞弹', icon: '🚀',
+        desc: '这个导弹承载了数之不尽的怨恨。每场战斗的第一个回合获得10点攻击力，回合结束后消失。',
+        source: 'any',
+    },
+    rbSingerBangs: {
+        id: 'rbSingerBangs', name: 'R&B歌手的斜刘海', icon: '🎤',
+        desc: '斜刘海对R&B有加持吗？商店中的所有商品价格降低10%。',
+        source: 'any',
+    },
 };
 
 function getShopPrice(basePrice, itemId) {
@@ -1165,15 +1195,30 @@ function getShopPrice(basePrice, itemId) {
     if (state.floor > 50 && (itemId === 'buyAtk' || itemId === 'buyDef')) {
         price = Math.floor(price * 1.5);
     }
-    return price;
+    // Modular relic discounts: additive stacking, applied last, min 1 gold
+    price = Math.floor(price * (1 - getShopDiscount()));
+    return Math.max(1, price);
+}
+
+// Shop discount from relics (additive): 村庄英雄的勋章 25% + R&B歌手的斜刘海 10%
+function getShopDiscount() {
+    let discount = 0;
+    if (hasRelic('villageHeroMedal')) discount += 0.25;
+    if (hasRelic('rbSingerBangs')) discount += 0.10;
+    return Math.min(discount, 0.9); // cap at 90%
 }
 function hasRelic(id) { return state.player.relics && state.player.relics.includes(id); }
 function relicStatBonus(base, stat) {
+    // Modular relic stat bonuses (stat: 'attack' | 'defense')
     // Void shard: +10% ATK/DEF when HP < 50%
-    // Chaos mark: always +10% ATK/DEF
+    // Chaos mark: always +20% ATK/DEF
+    // Nether alloy shard: +10% DEF only
+    // Ururu missile: +10 flat ATK on the first turn of each battle
     let bonus = base;
-    if (hasRelic('chaosMark')) bonus = Math.floor(bonus * 1.1);
+    if (hasRelic('chaosMark')) bonus = Math.floor(bonus * 1.2);
     if (hasRelic('voidShard') && state.player.hp < state.player.maxHp * 0.5) bonus = Math.floor(bonus * 1.1);
+    if (stat === 'defense' && hasRelic('netherAlloyShard')) bonus = Math.floor(bonus * 1.1);
+    if (stat === 'attack' && hasRelic('ururuMissile') && state._battleTurnCount === 1) bonus += 10;
     return bonus;
 }
 function giveRelic(id) {
@@ -1452,7 +1497,70 @@ const CARD_DEFS = {
         noEngrave: true, // event-exclusive curse card, cannot take runes
         exhaustHpCost: false,
     },
+    energyCard: {
+        id: 'energyCard',
+        icon: '⚡',
+        type: 'junk',
+        cost: 1,
+        effect: 'gainEnergy', // +2 energy on use (net +1)
+        playable: true,
+        noEngrave: true, // shop-exclusive special card, cannot take runes
+    },
+    drawCard: {
+        id: 'drawCard',
+        icon: '🃏',
+        type: 'junk',
+        cost: 1,
+        effect: 'drawExtra', // draw 2 cards on use
+        playable: true,
+        noEngrave: true, // shop-exclusive special card, cannot take runes
+    },
 };
+
+// Modular card display helpers (used by hand, backpack, discard, engrave UIs)
+function getCardDisplayName(card) {
+    switch (card.id) {
+        case 'attack': return T.cardAttack;
+        case 'defense': return T.cardDefense;
+        case 'magicBook': return '魔法书';
+        case 'warriorBlood': return '战士的鲜血';
+        case 'emptyMagazine': return '空弹匣';
+        case 'energyCard': return '精力卡牌';
+        case 'drawCard': return '抽卡卡牌';
+        default: return card.playable === false ? '空白卡牌' : card.id;
+    }
+}
+
+function getCardDisplayDesc(card) {
+    switch (card.id) {
+        case 'attack': return T.cardAttackDesc(state.player.attack);
+        case 'defense': return T.cardDefenseDesc(state.player.defense);
+        case 'magicBook': return `伤害 = 攻击力 + 等级×3（无视敌人防御）`;
+        case 'warriorBlood': return '抽到时失去3%生命；0费打出消耗本场移除';
+        case 'emptyMagazine': return '无效果，打出后本场移除';
+        case 'energyCard': return '使用后获得2点精力';
+        case 'drawCard': return '使用后抽2张牌';
+        default: return card.playable === false ? '无法打出的废牌' : '';
+    }
+}
+
+// ── Modular rune energy calculation (Section 12) ──
+// Rules: base cost + heavyStrike(+1) + double-rune penalty(+1);
+// freeEnergy rune overrides everything to 0; never negative.
+function getRuneCount(card) {
+    return (card.rune ? 1 : 0) + (card._fusedRunes ? card._fusedRunes.length : 0);
+}
+function hasRuneOnCard(card, runeId) {
+    return card.rune === runeId || (card._fusedRunes && card._fusedRunes.includes(runeId));
+}
+function getCardDisplayCost(card) {
+    if (card.playable === false) return null;
+    if (hasRuneOnCard(card, 'freeEnergy')) return 0; // free override wins
+    let cost = card.cost;
+    if (hasRuneOnCard(card, 'heavyStrike')) cost += 1;
+    if (getRuneCount(card) >= 2) cost += 1; // double-rune penalty
+    return Math.max(0, cost);
+}
 
 // =====================================================================
 // RUNE DEFINITIONS (data-driven — add new runes here)
@@ -1514,14 +1622,11 @@ const RUNE_DEFS = {
         name: '主宰',
         type: 'attack',
         tag: 'attack',
-        desc: '每用此卡击杀一个怪物，永久+15%伤害（跨战斗累积）。清怪越多越强，滚雪球型印记。',
+        desc: '用此卡每击杀一个怪物，玩家攻击力永久+1（跨战斗累积）。卡牌显示累计击杀数。',
         hooks: {
-            modifyDamage(state, card, baseDamage) {
-                const kills = (card.runeData && card.runeData.kills) || 0;
-                const bonus = Math.floor(baseDamage * kills * 0.15);
-                return baseDamage + bonus;
-            },
             onKill(state, card) {
+                // Permanent +1 player attack per kill
+                state.player.attack += 1;
                 if (!card.runeData) card.runeData = {};
                 card.runeData.kills = (card.runeData.kills || 0) + 1;
                 // Also update the persistent card via source index
@@ -1533,7 +1638,7 @@ const RUNE_DEFS = {
                         persistentCard.runeData.kills = card.runeData.kills;
                     }
                 }
-                addMessage(`💀 主宰：击杀计数 +1（当前 ${card.runeData.kills}）`, 'damage');
+                addMessage(`💀 主宰：攻击力永久+1！（累计击杀 ${card.runeData.kills}）`, 'heal');
             },
         },
     },
@@ -1595,10 +1700,10 @@ const RUNE_DEFS = {
         name: '重击',
         type: 'attack',
         tag: 'attack',
-        desc: '卡牌消耗+2精力，伤害×3。高风险高回报。',
+        desc: '卡牌消耗+1精力，伤害×2。高风险高回报。',
         hooks: {
-            onPlay(state, card) { return { costModifier: 2 }; },
-            modifyDamage(state, card, baseDamage) { return baseDamage * 3; },
+            onPlay(state, card) { return { costModifier: 1 }; },
+            modifyDamage(state, card, baseDamage) { return baseDamage * 2; },
         },
     },
     slaySpireLogic: {
@@ -1639,7 +1744,7 @@ const RUNE_DEFS = {
         name: '以血换血',
         type: 'attack',
         tag: 'attack',
-        desc: '使用后失去5%当前生命（最少1点），伤害+30%。以命搏命。',
+        desc: '使用后失去5%当前生命（最少1点），伤害+50%。以命搏命。',
         hooks: {
             onPlay(state, card) {
                 const hpLoss = Math.max(1, Math.ceil(state.player.hp * 0.05));
@@ -1648,7 +1753,7 @@ const RUNE_DEFS = {
                 animateDamage('player-sprite', hpLoss, 'damage');
                 return {};
             },
-            modifyDamage(state, card, baseDamage) { return Math.floor(baseDamage * 1.3); },
+            modifyDamage(state, card, baseDamage) { return Math.floor(baseDamage * 1.5); },
         },
     },
     waitAndRest: {
@@ -1924,6 +2029,22 @@ const SHOP_ITEMS = [
         apply(state) { return null; },
     },
     {
+        id: 'energyCard',
+        name: '精力卡牌',
+        icon: '⚡',
+        desc: '获得1张精力卡牌（使用后+2精力）',
+        price: 100,
+        apply(state) { return null; },
+    },
+    {
+        id: 'drawCard',
+        name: '抽卡卡牌',
+        icon: '🃏',
+        desc: '获得1张抽卡卡牌（使用后抽2张牌）',
+        price: 120,
+        apply(state) { return null; },
+    },
+    {
         id: 'buyAtk',
         name: '攻击力 +1',
         icon: '⚔️',
@@ -2180,20 +2301,20 @@ function generateEnemy(floor) {
             simultAttackDefend: bossData ? (bossData.simultAttackDefend || false) : false,
         };
     }
-    // 4-tier HP/ATK scaling (HP ×1.5 for normal monsters only)
+    // 4-tier HP/ATK scaling (HP ×1.5, ATK ×1.2 for normal monsters only)
     let hp, atk;
     if (floor <= 25) {
         hp = Math.floor((randInt(10, 30) + Math.floor(floor * 1.5)) * 1.5);
-        atk = randInt(1, 4) + Math.floor(floor * 0.22);
+        atk = Math.floor((randInt(1, 4) + Math.floor(floor * 0.22)) * 1.2);
     } else if (floor <= 50) {
         hp = Math.floor((randInt(20, 50) + Math.floor(floor * 1.5)) * 1.5);
-        atk = randInt(3, 7) + Math.floor(floor * 0.3);
+        atk = Math.floor((randInt(3, 7) + Math.floor(floor * 0.3)) * 1.2);
     } else if (floor <= 75) {
         hp = Math.floor((randInt(40, 80) + Math.floor(floor * 1.8)) * 1.5);
-        atk = randInt(5, 10) + Math.floor(floor * 0.38);
+        atk = Math.floor((randInt(5, 10) + Math.floor(floor * 0.38)) * 1.2);
     } else {
         hp = Math.floor((randInt(60, 110) + Math.floor(floor * 2)) * 1.5);
-        atk = randInt(8, 14) + Math.floor(floor * 0.45);
+        atk = Math.floor((randInt(8, 14) + Math.floor(floor * 0.45)) * 1.2);
     }
     const def = floor <= 20
         ? Math.floor(floor * 1) + randInt(-1, 2)
@@ -2460,7 +2581,9 @@ function playCard(handIndex) {
     }
 
     // Calculate actual energy cost (energyRefund → free, costModifier → extra cost)
-    const actualCost = onPlayResult.energyRefund ? 0 : (card.cost + (onPlayResult.costModifier || 0));
+    // Energy cost: free override (freeEnergy rune) → 0; otherwise base + modifiers + double-rune penalty
+    const actualCost = onPlayResult.energyRefund ? 0
+        : Math.max(0, card.cost + (onPlayResult.costModifier || 0) + (getRuneCount(card) >= 2 ? 1 : 0));
     if (state.energy < actualCost) {
         addMessage(T.msgNoEnergy, 'damage');
         return;
@@ -2499,9 +2622,25 @@ function playCard(handIndex) {
     }
 
     // Apply card effect
+    if (card.effect === 'gainEnergy') {
+        // Energy card: +2 energy (already paid cost 1 → net +1)
+        state.energy += 2;
+        addMessage(`⚡ 精力卡牌：获得2点精力！（当前 ${state.energy}）`, 'heal');
+        SFX.play('level_up');
+        updateBattleUI();
+        return;
+    }
+    if (card.effect === 'drawExtra') {
+        // Draw card: draw 2 cards
+        const drawn = drawCards(2);
+        addMessage(`🃏 抽卡卡牌：抽取 ${drawn.length} 张牌！`, 'info');
+        SFX.play('draw');
+        updateBattleUI();
+        return;
+    }
     if (card.effect === 'magicAttack') {
         // Magic book: ATK + level*3, ignores defense
-        let dmg = relicStatBonus(state.player.attack + state.player.level * 3);
+        let dmg = relicStatBonus(state.player.attack + state.player.level * 3, 'attack');
         if (hooks.modifyDamage) dmg = hooks.modifyDamage(state, card, dmg);
         state.enemy.hp -= dmg;
         addMessage(`📖 魔法书：造成 ${dmg} 点伤害（无视防御）！`, 'damage');
@@ -2516,7 +2655,7 @@ function playCard(handIndex) {
             setTimeout(() => onEnemyDefeated(), 400); return;
         }
     } else if (card.effect === 'dealDamage') {
-        let dmg = relicStatBonus(state.player.attack);
+        let dmg = relicStatBonus(state.player.attack, 'attack');
         if (hooks.modifyDamage) {
             dmg = hooks.modifyDamage(state, card, dmg);
         }
@@ -2564,7 +2703,7 @@ function playCard(handIndex) {
         const extraAttacks = onPlayResult.extraAttacks || 0;
         for (let i = 0; i < extraAttacks; i++) {
             if (state.enemy.hp <= 0) break;
-            let extraDmg = relicStatBonus(state.player.attack);
+            let extraDmg = relicStatBonus(state.player.attack, 'attack');
             if (hooks.modifyDamage) {
                 extraDmg = hooks.modifyDamage(state, card, extraDmg);
             }
@@ -2599,7 +2738,7 @@ function playCard(handIndex) {
         }
 
     } else if (card.effect === 'gainShield') {
-        let shieldAmt = relicStatBonus(state.player.defense);
+        let shieldAmt = relicStatBonus(state.player.defense, 'defense');
         if (hooks.modifyShield) {
             shieldAmt = hooks.modifyShield(state, card, shieldAmt);
         }
@@ -3112,7 +3251,8 @@ function grantLevels(n) {
 }
 
 function expToNextLevel() {
-    return state.player.level * 10 + 20;
+    // Halved from original curve (level*10+20) → keeps same shape
+    return state.player.level * 5 + 10;
 }
 
 // =====================================================================
@@ -3546,13 +3686,16 @@ function showRuneSelection() {
                         T.runeTypeUniversal;
         const usable = hasCompatibleCardForRune(rune);
         if (!usable) {
+            // Gold Shovel relic: unusable runes can be recycled for 50 gold
+            const recycleAction = hasRelic('goldShovel') ? `onclick="recycleRuneFromSelection('${rune.id}')"` : '';
+            const recycleStyle = hasRelic('goldShovel') ? ' style="cursor:pointer;"' : '';
             return `
-                <div class="rune-card rune-card-disabled">
+                <div class="rune-card rune-card-disabled"${recycleStyle} ${recycleAction}>
                     <div class="rune-icon">🔮</div>
                     <div class="rune-name">${rune.name}</div>
                     <div class="rune-tag ${tagClass}">${tagText}</div>
                     <div class="rune-desc">${rune.desc}</div>
-                    <div class="rune-desc" style="color:var(--enemy);font-weight:700;">🚫 没有可刻印的卡牌</div>
+                    <div class="rune-desc" style="color:var(--enemy);font-weight:700;">🚫 没有可刻印的卡牌${hasRelic('goldShovel') ? '（点击回收 +50金币）' : ''}</div>
                 </div>
             `;
         }
@@ -3604,7 +3747,7 @@ function showCardEngrave(rune) {
         const compatible = isRuneCompatible(rune, card);
         const hasRune = !!card.rune;
         const disabled = !compatible || hasRune;
-        const cardName = card.id === 'attack' ? T.cardAttack : T.cardDefense;
+        const cardName = getCardDisplayName(card);
         let hint = '';
         if (hasRune) hint = `🔒 ${T.cardHasRune}`;
         else if (!compatible) hint = `🚫 ${T.cardIncompatible}`;
@@ -3637,7 +3780,7 @@ function engraveRuneOnCard(cardIndex) {
     card.runeData = {};
     SFX.play('rune');
 
-    const cardName = card.id === 'attack' ? T.cardAttack : T.cardDefense;
+    const cardName = getCardDisplayName(card);
     addMessage(T.runeEngraved(rune.name, cardName), 'heal');
 
     // Return to correct screen based on origin
@@ -3687,8 +3830,77 @@ function showRuneConfirm(rune) {
         if (!hasCompatible) acceptBtn.style.opacity = '0.4';
         else acceptBtn.style.opacity = '1';
     }
+    // Gold Shovel relic: show recycle option (+50 gold)
+    const recycleBtn = $('btn-recycle-rune');
+    if (recycleBtn) {
+        recycleBtn.style.display = hasRelic('goldShovel') ? '' : 'none';
+    }
     showScreen('rune-confirm');
 }
+
+// Gold Shovel: recycle the pending rune for 50 gold
+function recycleRune() {
+    const runeId = state.pendingConfirmRuneId;
+    if (!runeId || !hasRelic('goldShovel')) return;
+    state.player.gold += 50;
+    state.pendingConfirmRuneId = null;
+    state.pendingRuneId = null;
+    addMessage(`🪙 金铲铲：印记回收，+50金币！`, 'heal');
+    // Resume flow based on origin (same as decline)
+    if (state.engraveOrigin === 'shop') {
+        state.screen = 'shop';
+        renderShop();
+    } else if (state.engraveOrigin === 'chest') {
+        state.engraveOrigin = 'boss';
+        proceedAfterRoom();
+    } else if (state.engraveOrigin === 'blessing') {
+        state.engraveOrigin = 'boss';
+        startNewArea(1);
+    } else {
+        showReward();
+    }
+}
+window.recycleRune = recycleRune;
+
+// Gold Shovel: recycle an unusable rune from the 3-choice selection screen
+function recycleRuneFromSelection(runeId) {
+    if (!hasRelic('goldShovel')) return;
+    if (!state.pendingRuneChoices) return;
+    const idx = state.pendingRuneChoices.findIndex(r => r.id === runeId);
+    if (idx === -1) return;
+    state.pendingRuneChoices.splice(idx, 1);
+    state.player.gold += 50;
+    addMessage(`🪙 金铲铲：印记回收，+50金币！`, 'heal');
+    // Re-render remaining choices
+    $('rune-options').innerHTML = state.pendingRuneChoices.map(rune => {
+        const tagClass = rune.tag;
+        const tagText = rune.tag === 'attack' ? T.runeTypeAttack :
+                        rune.tag === 'defense' ? T.runeTypeDefense :
+                        T.runeTypeUniversal;
+        const usable = hasCompatibleCardForRune(rune);
+        if (!usable) {
+            const recycleAction = hasRelic('goldShovel') ? `onclick="recycleRuneFromSelection('${rune.id}')"` : '';
+            return `
+                <div class="rune-card rune-card-disabled" ${recycleAction}>
+                    <div class="rune-icon">🔮</div>
+                    <div class="rune-name">${rune.name}</div>
+                    <div class="rune-tag ${tagClass}">${tagText}</div>
+                    <div class="rune-desc">${rune.desc}</div>
+                    <div class="rune-desc" style="color:var(--enemy);font-weight:700;">🚫 没有可刻印的卡牌（点击回收 +50金币）</div>
+                </div>
+            `;
+        }
+        return `
+            <div class="rune-card" onclick="selectRune('${rune.id}')">
+                <div class="rune-icon">🔮</div>
+                <div class="rune-name">${rune.name}</div>
+                <div class="rune-tag ${tagClass}">${tagText}</div>
+                <div class="rune-desc">${rune.desc}</div>
+            </div>
+        `;
+    }).join('');
+}
+window.recycleRuneFromSelection = recycleRuneFromSelection;
 
 function acceptRune() {
     const runeId = state.pendingConfirmRuneId;
@@ -3778,7 +3990,7 @@ const EVENT_DEFS = [
         id: 'runeMage', name: '流浪的符文法师', floorMin: 3,
         desc: '流浪的符文法师正在寻找遗失的符文宝石。',
         options: [
-            { label: '给予宝石', condition: s => hasRelic('runeGem'), effect(s) { state.player.cards.push({id:'magicBook',icon:'📖',type:'atk',cost:2,effect:'magicAttack',rune:null,runeData:{}}); addMessage('符文法师赠送了魔法书', 'heal'); }, resultText: '符文法师感谢你的慷慨，将珍藏的「符文法师的魔法书」赠予了你。' },
+            { label: '给予宝石', condition: s => hasRelic('runeGem'), effect(s) { state.player.cards.push({id:'magicBook',icon:'📖',type:'atk',cost:2,effect:'magicAttack',rune:null,runeData:{}}); addMessage('符文法师赠送了「魔法书」（符文宝石仍然保留）', 'heal'); }, resultText: '符文法师感谢你的慷慨，将珍藏的「魔法书」赠予了你（伤害 = 攻击力 + 等级×3，无视敌人防御）。你的符文宝石仍然保留。' },
             { label: '离开', effect(s) {}, resultText: '你默默地离开了符文法师。' },
         ],
     },
@@ -4237,6 +4449,22 @@ function buyShopItem(itemId) {
         renderShop();
         return;
     }
+    if (item.id === 'energyCard') {
+        state.player.gold -= itemPrice;
+        state.player.cards.push({ ...CARD_DEFS.energyCard, rune: null, runeData: {} });
+        addMessage('⚡ 获得了一张精力卡牌！', 'heal');
+        SFX.play('play_card');
+        renderShop();
+        return;
+    }
+    if (item.id === 'drawCard') {
+        state.player.gold -= itemPrice;
+        state.player.cards.push({ ...CARD_DEFS.drawCard, rune: null, runeData: {} });
+        addMessage('🃏 获得了一张抽卡卡牌！', 'heal');
+        SFX.play('play_card');
+        renderShop();
+        return;
+    }
 
     // Stats / permanent upgrades (price escalates per purchase)
     if (item.id === 'buyAtk') {
@@ -4316,17 +4544,25 @@ function leaveShop() {
 function showDiscardScreen() {
     state.screen = 'rune-engrave';
     $('rune-engrave-title').textContent = '🗑️ 丢弃卡牌';
-    $('rune-engrave-desc').textContent = '选择一张卡牌永久丢弃（不可撤销）：';
+    $('rune-engrave-desc').textContent = '选择一张卡牌永久丢弃（不可撤销），可查看卡牌效果与全部印记：';
     $('card-engrave-options').innerHTML = state.player.cards.map((card, i) => {
-        const cardName = card.id === 'attack' ? T.cardAttack
-            : card.id === 'magicBook' ? '魔法书'
-            : card.id === 'warriorBlood' ? '战士的鲜血'
-            : card.id === 'emptyMagazine' ? '空弹匣'
-            : (card.playable === false ? '空白卡牌' : T.cardDefense);
+        const cardName = getCardDisplayName(card);
+        const cardDesc = getCardDisplayDesc(card);
+        // All runes (primary + fused)
+        const allRunes = [];
+        if (card.rune) allRunes.push(card.rune);
+        if (card._fusedRunes) allRunes.push(...card._fusedRunes);
+        const runeHTML = allRunes.length > 0
+            ? `<div class="engrave-rune" style="display:flex;flex-wrap:wrap;gap:2px;justify-content:center;margin-top:4px;">${allRunes.map(r =>
+                `<span style="font-size:9px;padding:1px 4px;background:rgba(156,39,176,0.2);border-radius:3px;">🔮${RUNE_DEFS[r]?.name || r}</span>`
+            ).join('')}</div>`
+            : '';
         return `
             <div class="engrave-card" onclick="confirmDiscardCard(${i})">
                 <div class="engrave-icon">${card.icon}</div>
                 <div class="engrave-name">${cardName}</div>
+                <div style="font-size:10px;color:var(--text-dim);margin-top:2px;">${cardDesc}</div>
+                ${runeHTML}
                 <div class="engrave-hint">👆 点击丢弃</div>
             </div>
         `;
@@ -4338,11 +4574,7 @@ function confirmDiscardCard(idx) {
     const card = state.player.cards[idx];
     if (!card) return;
     state.player.cards.splice(idx, 1);
-    const cardName = card.id === 'attack' ? T.cardAttack
-        : card.id === 'magicBook' ? '魔法书'
-        : card.id === 'warriorBlood' ? '战士的鲜血'
-        : card.id === 'emptyMagazine' ? '空弹匣'
-        : (card.playable === false ? '空白卡牌' : T.cardDefense);
+    const cardName = getCardDisplayName(card);
     addMessage(`🗑️ 永久丢弃了「${cardName}」`, 'info');
     state.screen = 'shop';
     renderShop();
@@ -4552,7 +4784,7 @@ function renderCardBackpack() {
         const runeName = c.rune ? (RUNE_DEFS[c.rune]?.name || c.rune) : '';
         const fusedRunes = c._fusedRunes ? c._fusedRunes.map(r => RUNE_DEFS[r]?.name || r).join('+') : '';
         const allRunes = [runeName, ...(c._fusedRunes || []).map(r => RUNE_DEFS[r]?.name || r)].filter(Boolean).join(' · ');
-        html += `<div style="font-size:9px;color:var(--text-dim);padding:1px 0;">${c.icon} ${c.id==='attack'?'攻':c.id==='magicBook'?'书':c.id==='warriorBlood'?'血':c.id==='emptyMagazine'?'匣':(c.playable===false?'空':'防')}${allRunes?' 🔮'+allRunes:''} ${c.playable===false?'':'⚡'+c.cost}</div>`;
+        html += `<div style="font-size:9px;color:var(--text-dim);padding:1px 0;">${c.icon} ${c.id==='attack'?'攻':c.id==='magicBook'?'书':c.id==='warriorBlood'?'血':c.id==='emptyMagazine'?'匣':c.id==='energyCard'?'精':c.id==='drawCard'?'抽':(c.playable===false?'空':'防')}${allRunes?' 🔮'+allRunes:''} ${c.playable===false?'':'⚡'+c.cost}</div>`;
     }
     if (state._hasFreeFusion) {
         html += '<button class="btn btn-small" onclick="startFreeFusion()" style="margin-top:4px;width:100%;background:var(--gold);color:#000;font-weight:700;font-size:10px;">🏰 免费缝合</button>';
@@ -4575,7 +4807,7 @@ function showFusionScreen() {
         const c = cards[i];
         const hasRune = c.rune || (c._fusedRunes && c._fusedRunes.length > 0);
         if (!hasRune) continue;
-        const cardName = c.id === 'attack' ? '攻击' : (c.id === 'magicBook' ? '魔法书' : '防御');
+        const cardName = getCardDisplayName(c);
         const runeLabel = c.rune ? '🔮' + (RUNE_DEFS[c.rune]?.name || c.rune) : (c._fusedRunes ? c._fusedRunes.map(r => RUNE_DEFS[r]?.name || r).join('+') : '');
         html += `<div class="engrave-card" onclick="selectFusionSource(${i})"><div>${c.icon} ${cardName}</div><div style="font-size:10px;">${runeLabel}</div></div>`;
     }
@@ -4605,7 +4837,7 @@ function selectFusionSource(idx) {
         if (cRuneCount >= 2) continue;
         const compatible = srcRuneDef ? isRuneCompatible(srcRuneDef, c) : true;
         if (!compatible) continue;
-        const cardName = c.id === 'attack' ? '攻击' : (c.id === 'magicBook' ? '魔法书' : '防御');
+        const cardName = getCardDisplayName(c);
         const tgtLabel = c.rune ? '🔮' + (RUNE_DEFS[c.rune]?.name || c.rune) : (c._fusedRunes ? c._fusedRunes.map(r => RUNE_DEFS[r]?.name || r).join('+') : '');
         html += `<div class="engrave-card" onclick="doFusion(${i})"><div>${c.icon} ${cardName}</div><div style="font-size:10px;">${tgtLabel}</div><div style="font-size:9px;color:var(--gold);">接收「${srcRuneName}」</div></div>`;
     }
@@ -4995,31 +5227,60 @@ function renderHand() {
                 `;
                 continue;
             }
-            // Calculate display cost (heavyStrike +2, freeEnergy = 0)
-            const displayCost = card.rune === 'freeEnergy' ? 0 : (card.rune === 'heavyStrike' ? card.cost + 2 : card.cost);
+            // Energy card: +2 energy display
+            if (card.id === 'energyCard') {
+                const ecDisabled = (state.energy < 1) ? 'disabled' : '';
+                html += `
+                    <div class="card-slot"><div class="card energy-card ${ecDisabled}" onclick="playCard(${i})">
+                        <div class="card-cost">⚡1</div>
+                        <div class="card-icon">${card.icon}</div>
+                        <div class="card-title">精力卡牌</div>
+                        <div class="card-desc">使用后获得2点精力</div>
+                        <div class="card-type-label energy">ENERGY</div>
+                    </div></div>
+                `;
+                continue;
+            }
+            // Draw card: draw 2 display
+            if (card.id === 'drawCard') {
+                const dcDisabled = (state.energy < 1) ? 'disabled' : '';
+                html += `
+                    <div class="card-slot"><div class="card draw-card ${dcDisabled}" onclick="playCard(${i})">
+                        <div class="card-cost">⚡1</div>
+                        <div class="card-icon">${card.icon}</div>
+                        <div class="card-title">抽卡卡牌</div>
+                        <div class="card-desc">使用后抽2张牌</div>
+                        <div class="card-type-label draw">DRAW</div>
+                    </div></div>
+                `;
+                continue;
+            }
+            // Calculate display cost (modular: heavyStrike +1, double-rune +1, freeEnergy = 0)
+            const displayCost = getCardDisplayCost(card);
             const disabled = (state.energy < displayCost) ? 'disabled' : '';
             const typeClass = card.type === 'atk' ? 'atk-card' : 'def-card';
             const typeLabel = card.type === 'atk' ? 'ATTACK' : 'DEFENSE';
             const typeLabelClass = card.type === 'atk' ? 'atk' : 'def';
-            const name = card.id === 'attack' ? T.cardAttack : T.cardDefense;
-            const desc = card.id === 'attack'
-                ? T.cardAttackDesc(state.player.attack)
-                : T.cardDefenseDesc(state.player.defense);
+            const name = getCardDisplayName(card);
+            const desc = getCardDisplayDesc(card);
             const runeIndicator = (() => {
                 const allRunes = [];
                 if (card.rune) {
                     const rName = RUNE_DEFS[card.rune]?.name || card.rune;
-                    const heldInfo = (card.rune === 'waitAndRest' && card.runeData?.heldTurns)
-                        ? `+${card.runeData.heldTurns * 10}%` : '';
-                    allRunes.push({ name: rName, extra: heldInfo });
+                    let extra = '';
+                    if (card.rune === 'waitAndRest' && card.runeData?.heldTurns) extra = `+${card.runeData.heldTurns * 10}%`;
+                    if (card.rune === 'dominator' && card.runeData?.kills) extra = `击杀${card.runeData.kills}`;
+                    allRunes.push({ name: rName, extra });
                 }
                 if (card._fusedRunes) {
                     for (let fi = 0; fi < card._fusedRunes.length; fi++) {
                         const rid = card._fusedRunes[fi];
                         const rName = RUNE_DEFS[rid]?.name || rid;
                         const fd = (card._fusedRunesData && card._fusedRunesData[fi]) || {};
-                        const fusedHeld = (rid === 'waitAndRest' && fd.heldTurns) ? `+${fd.heldTurns * 10}%` : '';
-                        allRunes.push({ name: rName, extra: fusedHeld });
+                        let fusedExtra = '';
+                        if (rid === 'waitAndRest' && fd.heldTurns) fusedExtra = `+${fd.heldTurns * 10}%`;
+                        if (rid === 'dominator' && fd.kills) fusedExtra = `击杀${fd.kills}`;
+                        allRunes.push({ name: rName, extra: fusedExtra });
                     }
                 }
                 if (allRunes.length === 0) return '';
@@ -5186,9 +5447,9 @@ function pickBlessing(type) {
         state.engraveOrigin = 'blessing';
         showRuneConfirm(rune);
     } else if (type === 'wealth') {
-        state.player.gold += 100;
+        state.player.gold += 200;
         state.player.cards.push({ ...CARD_DEFS.blank, rune: null, runeData: {} });
-        addMessage('💰 财富的代价：获得100金币和一张空白卡牌！', 'heal');
+        addMessage('💰 财富的代价：获得200金币和一张空白卡牌！', 'heal');
         startNewArea(1);
     }
 }
