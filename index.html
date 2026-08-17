@@ -224,6 +224,8 @@ body {
 .card.def-card { border-color: var(--card-def); }
 .card.def-card:hover:not(.disabled) { box-shadow: 0 8px 24px rgba(66,165,245,0.3); }
 .card.disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(50%); }
+.card.junk-card { border-color: #555; background: #1a1a1a; }
+.card-type-label.junk { color: #888; }
 .card-cost {
     position: absolute; top: -6px; left: -6px;
     width: 22px; height: 22px; border-radius: 50%;
@@ -621,11 +623,11 @@ body {
         <div class="subtitle">组建卡组，击杀怪物</div>
         <div class="menu-instructions">
             <p><b>⚔️ 战斗：</b>回合制卡牌对战。每回合抽3张牌、恢复2点精力。怪物有防御池——攻击优先消耗防御再扣HP。每回合可看到敌人的意图（攻击/防御/技能）。</p>
-            <p><b>🗺️ 路线：</b>每层在地图上选择房间。⚔️普通战斗 · ⭐精英怪 · ❓事件 · 🛒商店 · 💀楼层主。沿金色连线移动。</p>
-            <p><b>❓ 事件：</b>多样的剧情遭遇，做出选择获得不同结果。每个事件每局最多遇到一次。</p>
-            <p><b>🛒 商店：</b>购买卡牌、属性、遗物、印记缝合等服务。价格随楼层上涨。每局随机上架2个遗物。</p>
-            <p><b>🔮 印记：</b>击败楼层主（25/50/75层）获得印记，刻在卡牌上获得永久效果。商店100g可进行印记缝合转移。</p>
-            <p><b>📈 升级：</b>经验随楼层分档（1-25层:10EXP → 76-100层:3EXP）。升级增加最大HP，攻防通过战斗奖励提升。</p>
+            <p><b>✨ 初始祝福：</b>开局三选一——随机遗物、随机印记，或100金币+空白卡牌（废牌，不可打出）。</p>
+            <p><b>🗺️ 路线：</b>每层在地图上选择房间。⚔️普通战斗 · ⭐精英怪 · ❓事件 · 🛒商店 · 🏨旅馆 · 💀楼层主。每个房间最多通往下一层2个房间，提前规划你的路线！</p>
+            <p><b>🏨 旅馆：</b>Boss前必有一个。三选一：回血25% / 锻炼（攻防血各+5）/ 冥想（等级+5）。</p>
+            <p><b>🛒 商店：</b>购买卡牌、属性、遗物、印记缝合等服务。属性越买越贵，价格随楼层上涨。每局随机上架2个遗物。</p>
+            <p><b>📈 升级：</b>升级仅增加最大HP（+5），不回复生命。旅馆回血和事件成为重要的回血来源。</p>
             <p><b>🏆 目标：</b>击败第100层最终Boss「四神共选」通关！按 ` 键打开管理员面板调试。</p>
         </div>
         <div class="menu-buttons">
@@ -716,6 +718,52 @@ body {
                 <div class="reward-icon">🛡️</div>
                 <div class="reward-title">防御力 +1</div>
                 <div class="reward-desc">免费</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- BLESSING -->
+    <div id="screen-blessing" class="screen">
+        <h2>✨ 初始祝福</h2>
+        <p style="color:var(--text-dim);font-size:14px;margin-bottom:12px;">踏上征途之前，选择你的祝福：</p>
+        <div class="reward-options">
+            <div class="reward-card" onclick="pickBlessing('relic')">
+                <div class="reward-icon">💎</div>
+                <div class="reward-title">随机遗物</div>
+                <div class="reward-desc">随机获得一个遗物</div>
+            </div>
+            <div class="reward-card" onclick="pickBlessing('rune')">
+                <div class="reward-icon">🔮</div>
+                <div class="reward-title">随机印记</div>
+                <div class="reward-desc">随机获得一个印记并刻印</div>
+            </div>
+            <div class="reward-card" onclick="pickBlessing('wealth')">
+                <div class="reward-icon">💰</div>
+                <div class="reward-title">财富的代价</div>
+                <div class="reward-desc" style="color:var(--enemy);">⚠️ 获得100金币，但获得一张「空白卡牌」</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- INN -->
+    <div id="screen-inn" class="screen">
+        <h2>🏨 旅馆</h2>
+        <p style="color:var(--text-dim);font-size:14px;margin-bottom:12px;">疲惫的旅途终于有了歇脚之处。选择一个服务：</p>
+        <div class="reward-options">
+            <div class="reward-card" onclick="pickInnAction('rest')">
+                <div class="reward-icon">🛏️</div>
+                <div class="reward-title">回血</div>
+                <div class="reward-desc">回复25%最大生命值</div>
+            </div>
+            <div class="reward-card" onclick="pickInnAction('train')">
+                <div class="reward-icon">💪</div>
+                <div class="reward-title">锻炼</div>
+                <div class="reward-desc">攻击力+5，防御力+5，最大HP+5</div>
+            </div>
+            <div class="reward-card" onclick="pickInnAction('meditate')">
+                <div class="reward-icon">🧘</div>
+                <div class="reward-title">冥想</div>
+                <div class="reward-desc">等级+5（仅提升最大HP）</div>
             </div>
         </div>
     </div>
@@ -870,7 +918,7 @@ const BALANCE = {
         initial: { level: 1, maxHp: 50, hp: 50, attack: 7, defense: 4, exp: 0, gold: 0 },
         maxEnergy: 2,
         drawPerTurn: 3,
-        levelUpBonus: { maxHp: 10 },
+        levelUpBonus: { maxHp: 5 },
         shopExtraEnergyBought: false,
         shopExtraDrawCount: 0,
         relics: [],
@@ -1094,6 +1142,10 @@ const RELIC_DEFS = {
 };
 
 function getShopPrice(basePrice, itemId) {
+    // Attribute purchases escalate +1 gold per prior purchase (added to base)
+    if (itemId === 'buyAtk') basePrice += (state.player.atkBuyCount || 0);
+    else if (itemId === 'buyDef') basePrice += (state.player.defBuyCount || 0);
+    else if (itemId === 'buyMaxHp') basePrice += (state.player.hpBuyCount || 0);
     let price = Math.floor(basePrice * (1 + state.floor * 0.02));
     // After floor 50: attack/defense purchase price ×1.5
     if (state.floor > 50 && (itemId === 'buyAtk' || itemId === 'buyDef')) {
@@ -1123,12 +1175,7 @@ function giveRelic(id) {
             addMessage('💠 非洲之星：获得500金币！', 'heal');
         }
         if (id === 'terraStar') {
-            for (let i = 0; i < 10; i++) {
-                state.player.level++;
-                state.player.maxHp += BALANCE.player.levelUpBonus.maxHp;
-                healPlayer(BALANCE.player.levelUpBonus.maxHp);
-                if (hasRelic('hestiaBlessing')) healPlayer(Math.ceil(state.player.maxHp * 0.05));
-            }
+            grantLevels(10);
             addMessage('⭐ 泰拉之星：等级提升10级！', 'heal');
         }
         return true;
@@ -1342,6 +1389,7 @@ const ROOM_TYPES = {
     boss:   { id: 'boss', name: '楼层主', icon: '💀', color: '#ff5722', desc: '强力敌人' },
     question: { id: 'question', name: '问号房', icon: '❓', color: '#ffd700', desc: '事件、怪物或宝箱' },
     shop:   { id: 'shop', name: '商店', icon: '🛒', color: '#4caf50', desc: '购买物品' },
+    inn:    { id: 'inn', name: '旅馆', icon: '🏨', color: '#a1887f', desc: '回血、锻炼或冥想' },
 };
 
 // =====================================================================
@@ -1361,6 +1409,14 @@ const CARD_DEFS = {
         type: 'def',
         cost: 1,
         effect: 'gainShield', // gains player.defense shield to player
+    },
+    blank: {
+        id: 'blank',
+        icon: '🀫',
+        type: 'junk',
+        cost: 0,
+        effect: 'none',
+        playable: false, // unplayable curse card — clutters the deck
     },
 };
 
@@ -1640,9 +1696,15 @@ function pickConnectedPositions(cols, count, prevPositions) {
     const prevMax = Math.max(...prevPositions);
     positions.add(randInt(Math.max(0, prevMin - reach), Math.min(cols - 1, prevMin + reach)));
     positions.add(randInt(Math.max(0, prevMax - reach), Math.min(cols - 1, prevMax + reach)));
-    // Fill remaining
-    while (positions.size < count) {
-        // Pick a position reachable from at least one previous position
+    // Fill remaining (cap at available reachable columns to avoid infinite loop)
+    const available = new Set();
+    for (const p of prevPositions) {
+        for (let c = Math.max(0, p - reach); c <= Math.min(cols - 1, p + reach); c++) available.add(c);
+    }
+    const cap = Math.min(count, available.size);
+    let guard = 0;
+    while (positions.size < cap && guard < 100) {
+        guard++;
         const refPrev = prevPositions[randInt(0, prevPositions.length - 1)];
         positions.add(randInt(Math.max(0, refPrev - reach), Math.min(cols - 1, refPrev + reach)));
     }
@@ -1666,7 +1728,7 @@ function generateMap(startFloor, endFloor) {
         if (isBoss) {
             // Boss: single room in center column
             const row = new Array(cols).fill(null);
-            row[Math.floor(cols / 2)] = { type: 'boss', floor: floorNum, col: Math.floor(cols / 2) };
+            row[Math.floor(cols / 2)] = { type: 'boss', floor: floorNum, col: Math.floor(cols / 2), next: [] };
             map.push(row);
         } else if (f === 0) {
             // First floor: 2-4 rooms spread out
@@ -1674,7 +1736,7 @@ function generateMap(startFloor, endFloor) {
             const count = randInt(2, 4);
             const pos = pickPositions(cols, count);
             for (const c of pos) {
-                row[c] = { type: randomRoomType(), floor: floorNum, col: c };
+                row[c] = { type: randomRoomType(), floor: floorNum, col: c, next: [] };
             }
             map.push(row);
         } else {
@@ -1699,7 +1761,7 @@ function generateMap(startFloor, endFloor) {
                         specialCount++;
                     }
                 }
-                row[c] = { type, floor: floorNum, col: c };
+                row[c] = { type, floor: floorNum, col: c, next: [] };
             }
             map.push(row);
         }
@@ -1717,33 +1779,87 @@ function generateMap(startFloor, endFloor) {
             }
         }
     }
+
+    // Inn injection: fixed at 24/49/74/99 (one floor before each boss)
+    const FIXED_INN_FLOORS = [24, 49, 74, 99];
+    for (const innFloor of FIXED_INN_FLOORS) {
+        if (innFloor < startFloor || innFloor > endFloor) continue;
+        const rowIdx = innFloor - startFloor;
+        const row = map[rowIdx];
+        if (!row) continue;
+        const validCols = [];
+        for (let c = 0; c < cols; c++) { if (row[c] && row[c].type !== 'inn') validCols.push(c); }
+        if (validCols.length > 0) {
+            const c = validCols[Math.floor(Math.random() * validCols.length)];
+            row[c].type = 'inn';
+        }
+    }
+    // Random inns: 1-2 extra per area (avoid boss floors, fixed inn floors, elites)
+    const extraInnCount = randInt(1, 2);
+    let placed = 0, attempts = 0;
+    while (placed < extraInnCount && attempts < 50) {
+        attempts++;
+        const floorNum = randInt(startFloor, endFloor);
+        if (isBossFloor(floorNum) || FIXED_INN_FLOORS.includes(floorNum)) continue;
+        const rowIdx = floorNum - startFloor;
+        const row = map[rowIdx];
+        if (!row) continue;
+        const validCols = [];
+        for (let c = 0; c < cols; c++) {
+            if (row[c] && row[c].type === 'battle') validCols.push(c); // only convert battle rooms
+        }
+        if (validCols.length === 0) continue;
+        const c = validCols[Math.floor(Math.random() * validCols.length)];
+        row[c].type = 'inn';
+        placed++;
+    }
+
+    // Build explicit connections (each room: 1-2 outgoing edges to next floor)
+    buildConnections(map);
     return map;
+}
+
+// Explicit route edges: each room connects to 1-2 rooms on the next floor.
+// Guarantees: every room has ≥1 outgoing, every next-floor room has ≥1 incoming,
+// paths can merge (multiple rooms may point to the same target).
+function buildConnections(map) {
+    for (let f = 0; f < map.length - 1; f++) {
+        const rowRooms = [];
+        const nextRooms = [];
+        for (let c = 0; c < map[f].length; c++) if (map[f][c]) rowRooms.push({ room: map[f][c], col: c });
+        for (let c = 0; c < map[f + 1].length; c++) if (map[f + 1][c]) nextRooms.push({ room: map[f + 1][c], col: c });
+        for (const r of rowRooms) r.room.next = [];
+
+        // Step 1: ensure every next-floor room has ≥1 incoming edge
+        for (const nr of nextRooms) {
+            const candidates = rowRooms
+                .filter(r => r.room.next.length < 2)
+                .sort((a, b) => Math.abs(a.col - nr.col) - Math.abs(b.col - nr.col));
+            if (candidates.length > 0) candidates[0].room.next.push(nr.col);
+        }
+        // Step 2: ensure every room has ≥1 outgoing edge
+        for (const r of rowRooms) {
+            if (r.room.next.length === 0 && nextRooms.length > 0) {
+                const target = nextRooms.sort((a, b) => Math.abs(a.col - r.col) - Math.abs(b.col - r.col))[0];
+                r.room.next.push(target.col);
+            }
+        }
+        // Step 3: ~40% of rooms get a 2nd outgoing edge (branching)
+        for (const r of rowRooms) {
+            if (r.room.next.length < 2 && Math.random() < 0.4) {
+                const candidates = nextRooms
+                    .filter(n => !r.room.next.includes(n.col))
+                    .sort((a, b) => Math.abs(a.col - r.col) - Math.abs(b.col - r.col));
+                if (candidates.length > 0) r.room.next.push(candidates[0].col);
+            }
+        }
+    }
 }
 
 // =====================================================================
 // SHOP ITEMS (data-driven — add new items here)
 // =====================================================================
 const SHOP_ITEMS = [
-    {
-        id: 'heal',
-        name: '回复生命',
-        icon: '💚',
-        desc: '回复最大HP的15%',
-        price: 6,
-        apply(state) {
-            const heal = Math.ceil(state.player.maxHp * 0.15);
-            healPlayer(heal);
-            return `回复了 ${heal} 点生命`;
-        },
-    },
-    {
-        id: 'randomRune',
-        name: '随机印记',
-        icon: '🔮',
-        desc: '从3个随机印记中选择一个刻印',
-        price: 30,
-        apply(state) { return null; },
-    },
     {
         id: 'buyAttack',
         name: '攻击卡牌',
@@ -1761,29 +1877,11 @@ const SHOP_ITEMS = [
         apply(state) { return null; },
     },
     {
-        id: 'extraEnergy',
-        name: '额外精力值',
-        icon: '⚡',
-        desc: '每回合永久+1精力（限购1次）',
-        price: 67,
-        maxPurchases: 1,
-        apply(state) { return null; },
-    },
-    {
-        id: 'extraDraw',
-        name: '额外抽卡',
-        icon: '🃏',
-        desc: '每回合永久多抽1张牌（限购2次）',
-        price: 67,
-        maxPurchases: 2,
-        apply(state) { return null; },
-    },
-    {
         id: 'fuseService',
         name: '印记缝合服务',
         icon: '🪡',
         desc: '将一张卡牌的印记转移到另一张已有印记的卡牌上',
-        price: 100,
+        price: 125,
         apply(state) { return null; },
     },
     {
@@ -2010,6 +2108,7 @@ function randInt(min, max) {
 function isBossFloor(n) { return BALANCE.bossFloors.includes(n); }
 function healPlayer(amount) { state.player.hp = Math.min(state.player.maxHp, state.player.hp + amount); }
 function isRuneCompatible(rune, card) {
+    if (card.playable === false) return false; // blank cards cannot be engraved
     return rune.tag === 'universal' ||
            (rune.tag === 'attack' && card.type === 'atk') ||
            (rune.tag === 'defense' && card.type === 'def');
@@ -2041,19 +2140,19 @@ function generateEnemy(floor) {
             simultAttackDefend: bossData ? (bossData.simultAttackDefend || false) : false,
         };
     }
-    // 4-tier HP/ATK scaling
+    // 4-tier HP/ATK scaling (HP ×1.5 for normal monsters only)
     let hp, atk;
     if (floor <= 25) {
-        hp = randInt(10, 30) + Math.floor(floor * 1.5);
+        hp = Math.floor((randInt(10, 30) + Math.floor(floor * 1.5)) * 1.5);
         atk = randInt(1, 4) + Math.floor(floor * 0.22);
     } else if (floor <= 50) {
-        hp = randInt(20, 50) + Math.floor(floor * 1.5);
+        hp = Math.floor((randInt(20, 50) + Math.floor(floor * 1.5)) * 1.5);
         atk = randInt(3, 7) + Math.floor(floor * 0.3);
     } else if (floor <= 75) {
-        hp = randInt(40, 80) + Math.floor(floor * 1.8);
+        hp = Math.floor((randInt(40, 80) + Math.floor(floor * 1.8)) * 1.5);
         atk = randInt(5, 10) + Math.floor(floor * 0.38);
     } else {
-        hp = randInt(60, 110) + Math.floor(floor * 2);
+        hp = Math.floor((randInt(60, 110) + Math.floor(floor * 2)) * 1.5);
         atk = randInt(8, 14) + Math.floor(floor * 0.45);
     }
     const def = floor <= 20
@@ -2277,6 +2376,11 @@ function playCard(handIndex) {
     }
     const card = state.deck.hand[handIndex];
     if (!card) return;
+    // Blank cards cannot be played
+    if (card.playable === false) {
+        addMessage('🀫 空白卡牌无法打出', 'damage');
+        return;
+    }
 
     // Plague debuff: lose 5% max HP per card played
     if (state.plagueTurns > 0) {
@@ -2796,12 +2900,7 @@ function onEnemyDefeated() {
     }
     // Event level bonus
     if (state._eventLevelBonus) {
-        for (let i = 0; i < state._eventLevelBonus; i++) {
-            state.player.level++;
-            state.player.maxHp += BALANCE.player.levelUpBonus.maxHp;
-            healPlayer(BALANCE.player.levelUpBonus.maxHp);
-            if (hasRelic('hestiaBlessing')) healPlayer(Math.ceil(state.player.maxHp * 0.05));
-        }
+        grantLevels(state._eventLevelBonus);
         addMessage(`⭐ 事件奖励：等级 +${state._eventLevelBonus}！`, 'heal');
         state._eventLevelBonus = 0;
     }
@@ -2920,15 +3019,24 @@ function checkLevelUp() {
     while (state.player.exp >= expToNextLevel()) {
         const cost = expToNextLevel();
         state.player.exp -= cost;
-        state.player.level++;
-        state.player.maxHp += BALANCE.player.levelUpBonus.maxHp;
-        healPlayer(BALANCE.player.levelUpBonus.maxHp);
-        if (hasRelic('hestiaBlessing')) healPlayer(Math.ceil(state.player.maxHp * 0.05));
+        applyLevelUp();
         leveled = true;
         SFX.play('level_up');
         addMessage(`${T.levelUp} 等级 ${state.player.level}！`, 'heal');
     }
     return leveled;
+}
+
+// Unified level-up rule: +maxHp only, no HP heal (hestiaBlessing relic still heals)
+function applyLevelUp() {
+    state.player.level++;
+    state.player.maxHp += BALANCE.player.levelUpBonus.maxHp;
+    if (hasRelic('hestiaBlessing')) healPlayer(Math.ceil(state.player.maxHp * 0.05));
+}
+
+// Grant n levels directly (used by events, relics, inn meditation)
+function grantLevels(n) {
+    for (let i = 0; i < n; i++) applyLevelUp();
 }
 
 function expToNextLevel() {
@@ -2938,7 +3046,7 @@ function expToNextLevel() {
 // =====================================================================
 // SAVE / LOAD
 // =====================================================================
-const SAVE_KEY = 'endless_slaughter_save';
+const SAVE_KEY = 'endless_slaughter_save_v2';
 
 function saveGame() {
     try {
@@ -3081,35 +3189,23 @@ function startNewArea(startFloor) {
 
 // Helper: which columns on the next floor are reachable from the current column?
 function getReachableCols(currentCol) {
+    const map = state.currentMap;
+    if (!map) return [];
     if (currentCol < 0) {
-        const firstRow = state.currentMap[0];
+        // Area entrance: all first-floor rooms are reachable
+        const firstRow = map[0];
         const cols = [];
         for (let c = 0; c < MAP_CONFIG.cols; c++) {
             if (firstRow[c]) cols.push(c);
         }
         return cols;
     }
-    const cols = [];
-    const maxReach = MAP_CONFIG.connectorReach;
-    // First pass: standard reachability
-    for (let c = 0; c < MAP_CONFIG.cols; c++) {
-        if (Math.abs(c - currentCol) <= maxReach) cols.push(c);
-    }
-    // Fallback: if no rooms reachable in the next row, open all paths to prevent dead ends
-    const nextRowIdx = state.mapCursorFloor + 1 - state.mapStartFloor;
-    if (nextRowIdx >= 0 && nextRowIdx < (state.currentMap ? state.currentMap.length : 0)) {
-        const nextRow = state.currentMap[nextRowIdx];
-        const hasAnyReachable = cols.some(c => nextRow[c] !== null);
-        if (!hasAnyReachable) {
-            // No standard-reach rooms exist → return all columns that have a room
-            const allCols = [];
-            for (let c = 0; c < MAP_CONFIG.cols; c++) {
-                if (nextRow[c]) allCols.push(c);
-            }
-            return allCols.length > 0 ? allCols : cols;
-        }
-    }
-    return cols;
+    // Follow explicit edges from the current room
+    const rowIdx = state.mapCursorFloor - state.mapStartFloor;
+    if (rowIdx < 0 || rowIdx >= map.length) return [];
+    const room = map[rowIdx][currentCol];
+    if (!room) return [];
+    return room.next || [];
 }
 
 function showMap() {
@@ -3190,11 +3286,11 @@ function showMap() {
             const nextRow = map[r + 1];
             const yTopUpper = (visibleRows - 2 - vr) * (CH + GAP); // row above
             for (let c = 0; c < cols; c++) {
-                if (!row[c]) continue;
-                for (let nc = 0; nc < cols; nc++) {
+                const cell = row[c];
+                if (!cell) continue;
+                // Draw explicit edges from room.next
+                for (const nc of (cell.next || [])) {
                     if (!nextRow[nc]) continue;
-                    if (!columnsConnected(c, nc)) continue;
-
                     const slotW = CW + 8;
                     const x1 = c * slotW + CW / 2;
                     const y1 = yTop + CH;        // bottom of lower cell
@@ -3203,8 +3299,6 @@ function showMap() {
 
                     const isActive = (cursorFloor >= mapStart && floorNum === cursorFloor
                                     && c === cursorCol && reachableCols.includes(nc));
-                    // Only show inactive lines for direct connections (less visual noise)
-                    if (!isActive && Math.abs(c - nc) > 1) continue;
                     const stroke = isActive ? 'var(--gold)' : '#2a2a3a';
                     const sw = isActive ? 3.5 : 1;
                     const op = isActive ? 1 : 0.25;
@@ -3335,6 +3429,10 @@ function resolveRoom(cell) {
             enterShop();
             break;
 
+        case 'inn':
+            enterInn();
+            break;
+
         default:
             advanceFloor();
     }
@@ -3462,6 +3560,10 @@ function engraveRuneOnCard(cardIndex) {
         // Elite: rune chosen, advance
         state.engraveOrigin = 'boss';
         advanceFloor();
+    } else if (state.engraveOrigin === 'blessing') {
+        // Initial blessing rune engraved → start the run
+        state.engraveOrigin = 'boss';
+        startNewArea(1);
     } else {
         // Boss rune → advance (boss already gave relic earlier)
         advanceFloor();
@@ -3512,6 +3614,10 @@ function declineRune() {
         storeDeclinedRune();
         state.engraveOrigin = 'boss';
         proceedAfterRoom();
+    } else if (state.engraveOrigin === 'blessing') {
+        storeDeclinedRune();
+        state.engraveOrigin = 'boss';
+        startNewArea(1);
     } else {
         storeDeclinedRune();
         showReward();
@@ -3631,7 +3737,7 @@ const EVENT_DEFS = [
         options: [
             { label: '与愤怒形态对话', effect(s) { state.enemy = generateSpecialElite(state.floor, 'wrathWatcher'); enterEventBattle(); }, startsBattle: true, resultText: '愤怒的观者向你发起了猛烈的攻击！' },
             { label: '与平静形态对话', effect(s) { healPlayer(Math.ceil(state.player.maxHp * 0.2)); addMessage('回复20%HP', 'heal'); }, resultText: '观者解释了自己愤怒的原因——因为速通杀戮尖塔2之后不知为何来到了这里，感到有些不快。观者为失态道歉，并给予了你回复药水。回复20%生命值。' },
-            { label: '与神格状态对话', effect(s) { for(let i=0;i<5;i++){ state.player.exp += expToNextLevel(); checkLevelUp(); } addMessage('等级+5', 'heal'); }, resultText: '观者表示从未见过如此弱小之人，当场帮你提升了五级。你感到一股强大的力量涌入体内。等级+5。' },
+            { label: '与神格状态对话', effect(s) { grantLevels(5); addMessage('等级+5', 'heal'); }, resultText: '观者表示从未见过如此弱小之人，当场帮你提升了五级。你感到一股强大的力量涌入体内。等级+5。' },
         ],
     },
     {
@@ -3747,10 +3853,7 @@ const EVENT_DEFS = [
             {
                 label: '摧毁祭坛',
                 effect(s) {
-                    for (let i = 0; i < 3; i++) {
-                        s.player.exp += expToNextLevel();
-                        checkLevelUp();
-                    }
+                    grantLevels(3);
                     addMessage('祭坛崩塌：等级+3！', 'heal');
                 },
                 resultText: '祭坛崩塌，残留的力量化为经验。你提升了3级。',
@@ -3961,23 +4064,13 @@ function renderShop() {
     const pageItems = allItems.slice(start, start + ITEMS_PER_PAGE);
 
     $('shop-items').innerHTML = pageItems.map(item => {
-        let remainText = '';
-        let disabled = false;
-        if (item.maxPurchases) {
-            let bought = 0;
-            if (item.id === 'extraEnergy') bought = state.player.shopExtraEnergyBought ? 1 : 0;
-            if (item.id === 'extraDraw') bought = state.player.shopExtraDrawCount || 0;
-            const remain = item.maxPurchases - bought;
-            remainText = ` <span style="color:#888;font-size:9px;">(剩${remain}次)</span>`;
-            if (remain <= 0) disabled = true;
-        }
         const actualPrice = getShopPrice(item.price, item.id);
-        const canAfford = state.player.gold >= actualPrice && !disabled;
+        const canAfford = state.player.gold >= actualPrice;
         const isRelic = item.isRelic;
         return `
             <div class="shop-item"${isRelic ? ' style="border-color:var(--gold);"' : ''}>
                 <div class="shop-item-icon">${item.icon}</div>
-                <div class="shop-item-name"${isRelic ? ' style="color:var(--gold);"' : ''}>${item.name}${remainText}</div>
+                <div class="shop-item-name"${isRelic ? ' style="color:var(--gold);"' : ''}>${item.name}</div>
                 <div class="shop-item-desc">${item.desc}</div>
                 <div class="shop-item-price">💰 ${actualPrice}</div>
                 <button class="btn btn-small" ${!canAfford ? 'disabled' : ''}
@@ -4005,23 +4098,6 @@ function buyShopItem(itemId) {
     if (!item) return;
     if (state.player.gold < itemPrice) return;
 
-    // Special handling for random rune: show 3 choices
-    if (item.id === 'randomRune') {
-        const shuffled = shuffle([...ALL_RUNE_IDS]);
-        const choices = shuffled.slice(0, 3).map(id => RUNE_DEFS[id]);
-        // Check if any compatible card exists for any of the 3 runes
-        const hasAnyCompatible = state.player.cards.some(card => {
-            return choices.some(r => isRuneCompatible(r, card) && !card.rune);
-        });
-        if (!hasAnyCompatible) {
-            addMessage('没有可刻印的卡牌，无法购买印记', 'damage');
-            return;
-        }
-        state.player.gold -= itemPrice;
-        showShopRuneSelection(choices);
-        return;
-    }
-
     // Card purchases
     if (item.id === 'buyAttack') {
         state.player.gold -= itemPrice;
@@ -4042,29 +4118,11 @@ function buyShopItem(itemId) {
         return;
     }
 
-    // Stats / permanent upgrades
-    if (item.id === 'extraEnergy') {
-        if (state.player.shopExtraEnergyBought) { addMessage('已经购买过了！', 'damage'); return; }
-        state.player.gold -= itemPrice;
-        state.player.shopExtraEnergyBought = true;
-        addMessage('⚡ 每回合精力永久+1！', 'heal');
-        SFX.play('play_card');
-        renderShop();
-        return;
-    }
-    if (item.id === 'extraDraw') {
-        const count = state.player.shopExtraDrawCount || 0;
-        if (count >= 2) { addMessage('最多购买2次！', 'damage'); return; }
-        state.player.gold -= itemPrice;
-        state.player.shopExtraDrawCount = count + 1;
-        addMessage('🃏 每回合抽牌数永久+1！（当前额外+' + (count + 1) + '）', 'heal');
-        SFX.play('play_card');
-        renderShop();
-        return;
-    }
+    // Stats / permanent upgrades (price escalates per purchase)
     if (item.id === 'buyAtk') {
         state.player.gold -= itemPrice;
         state.player.attack += 1;
+        state.player.atkBuyCount = (state.player.atkBuyCount || 0) + 1;
         addMessage('⚔️ 攻击力永久+1！（当前 ' + state.player.attack + '）', 'heal');
         SFX.play('play_card');
         renderShop();
@@ -4073,6 +4131,7 @@ function buyShopItem(itemId) {
     if (item.id === 'buyDef') {
         state.player.gold -= itemPrice;
         state.player.defense += 1;
+        state.player.defBuyCount = (state.player.defBuyCount || 0) + 1;
         addMessage('🛡️ 防御力永久+1！（当前 ' + state.player.defense + '）', 'heal');
         SFX.play('play_card');
         renderShop();
@@ -4081,6 +4140,7 @@ function buyShopItem(itemId) {
     if (item.id === 'buyMaxHp') {
         state.player.gold -= itemPrice;
         state.player.maxHp += 5;
+        state.player.hpBuyCount = (state.player.hpBuyCount || 0) + 1;
         addMessage('❤️ 最大生命值永久+5！（当前 ' + state.player.maxHp + '）', 'heal');
         SFX.play('play_card');
         renderShop();
@@ -4121,31 +4181,33 @@ function leaveShop() {
     proceedAfterRoom();
 }
 
-// Shop rune selection: show 3 runes, player picks 1
-function showShopRuneSelection(choices) {
-    state.screen = 'rune-select';
-    $('rune-select-title').textContent = '选择印记';
-    $('rune-select-desc').textContent = '从3个印记中选择一个刻在卡牌上';
-    $('rune-options').innerHTML = choices.map(rune => {
-        const tagClass = rune.tag === 'attack' ? 'atk' : (rune.tag === 'defense' ? 'def' : 'universal');
-        const tagText = rune.tag === 'attack' ? '攻击' : (rune.tag === 'defense' ? '防御' : '通用');
-        return `<div class="rune-card" onclick="selectShopRune('${rune.id}')">
-            <div class="rune-icon">🔮</div>
-            <div class="rune-name">${rune.name}</div>
-            <div class="rune-tag ${tagClass}">${tagText}</div>
-            <div class="rune-desc">${rune.desc}</div>
-        </div>`;
-    }).join('');
-    showScreen('rune-select');
+// =====================================================================
+// INN (旅馆)
+// =====================================================================
+function enterInn() {
+    SFX.play('shop');
+    state.screen = 'inn';
+    render();
 }
-window.showShopRuneSelection = showShopRuneSelection;
 
-function selectShopRune(runeId) {
-    state.pendingRuneId = runeId;
-    state.engraveOrigin = 'shop';
-    showCardEngrave(RUNE_DEFS[runeId]);
+function pickInnAction(action) {
+    if (action === 'rest') {
+        const heal = Math.ceil(state.player.maxHp * 0.25);
+        healPlayer(heal);
+        addMessage(`🛏️ 旅馆回血：回复 ${heal} 点生命`, 'heal');
+    } else if (action === 'train') {
+        state.player.attack += 5;
+        state.player.defense += 5;
+        state.player.maxHp += 5;
+        addMessage('💪 锻炼完成：攻击力+5，防御力+5，最大HP+5', 'heal');
+    } else if (action === 'meditate') {
+        grantLevels(5);
+        addMessage('🧘 冥想完成：等级+5', 'heal');
+    }
+    SFX.play('reward');
+    proceedAfterRoom();
 }
-window.selectShopRune = selectShopRune;
+window.pickInnAction = pickInnAction;
 
 function continueAfterChest() {
     state.chestResult = null;
@@ -4171,7 +4233,7 @@ function showScreen(name) {
     const el = $(`screen-${name}`);
     if (el) el.classList.add('active');
     // Show HUD on game screens, hide on menu/victory/gameover
-    const gameScreens = ['map', 'battle', 'question-room', 'shop', 'chest-result', 'rune-select', 'rune-engrave', 'rune-confirm', 'reward', 'attr-pick'];
+    const gameScreens = ['map', 'battle', 'question-room', 'shop', 'inn', 'chest-result', 'rune-select', 'rune-engrave', 'rune-confirm', 'reward', 'attr-pick', 'blessing'];
     $('hud-bar').style.display = gameScreens.includes(name) ? 'flex' : 'none';
     if (gameScreens.includes(name)) updateHUD();
     // Show/hide floating side panel
@@ -4316,7 +4378,7 @@ function renderCardBackpack() {
         const runeName = c.rune ? (RUNE_DEFS[c.rune]?.name || c.rune) : '';
         const fusedRunes = c._fusedRunes ? c._fusedRunes.map(r => RUNE_DEFS[r]?.name || r).join('+') : '';
         const allRunes = [runeName, ...(c._fusedRunes || []).map(r => RUNE_DEFS[r]?.name || r)].filter(Boolean).join(' · ');
-        html += `<div style="font-size:9px;color:var(--text-dim);padding:1px 0;">${c.icon} ${c.id==='attack'?'攻':c.id==='magicBook'?'书':'防'}${allRunes?' 🔮'+allRunes:''} ⚡${c.cost}</div>`;
+        html += `<div style="font-size:9px;color:var(--text-dim);padding:1px 0;">${c.icon} ${c.id==='attack'?'攻':c.id==='magicBook'?'书':(c.playable===false?'空':'防')}${allRunes?' 🔮'+allRunes:''} ${c.playable===false?'':'⚡'+c.cost}</div>`;
     }
     if (state._hasFreeFusion) {
         html += '<button class="btn btn-small" onclick="startFreeFusion()" style="margin-top:4px;width:100%;background:var(--gold);color:#000;font-weight:700;font-size:10px;">🏰 免费缝合</button>';
@@ -4720,6 +4782,18 @@ function renderHand() {
     for (let i = 0; i < maxSlots; i++) {
         if (i < cards.length) {
             const card = cards[i];
+            // Blank card: special unplayable display
+            if (card.playable === false) {
+                html += `
+                    <div class="card-slot"><div class="card junk-card disabled" onclick="playCard(${i})">
+                        <div class="card-icon">${card.icon}</div>
+                        <div class="card-title">空白卡牌</div>
+                        <div class="card-desc">无法打出的废牌</div>
+                        <div class="card-type-label junk">JUNK</div>
+                    </div></div>
+                `;
+                continue;
+            }
             // Calculate display cost (heavyStrike +2, freeEnergy = 0)
             const displayCost = card.rune === 'freeEnergy' ? 0 : (card.rune === 'heavyStrike' ? card.cost + 2 : card.cost);
             const disabled = (state.energy < displayCost) ? 'disabled' : '';
@@ -4819,6 +4893,12 @@ function render() {
         case 'attr-pick':
             showScreen('attr-pick');
             break;
+        case 'inn':
+            showScreen('inn');
+            break;
+        case 'blessing':
+            showScreen('blessing');
+            break;
         case 'rune-select':
             showScreen('rune-select');
             break;
@@ -4874,12 +4954,44 @@ function startGame() {
     try {
         SFX.play('click');
         state = freshState();
-        startNewArea(1);
+        showBlessing();
     } catch (e) {
         console.error('startGame error:', e.message, e.stack);
         alert('游戏启动失败：' + e.message);
     }
 }
+
+// =====================================================================
+// INITIAL BLESSING (初始祝福)
+// =====================================================================
+function showBlessing() {
+    state.screen = 'blessing';
+    render();
+}
+
+function pickBlessing(type) {
+    if (type === 'relic') {
+        const available = getAvailableRelics(['any', 'boss']);
+        if (available.length > 0) {
+            const relic = available[Math.floor(Math.random() * available.length)];
+            giveRelic(relic.id);
+            addMessage(`💎 初始祝福：获得遗物「${relic.name}」！`, 'heal');
+        }
+        startNewArea(1);
+    } else if (type === 'rune') {
+        const runeIds = ALL_RUNE_IDS.filter(id => !state.declinedRunes.includes(id));
+        if (runeIds.length === 0) { startNewArea(1); return; }
+        const rune = RUNE_DEFS[runeIds[Math.floor(Math.random() * runeIds.length)]];
+        state.engraveOrigin = 'blessing';
+        showRuneConfirm(rune);
+    } else if (type === 'wealth') {
+        state.player.gold += 100;
+        state.player.cards.push({ ...CARD_DEFS.blank, rune: null, runeData: {} });
+        addMessage('💰 财富的代价：获得100金币和一张空白卡牌！', 'heal');
+        startNewArea(1);
+    }
+}
+window.pickBlessing = pickBlessing;
 
 function selectReward(type) {
     applyReward(type);
