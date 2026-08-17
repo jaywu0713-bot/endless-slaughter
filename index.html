@@ -226,6 +226,8 @@ body {
 .card.disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(50%); }
 .card.junk-card { border-color: #555; background: #1a1a1a; }
 .card-type-label.junk { color: #888; }
+.card.blood-card { border-color: #b71c1c; }
+.card-type-label.blood { color: #ef5350; }
 .card-cost {
     position: absolute; top: -6px; left: -6px;
     width: 22px; height: 22px; border-radius: 50%;
@@ -1139,6 +1141,16 @@ const RELIC_DEFS = {
         desc: '某位突击探员的珍贵遗物。获得时立即获得500金币。',
         source: 'event',
     },
+    fallenAngelCurse: {
+        id: 'fallenAngelCurse', name: '堕天使的诅咒', icon: '🪶',
+        desc: '堕天使的谢礼同时也是诅咒。每场战斗开始时失去5点生命值。',
+        source: 'event',
+    },
+    battleScar: {
+        id: 'battleScar', name: '战场创伤', icon: '🩹',
+        desc: '并肩作战留下的创伤。之后获得的所有经验减少10%。',
+        source: 'event',
+    },
 };
 
 function getShopPrice(basePrice, itemId) {
@@ -1417,6 +1429,26 @@ const CARD_DEFS = {
         cost: 0,
         effect: 'none',
         playable: false, // unplayable curse card — clutters the deck
+    },
+    warriorBlood: {
+        id: 'warriorBlood',
+        icon: '🩸',
+        type: 'junk',
+        cost: 0,
+        effect: 'exhaustSelf', // pay 3% current HP to exhaust for this battle
+        playable: true,
+        noEngrave: true, // event-exclusive curse card, cannot take runes
+        exhaustHpCost: true,
+    },
+    emptyMagazine: {
+        id: 'emptyMagazine',
+        icon: '🈳',
+        type: 'junk',
+        cost: 2,
+        effect: 'exhaustSelf', // no effect; pay 2 energy to exhaust for this battle
+        playable: true,
+        noEngrave: true, // event-exclusive curse card, cannot take runes
+        exhaustHpCost: false,
     },
 };
 
@@ -2109,6 +2141,7 @@ function isBossFloor(n) { return BALANCE.bossFloors.includes(n); }
 function healPlayer(amount) { state.player.hp = Math.min(state.player.maxHp, state.player.hp + amount); }
 function isRuneCompatible(rune, card) {
     if (card.playable === false) return false; // blank cards cannot be engraved
+    if (card.noEngrave) return false; // curse cards cannot be engraved
     return rune.tag === 'universal' ||
            (rune.tag === 'attack' && card.type === 'atk') ||
            (rune.tag === 'defense' && card.type === 'def');
@@ -2194,6 +2227,16 @@ function drawCards(count) {
         }
     }
     state.deck.hand.push(...drawn);
+    // Warrior's Blood: first draw per battle costs 3% current HP
+    for (const d of drawn) {
+        if (d.id === 'warriorBlood' && !d._bloodTriggered) {
+            d._bloodTriggered = true;
+            const cost = Math.max(1, Math.ceil(state.player.hp * 0.03));
+            state.player.hp = Math.max(1, state.player.hp - cost);
+            addMessage(`🩸 战士的鲜血：抽到时失去 ${cost} 点生命`, 'damage');
+            animateDamage('player-sprite', cost, 'damage');
+        }
+    }
     return drawn;
 }
 
@@ -2232,6 +2275,13 @@ function discardCard(card) {
 // =====================================================================
 function startTurn() {
     if (state.screen !== 'battle' || state.battlePhase === 'over') return;
+
+    // Fallen Angel's Curse: lose 5 HP at the start of each battle (once per battle, min 1 HP)
+    if (hasRelic('fallenAngelCurse') && (state._battleTurnCount || 0) === 0) {
+        state.player.hp = Math.max(1, state.player.hp - 5);
+        addMessage('🪶 堕天使的诅咒：战斗开始，失去5点生命', 'damage');
+        animateDamage('player-sprite', 5, 'damage');
+    }
 
     // Ironclad berserk: lose 10% HP per turn
     if (state.enemy && state.enemy.eliteSpecial === 'berserk') {
@@ -2413,6 +2463,21 @@ function playCard(handIndex) {
     }
     state.energy -= actualCost;
     SFX.play('play_card');
+
+    // Exhaust-self cards: removed for this battle (no discard). May cost HP.
+    if (card.effect === 'exhaustSelf') {
+        state.deck.hand.splice(handIndex, 1);
+        if (card.exhaustHpCost) {
+            const cost = Math.max(1, Math.ceil(state.player.hp * 0.03));
+            state.player.hp = Math.max(1, state.player.hp - cost);
+            addMessage(`🩸 战士的鲜血：消耗 ${cost} 点生命，本场战斗移除`, 'damage');
+            animateDamage('player-sprite', cost, 'damage');
+        } else {
+            addMessage('🈳 空弹匣已丢弃（本场战斗移除）', 'info');
+        }
+        updateBattleUI();
+        return;
+    }
 
     // Remove from hand, add to discard
     state.deck.hand.splice(handIndex, 1);
@@ -2892,6 +2957,7 @@ function onEnemyDefeated() {
     addMessage(`💰 获得 ${goldDrop} 金币！`, 'heal');
     const prevExp = state.player.exp;
     if (state._eventRelicReward) { giveRelic(state._eventRelicReward); addMessage('🎁 获得遗物「' + RELIC_DEFS[state._eventRelicReward].name + '」！', 'heal'); state._eventRelicReward = null; }
+    if (state._eventRelicReward2) { giveRelic(state._eventRelicReward2); addMessage('🎁 获得遗物「' + RELIC_DEFS[state._eventRelicReward2].name + '」！', 'heal'); state._eventRelicReward2 = null; }
     // Event extra gold
     if (state._eventExtraGold) {
         state.player.gold += state._eventExtraGold;
@@ -3009,6 +3075,8 @@ function grantBattleExp() {
     else if (state.floor <= 50) expGain = 7;
     else if (state.floor <= 75) expGain = 5;
     else expGain = 3;
+    // Battle Scar relic: -10% EXP gain
+    if (hasRelic('battleScar')) expGain = Math.max(1, Math.floor(expGain * 0.9));
     state.player.exp += expGain + (hasRelic('blessedBlood') ? Math.ceil(expGain * 0.2) : 0);
     addMessage(`获得 ${expGain} 点经验！`, 'heal');
     checkLevelUp();
@@ -3691,8 +3759,16 @@ const EVENT_DEFS = [
         id: 'fallenAngel', name: '逃避追捕的堕天使', floorMin: 1,
         desc: '黑暗天使正在追捕他们眼中的叛徒堕天使。',
         options: [
-            { label: '帮助逃避', effect(s) { state.player.gold += 15; if (state._eventRelicReward) { giveRelic(state._eventRelicReward); addMessage('🎁 获得遗物「' + RELIC_DEFS[state._eventRelicReward].name + '」！', 'heal'); state._eventRelicReward = null; }
-    grantBattleExp(); addMessage('堕天使给了你金币和经验', 'heal'); }, resultText: '堕天使感激你的帮助，将身上所有的金币赠予了你，并分享了自己的战斗经验。' },
+            {
+                label: '帮助逃避', warning: '获得「堕天使的诅咒」：每场战斗开始失去5点生命',
+                effect(s) {
+                    s.player.gold += 123;
+                    grantLevels(2);
+                    giveRelic('fallenAngelCurse');
+                    addMessage('堕天使给了你123金币并助你提升2级，但你也染上了诅咒', 'heal');
+                },
+                resultText: '堕天使感激你的帮助，将身上所有的金币赠予了你，并分享了自己的战斗经验。但堕天使的诅咒也留在了你身上——每场战斗开始时都会失去5点生命。',
+            },
             { label: '协助追捕者', effect(s) { state.enemy = generateSpecialElite(state.floor, 'darkAngel'); enterEventBattle(); }, startsBattle: true, resultText: '黑暗天使感谢你的付出，但在你离开之前他偷袭了你。与精英怪「黑暗天使」发生战斗！' },
         ],
     },
@@ -3718,7 +3794,15 @@ const EVENT_DEFS = [
         desc: '被诅咒而失去理智的战士毁灭了自己的种族。',
         options: [
             { label: '攻击', effect(s) { state.enemy = generateSpecialElite(state.floor, 'ironclad'); enterEventBattle(); }, startsBattle: true, resultText: '为了让他安息，你拔剑与他战斗！' },
-            { label: '告密', effect(s) { giveRelic('burningBlood'); addMessage('获得燃烧之血', 'heal'); }, resultText: '战士默默点了点头，将自己的鲜血给予了你。获得遗物「燃烧之血」。' },
+            {
+                label: '告密', warning: '获得负面卡牌「战士的鲜血」',
+                effect(s) {
+                    giveRelic('burningBlood');
+                    s.player.cards.push({ ...CARD_DEFS.warriorBlood, rune: null, runeData: {} });
+                    addMessage('获得燃烧之血和「战士的鲜血」卡牌', 'heal');
+                },
+                resultText: '战士默默点了点头，将自己的鲜血给予了你。获得遗物「燃烧之血」。但血中残留的战斗欲望凝结成了一张「战士的鲜血」卡牌——抽到它和打出它都要付出生命的代价。',
+            },
             { label: '离开', effect(s) {}, resultText: '你心想：离这个疯子远点吧。于是悄悄离开了。' },
         ],
     },
@@ -3772,9 +3856,13 @@ const EVENT_DEFS = [
         desc: '一名负伤的突击探员躲在废墟后方，身上的装备已经所剩无几。',
         options: [
             {
-                label: '帮助他',
-                effect(s) { if (giveRelic('africaStar')) { addMessage('探员告知你某处地方有惊喜作为感谢', 'heal'); } },
-                resultText: '你帮助了负伤的探员。探员告知你某处地方藏有惊喜——你获得遗物「非洲之星」！立即获得500金币。',
+                label: '帮助他', warning: '获得负面卡牌「空弹匣」',
+                effect(s) {
+                    if (giveRelic('africaStar')) { addMessage('探员告知你某处地方有惊喜作为感谢', 'heal'); }
+                    s.player.cards.push({ ...CARD_DEFS.emptyMagazine, rune: null, runeData: {} });
+                    addMessage('探员顺手塞给你一个空弹匣', 'info');
+                },
+                resultText: '你帮助了负伤的探员。探员告知你某处地方藏有惊喜——你获得遗物「非洲之星」！立即获得500金币。但他身上的空弹匣也留在了你的卡组里——无效果，消耗2精力才能丢弃。',
             },
             {
                 label: '抢走装备后离开',
@@ -3822,15 +3910,20 @@ const EVENT_DEFS = [
         desc: '一名遍体鳞伤的士兵仍然守在已经失守的阵地前，他拒绝后退。',
         options: [
             {
-                label: '与他并肩作战',
-                effect(s) { state.enemy = generateNormalElite(state.floor); state._eventLevelBonus = 2; enterEventBattle(); },
+                label: '与他并肩作战', warning: '获得「战场创伤」：之后经验减少10%',
+                effect(s) {
+                    state.enemy = generateNormalElite(state.floor);
+                    state._eventRelicReward = 'terraStar';
+                    state._eventRelicReward2 = 'battleScar';
+                    enterEventBattle();
+                },
                 startsBattle: true,
                 resultText: '你与士兵共同迎击敌人——与精英怪展开战斗！',
             },
             {
                 label: '给予他补给',
-                effect(s) { if (giveRelic('terraStar')) { addMessage('士兵将护符交给你作为谢礼', 'heal'); } },
-                resultText: '士兵重新站起，将自己的护符交给你。你获得遗物「泰拉之星」！立即提升10级。',
+                effect(s) { grantLevels(3); addMessage('士兵传授了战斗经验：等级+3', 'heal'); },
+                resultText: '士兵重新站起，向你传授了他的战斗经验。等级+3。',
             },
             { label: '离开', effect(s) {}, resultText: '这不是属于我的战争。你离开了阵地。' },
         ],
@@ -4378,7 +4471,7 @@ function renderCardBackpack() {
         const runeName = c.rune ? (RUNE_DEFS[c.rune]?.name || c.rune) : '';
         const fusedRunes = c._fusedRunes ? c._fusedRunes.map(r => RUNE_DEFS[r]?.name || r).join('+') : '';
         const allRunes = [runeName, ...(c._fusedRunes || []).map(r => RUNE_DEFS[r]?.name || r)].filter(Boolean).join(' · ');
-        html += `<div style="font-size:9px;color:var(--text-dim);padding:1px 0;">${c.icon} ${c.id==='attack'?'攻':c.id==='magicBook'?'书':(c.playable===false?'空':'防')}${allRunes?' 🔮'+allRunes:''} ${c.playable===false?'':'⚡'+c.cost}</div>`;
+        html += `<div style="font-size:9px;color:var(--text-dim);padding:1px 0;">${c.icon} ${c.id==='attack'?'攻':c.id==='magicBook'?'书':c.id==='warriorBlood'?'血':c.id==='emptyMagazine'?'匣':(c.playable===false?'空':'防')}${allRunes?' 🔮'+allRunes:''} ${c.playable===false?'':'⚡'+c.cost}</div>`;
     }
     if (state._hasFreeFusion) {
         html += '<button class="btn btn-small" onclick="startFreeFusion()" style="margin-top:4px;width:100%;background:var(--gold);color:#000;font-weight:700;font-size:10px;">🏰 免费缝合</button>';
@@ -4790,6 +4883,33 @@ function renderHand() {
                         <div class="card-title">空白卡牌</div>
                         <div class="card-desc">无法打出的废牌</div>
                         <div class="card-type-label junk">JUNK</div>
+                    </div></div>
+                `;
+                continue;
+            }
+            // Warrior's Blood: curse card display
+            if (card.id === 'warriorBlood') {
+                html += `
+                    <div class="card-slot"><div class="card blood-card" onclick="playCard(${i})">
+                        <div class="card-cost">⚡0</div>
+                        <div class="card-icon">${card.icon}</div>
+                        <div class="card-title">战士的鲜血</div>
+                        <div class="card-desc">消耗3%生命打出，本场移除</div>
+                        <div class="card-type-label blood">BLOOD</div>
+                    </div></div>
+                `;
+                continue;
+            }
+            // Empty Magazine: no-effect exhaust card display
+            if (card.id === 'emptyMagazine') {
+                const magDisabled = (state.energy < 2) ? 'disabled' : '';
+                html += `
+                    <div class="card-slot"><div class="card junk-card ${magDisabled}" onclick="playCard(${i})">
+                        <div class="card-cost">⚡2</div>
+                        <div class="card-icon">${card.icon}</div>
+                        <div class="card-title">空弹匣</div>
+                        <div class="card-desc">无效果，打出后本场移除</div>
+                        <div class="card-type-label junk">EXHAUST</div>
                     </div></div>
                 `;
                 continue;
