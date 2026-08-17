@@ -371,6 +371,8 @@ body {
     box-shadow: 0 8px 24px rgba(255,215,0,0.2);
 }
 .engrave-card.disabled { opacity: 0.35; cursor: not-allowed; filter: grayscale(60%); }
+.rune-card-disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(70%); border-color: #444 !important; }
+.rune-card-disabled:hover { transform: none; box-shadow: none; border-color: #444 !important; }
 .engrave-card.hasRune { border-color: #9c27b0; }
 .engrave-card.selected { border-color: var(--gold) !important; box-shadow: 0 0 16px rgba(255,215,0,0.4); }
 
@@ -624,7 +626,7 @@ body {
         <div class="title">无尽杀戮</div>
         <div class="subtitle">组建卡组，击杀怪物</div>
         <div class="menu-instructions">
-            <p><b>⚔️ 战斗：</b>回合制卡牌对战。每回合抽3张牌、恢复2点精力。怪物有防御池——攻击优先消耗防御再扣HP。每回合可看到敌人的意图（攻击/防御/技能）。</p>
+            <p><b>⚔️ 战斗：</b>回合制卡牌对战。每回合抽4张牌、恢复2点精力。怪物有防御池——攻击优先消耗防御再扣HP。每回合可看到敌人的意图（攻击/防御/技能）。</p>
             <p><b>✨ 初始祝福：</b>开局三选一——随机遗物、随机印记，或100金币+空白卡牌（废牌，不可打出）。</p>
             <p><b>🗺️ 路线：</b>每层在地图上选择房间。⚔️普通战斗 · ⭐精英怪 · ❓事件 · 🛒商店 · 🏨旅馆 · 💀楼层主。每个房间最多通往下一层2个房间，提前规划你的路线！</p>
             <p><b>🏨 旅馆：</b>Boss前必有一个。三选一：回血25% / 锻炼（攻防血各+5）/ 冥想（等级+5）。</p>
@@ -919,7 +921,7 @@ const BALANCE = {
     player: {
         initial: { level: 1, maxHp: 50, hp: 50, attack: 7, defense: 4, exp: 0, gold: 0 },
         maxEnergy: 2,
-        drawPerTurn: 3,
+        drawPerTurn: 4,
         levelUpBonus: { maxHp: 5 },
         shopExtraEnergyBought: false,
         shopExtraDrawCount: 0,
@@ -1247,7 +1249,7 @@ const ELITE_DEFS = {
         category: 'special', hpMult: 1.75, atkMult: 1.35,
         special: 'adventurer',
         mechanicName: '恩惠',
-        mechanicDesc: '每次玩家结束回合，所有属性提升20%（基于基础属性线性增长）。显示当前成长等级。',
+        mechanicDesc: '每次玩家结束回合，攻击力和防御力叠加20%基础值（线性增长，不按指数叠加）。HP不会成长。显示当前成长等级。',
     },
     alchemist: {
         id: 'alchemist', name: '祖安炼金师', icon: '🧪',
@@ -1388,9 +1390,9 @@ const MAP_CONFIG = {
     rowGap: 40,
     connectorReach: 1,    // Tighter connections = less visual noise
     roomWeights: {
-        battle: 65,
+        battle: 70,
         question: 20,
-        shop: 15,
+        shop: 10,
     },
     maxSpecialPerFloor: 1, // Max 1 non-battle room per floor
 };
@@ -1812,24 +1814,21 @@ function generateMap(startFloor, endFloor) {
         }
     }
 
-    // Inn injection: fixed at 24/49/74/99 (one floor before each boss)
+    // Inn injection: floors 24/49/74/99 (one before each boss) — ALL rooms are inns
     const FIXED_INN_FLOORS = [24, 49, 74, 99];
     for (const innFloor of FIXED_INN_FLOORS) {
         if (innFloor < startFloor || innFloor > endFloor) continue;
         const rowIdx = innFloor - startFloor;
         const row = map[rowIdx];
         if (!row) continue;
-        const validCols = [];
-        for (let c = 0; c < cols; c++) { if (row[c] && row[c].type !== 'inn') validCols.push(c); }
-        if (validCols.length > 0) {
-            const c = validCols[Math.floor(Math.random() * validCols.length)];
-            row[c].type = 'inn';
+        for (let c = 0; c < cols; c++) {
+            if (row[c]) row[c].type = 'inn';
         }
     }
-    // Random inns: 1-2 extra per area (avoid boss floors, fixed inn floors, elites)
-    const extraInnCount = randInt(1, 2);
+    // Random inns: 3 extra per area (avoid boss floors, fixed inn floors, elites)
+    const extraInnCount = 3;
     let placed = 0, attempts = 0;
-    while (placed < extraInnCount && attempts < 50) {
+    while (placed < extraInnCount && attempts < 100) {
         attempts++;
         const floorNum = randInt(startFloor, endFloor);
         if (isBossFloor(floorNum) || FIXED_INN_FLOORS.includes(floorNum)) continue;
@@ -1914,6 +1913,14 @@ const SHOP_ITEMS = [
         icon: '🪡',
         desc: '将一张卡牌的印记转移到另一张已有印记的卡牌上',
         price: 125,
+        apply(state) { return null; },
+    },
+    {
+        id: 'discardCard',
+        name: '丢弃卡牌',
+        icon: '🗑️',
+        desc: '从卡组中永久丢弃一张卡牌',
+        price: 175,
         apply(state) { return null; },
     },
     {
@@ -2307,22 +2314,19 @@ function startTurn() {
         }
     }
 
-    // Adventurer growth: +20% of base stats per turn (linear)
+    // Adventurer growth: ATK/DEF +20% of BASE each turn (linear stacking), HP never grows
     if (state.enemy && state.enemy.eliteSpecial === 'adventurer') {
         if (!state.enemy._adventurerBaseAtk) {
             // First turn: store base stats, no growth
             state.enemy._adventurerBaseAtk = state.enemy.attack;
             state.enemy._adventurerBaseDef = state.enemy.defense;
-            state.enemy._adventurerBaseMaxHp = state.enemy.maxHp;
-            state.enemy._adventurerBaseHp = state.enemy.hp;
             state.enemy._adventurerLevel = 1;
         } else {
             state.enemy._adventurerLevel++;
-            state.enemy.attack = Math.floor(state.enemy._adventurerBaseAtk * (1 + 0.2 * (state.enemy._adventurerLevel - 1)));
-            state.enemy.defense = Math.floor(state.enemy._adventurerBaseDef * (1 + 0.2 * (state.enemy._adventurerLevel - 1)));
-            state.enemy.maxHp = Math.floor(state.enemy._adventurerBaseMaxHp * (1 + 0.2 * (state.enemy._adventurerLevel - 1)));
-            state.enemy.hp = Math.min(state.enemy.maxHp, Math.floor(state.enemy._adventurerBaseHp * (1 + 0.2 * (state.enemy._adventurerLevel - 1))));
-            addMessage(`🗺️ 冒险者提升至 Lv.${state.enemy._adventurerLevel}！所有属性+20%`, 'damage');
+            const n = state.enemy._adventurerLevel - 1; // number of growth ticks
+            state.enemy.attack = state.enemy._adventurerBaseAtk + Math.floor(state.enemy._adventurerBaseAtk * 0.2 * n);
+            state.enemy.defense = state.enemy._adventurerBaseDef + Math.floor(state.enemy._adventurerBaseDef * 0.2 * n);
+            addMessage(`🗺️ 冒险者提升至 Lv.${state.enemy._adventurerLevel}！攻防+20%基础值`, 'damage');
         }
     }
 
@@ -3522,6 +3526,11 @@ window.selectRoom = selectRoom;
 // RUNE SELECTION & ENGRAVING
 // =====================================================================
 
+// Check if any card can still take this rune (type-compatible AND no primary rune yet)
+function hasCompatibleCardForRune(rune) {
+    return state.player.cards.some(card => isRuneCompatible(rune, card) && !card.rune);
+}
+
 function showRuneSelection() {
     state.screen = 'rune-select';
     const choices = pickRandomRunes(BALANCE.runesPerSelection);
@@ -3535,6 +3544,18 @@ function showRuneSelection() {
         const tagText = rune.tag === 'attack' ? T.runeTypeAttack :
                         rune.tag === 'defense' ? T.runeTypeDefense :
                         T.runeTypeUniversal;
+        const usable = hasCompatibleCardForRune(rune);
+        if (!usable) {
+            return `
+                <div class="rune-card rune-card-disabled">
+                    <div class="rune-icon">🔮</div>
+                    <div class="rune-name">${rune.name}</div>
+                    <div class="rune-tag ${tagClass}">${tagText}</div>
+                    <div class="rune-desc">${rune.desc}</div>
+                    <div class="rune-desc" style="color:var(--enemy);font-weight:700;">🚫 没有可刻印的卡牌</div>
+                </div>
+            `;
+        }
         return `
             <div class="rune-card" onclick="selectRune('${rune.id}')">
                 <div class="rune-icon">🔮</div>
@@ -3551,6 +3572,11 @@ function showRuneSelection() {
 function selectRune(runeId) {
     const rune = RUNE_DEFS[runeId];
     if (!rune) return;
+    // Guard: rune cannot be selected if no compatible unengraved card exists
+    if (!hasCompatibleCardForRune(rune)) {
+        addMessage('🚫 没有符合条件的卡牌可刻印此印记', 'damage');
+        return;
+    }
     state.pendingRuneId = runeId;
     showCardEngrave(rune);
 }
@@ -3642,9 +3668,7 @@ function engraveRuneOnCard(cardIndex) {
 function showRuneConfirm(rune) {
     state.pendingConfirmRuneId = rune.id;
     // Check if any compatible card is available (no rune yet, type matches)
-    const hasCompatible = state.player.cards.some(card => {
-        return isRuneCompatible(rune, card) && !card.rune;
-    });
+    const hasCompatible = hasCompatibleCardForRune(rune);
     const tagText = rune.tag === 'attack' ? T.runeTypeAttack :
                     rune.tag === 'defense' ? T.runeTypeDefense : T.runeTypeUniversal;
     $('rune-confirm-card').innerHTML = `
@@ -3654,6 +3678,9 @@ function showRuneConfirm(rune) {
         <div class="rune-desc">${rune.desc}</div>
         ${!hasCompatible ? '<div style="color:var(--damage);font-size:12px;margin-top:8px;">⚠️ 没有可刻印的卡牌</div>' : ''}
     `;
+    // Grey out the rune card display when unusable
+    const cardEl = $('rune-confirm-card');
+    if (cardEl) cardEl.className = 'rune-card' + (!hasCompatible ? ' rune-card-disabled' : '');
     const acceptBtn = $('btn-accept-rune');
     if (acceptBtn) {
         acceptBtn.disabled = !hasCompatible;
@@ -4261,6 +4288,15 @@ function buyShopItem(itemId) {
         showFusionScreen();
         return;
     }
+    if (item.id === 'discardCard') {
+        if (state.player.cards.length <= 1) {
+            addMessage('卡组只剩一张卡牌，无法丢弃', 'damage');
+            return;
+        }
+        state.player.gold -= itemPrice;
+        showDiscardScreen();
+        return;
+    }
 
     // Apply item effect
     state.player.gold -= itemPrice;
@@ -4273,6 +4309,51 @@ function leaveShop() {
     state.engraveOrigin = 'boss';
     proceedAfterRoom();
 }
+
+// =====================================================================
+// SHOP: DISCARD CARD (丢弃卡牌)
+// =====================================================================
+function showDiscardScreen() {
+    state.screen = 'rune-engrave';
+    $('rune-engrave-title').textContent = '🗑️ 丢弃卡牌';
+    $('rune-engrave-desc').textContent = '选择一张卡牌永久丢弃（不可撤销）：';
+    $('card-engrave-options').innerHTML = state.player.cards.map((card, i) => {
+        const cardName = card.id === 'attack' ? T.cardAttack
+            : card.id === 'magicBook' ? '魔法书'
+            : card.id === 'warriorBlood' ? '战士的鲜血'
+            : card.id === 'emptyMagazine' ? '空弹匣'
+            : (card.playable === false ? '空白卡牌' : T.cardDefense);
+        return `
+            <div class="engrave-card" onclick="confirmDiscardCard(${i})">
+                <div class="engrave-icon">${card.icon}</div>
+                <div class="engrave-name">${cardName}</div>
+                <div class="engrave-hint">👆 点击丢弃</div>
+            </div>
+        `;
+    }).join('') + '<button class="btn btn-small" onclick="cancelDiscardCard()" style="margin-top:8px;">取消（保留卡牌）</button>';
+    showScreen('rune-engrave');
+}
+
+function confirmDiscardCard(idx) {
+    const card = state.player.cards[idx];
+    if (!card) return;
+    state.player.cards.splice(idx, 1);
+    const cardName = card.id === 'attack' ? T.cardAttack
+        : card.id === 'magicBook' ? '魔法书'
+        : card.id === 'warriorBlood' ? '战士的鲜血'
+        : card.id === 'emptyMagazine' ? '空弹匣'
+        : (card.playable === false ? '空白卡牌' : T.cardDefense);
+    addMessage(`🗑️ 永久丢弃了「${cardName}」`, 'info');
+    state.screen = 'shop';
+    renderShop();
+}
+window.confirmDiscardCard = confirmDiscardCard;
+
+function cancelDiscardCard() {
+    state.screen = 'shop';
+    renderShop();
+}
+window.cancelDiscardCard = cancelDiscardCard;
 
 // =====================================================================
 // INN (旅馆)
