@@ -4013,14 +4013,14 @@ function showQuestionRoom() {
     // Prevent re-entry (race condition from multiple render() calls)
     if (_questionRoomTimer !== null) return;
     SFX.play('question');
-    // Distribution: 15% monster, 15% chest, 70% event
+    // Distribution: 15% monster, 25% chest, 60% event
     const roll = Math.random();
     if (roll < 0.15) {
         // Monster encounter
         $('question-room-options').innerHTML = `<div class="reward-card"><div class="reward-icon">👾</div><div class="reward-title">遭遇怪物！</div><div class="reward-desc">前方出现了未知敌人…</div></div>`;
         showScreen('question-room');
         _questionRoomTimer = setTimeout(() => { _questionRoomTimer = null; enterQuestionBattle(); }, 1000);
-    } else if (roll < 0.3) {
+    } else if (roll < 0.4) {
         // Chest
         const reward = pickChestReward();
         if (reward.id === 'randomRune') {
