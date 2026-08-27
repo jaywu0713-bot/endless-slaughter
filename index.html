@@ -1726,7 +1726,7 @@ function getCardDisplayName(card) {
 function getCardDisplayDesc(card) {
     const careerDescs = {
         tripleStrike:'造成5点伤害3次', doubleDefense:'获得5点护盾2次', ponder:'抽2张牌', inspire:'本回合获得1点精力', bandage:'回复最大生命值10%', fightToLive:'造成5点伤害2次并回复2%生命值', bloodRush:'攻击Buff+3，并失去1%当前生命',
-        recovery:'回复最大生命值20%，使用后消耗', bloodDefense:'敏捷Buff+3，并失去3%当前生命', bloodValor:'攻击Buff+5，并失去3%当前生命', flashOfInsight:'抽3张牌，使用后消耗', pain:'造成本回合累计失去的生命值', rebirth:'造成本回合累计回复的生命值', crouch:'获得5点护盾并回复最大生命值15%，攻击Buff-2', bloodFlow:'每25点当前生命额外抽1张牌', lifeErosion:'最大生命值-2，造成最大生命值10%的伤害2次', sharedDeath:'玩家与敌人各获得1层共死', overdraw:'获得2点精力并失去3%当前生命', vitalityGuard:'每25点当前生命获得1次5点护盾', bornAgain:'失去50%当前生命，造成10点伤害5次', tireless:'根据本回合失血与回复造成伤害', blazingWill:'攻击Buff+10、敏捷Buff+5', wildfire:'获得1层生命回复Buff', lastStand:'按当前生命获得铁壁，使用后消耗'
+        recovery:'回复最大生命值20%，使用后消耗', bloodDefense:'敏捷Buff+3，并失去3%当前生命', bloodValor:'攻击Buff+5，并失去3%当前生命', flashOfInsight:'抽3张牌，使用后消耗', pain:`造成本场战斗累计失去的生命值（当前${formatGameNumber(state._careerBattleLost || 0)}）`, rebirth:`造成本场战斗累计回复的生命值（当前${formatGameNumber(state._careerBattleHealed || 0)}）`, crouch:'获得5点护盾并回复最大生命值15%，攻击Buff-2', bloodFlow:'每25点当前生命额外抽1张牌', lifeErosion:'最大生命值-2，造成最大生命值10%的伤害2次', sharedDeath:'玩家与敌人各获得1层共死', overdraw:'获得2点精力并失去3%当前生命', vitalityGuard:'每25点当前生命获得1次5点护盾', bornAgain:'失去50%当前生命，造成10点伤害5次', tireless:`根据本场战斗累计失血与回复造成伤害（当前${formatGameNumber((state._careerBattleLost || 0) + (state._careerBattleHealed || 0))}）`, blazingWill:'攻击Buff+10、敏捷Buff+5', wildfire:'获得1层生命回复Buff', lastStand:'按当前生命获得铁壁，使用后消耗'
     };
     if (careerDescs[card.id]) return careerDescs[card.id];
     switch (card.id) {
@@ -2632,11 +2632,11 @@ function drawCards(count) {
 }
 
 function recordCareerHpLoss(amount) {
-    if (isCareerMode() && amount > 0) state._careerTurnLost = (state._careerTurnLost || 0) + amount;
+    if (isCareerMode() && amount > 0) state._careerBattleLost = (state._careerBattleLost || 0) + amount;
 }
 
 function recordCareerHpHeal(amount) {
-    if (isCareerMode() && amount > 0) state._careerTurnHealed = (state._careerTurnHealed || 0) + amount;
+    if (isCareerMode() && amount > 0) state._careerBattleHealed = (state._careerBattleHealed || 0) + amount;
 }
 
 function discardHand() {
@@ -2672,6 +2672,8 @@ function discardCard(card) {
 function resetCareerBattleBuffs() {
     if (!isCareerMode()) return;
     state.careerBuffs = { attack: 0, agility: 0, regen: 0, ironwall: 0, coDeath: 0 };
+    state._careerBattleLost = 0;
+    state._careerBattleHealed = 0;
 }
 
 function getCareerAttackBuff() {
@@ -2775,10 +2777,6 @@ function startTurn() {
     }
 
     state.battlePhase = 'player';
-    if (isCareerMode()) {
-        state._careerTurnLost = 0;
-        state._careerTurnHealed = 0;
-    }
     state._battleTurnCount = (state._battleTurnCount || 0) + 1;
     state.shield = 0;
     state.turnFlags = { damageReduction: false, damageReductionCard: null, counterAttack: false, counterAttackCard: null };
@@ -2924,8 +2922,8 @@ function playCareerSpecialCard(card) {
         case 'bloodDefense': b.agility += 3; break;
         case 'bloodValor': b.attack += 5; break;
         case 'flashOfInsight': drawCards(3); card._exhaustThisBattle = true; break;
-        case 'pain': hit(state._careerTurnLost || 0); break;
-        case 'rebirth': hit(state._careerTurnHealed || 0); break;
+        case 'pain': hit(state._careerBattleLost || 0); break;
+        case 'rebirth': hit(state._careerBattleHealed || 0); break;
         case 'crouch': state.shield += 5 + getCareerAgilityBuff(); healPlayer(Math.ceil(state.player.maxHp*.15)); b.attack = Math.max(0,b.attack-2); break;
         case 'bloodFlow': drawCards(Math.floor(state.player.hp / 25)); break;
         case 'lifeErosion': state.player.maxHp = Math.max(1,state.player.maxHp-2); hit(Math.ceil(state.player.maxHp*.1),2); break;
@@ -2942,7 +2940,7 @@ function playCareerSpecialCard(card) {
         case 'blazingWill': b.attack += 10; b.agility += 5; break;
         case 'wildfire': b.regen += 1; break;
         case 'lastStand': b.ironwall += Math.floor(state.player.hp/10); card._exhaustThisBattle = true; break;
-        case 'tireless': hit((state._careerTurnLost || 0) + (state._careerTurnHealed || 0)); break;
+        case 'tireless': hit((state._careerBattleLost || 0) + (state._careerBattleHealed || 0)); break;
     }
     updateBattleUI();
     if (state.enemy.hp <= 0) { state.enemy.hp=0; state.battlePhase='over'; setTimeout(()=>onEnemyDefeated(),400); return false; }
