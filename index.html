@@ -6658,8 +6658,8 @@ function selectCareer(careerId) {
     state.careerId = careerId;
     if (careerId && CAREER_DEFS[careerId]) {
         state.player.cards = [
-            ...Array.from({ length: 3 }, () => ({ ...CARD_DEFS.careerAttack, rarity: 'normal', rune: null, runeData: {} })),
-            ...Array.from({ length: 3 }, () => ({ ...CARD_DEFS.careerDefense, rarity: 'normal', rune: null, runeData: {} })),
+            ...Array.from({ length: 2 }, () => ({ ...CARD_DEFS.careerAttack, rarity: 'normal', rune: null, runeData: {} })),
+            ...Array.from({ length: 2 }, () => ({ ...CARD_DEFS.careerDefense, rarity: 'normal', rune: null, runeData: {} })),
             { ...CARD_DEFS.sacrifice, rarity: 'blue', rune: null, runeData: {} },
             { ...CARD_DEFS.growth, rarity: 'blue', rune: null, runeData: {} },
         ];
