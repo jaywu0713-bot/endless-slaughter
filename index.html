@@ -50,6 +50,7 @@ body {
     padding: 6px 16px; background: rgba(10,10,26,0.92);
     border-bottom: 1px solid #333; font-size: 14px; font-weight: 700;
 }
+.hud-ui-toggle { padding: 3px 8px; font-size: 12px; }
 .hud-hp { color: var(--hp-green); }
 .hud-floor { color: var(--gold); }
 .hud-gold { color: var(--energy); }
@@ -122,6 +123,7 @@ body {
 
 /* ==================== BATTLE SCREEN ==================== */
 #screen-battle { justify-content: space-between; padding: 6px 10px; gap: 0; }
+#screen-battle .battle-header { display: none; }
 .battle-header { width: 100%; display: flex; justify-content: space-between; align-items: center; }
 /* Side info panel (relics + player stats) */
 .side-panel { width: 100px; display: flex; flex-direction: column; gap: 6px; font-size: 10px; padding: 4px; background: rgba(0,0,0,0.2); border-radius: 6px; height: fit-content; max-height: 100%; overflow-y: auto; }
@@ -156,6 +158,9 @@ body {
 .player-name { color: var(--player); }
 .enemy-name { color: var(--enemy); }
 .intent-display { font-size: 18px; font-weight: 900; color: var(--enemy); text-align: center; padding: 4px 0; text-shadow: 0 0 8px rgba(239,83,80,0.6); min-height: 28px; }
+.career-buffs { min-height: 16px; max-width: 130px; text-align: center; font-size: 10px; line-height: 14px; color: var(--gold); }
+.career-buff { cursor: pointer; text-decoration: underline dotted; white-space: nowrap; }
+.career-buff:hover { color: #fff; }
 .intent-display.skill-intent { color: var(--gold); text-shadow: 0 0 8px rgba(255,215,0,0.5); animation: pulseIntent 0.8s ease-in-out infinite; }
 @keyframes pulseIntent { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
 .btn-view-skill { font-size: 10px; padding: 2px 6px; background: var(--panel); border: 1px solid var(--gold); color: var(--gold); border-radius: 4px; cursor: pointer; margin-top: 2px; }
@@ -198,6 +203,7 @@ body {
     text-shadow: 0 0 8px rgba(255,235,59,0.4); white-space: nowrap;
     min-width: 60px; text-align: center;
 }
+.battle-damage-total { font-size: 14px; font-weight: 800; color: var(--enemy); white-space: nowrap; min-width: 72px; text-align: center; }
 
 /* ==================== MESSAGE LOG ==================== */
 .message-log { width: 100%; min-height: 40px; max-height: 80px; overflow-y: auto; font-size: 12px; color: var(--text-dim); text-align: center; padding: 4px 0; flex: 1; }
@@ -300,6 +306,8 @@ body {
 
 /* ==================== MAP SCREEN ==================== */
 #screen-map { justify-content: flex-start; padding: 16px 20px; gap: 8px; overflow-y: auto; }
+.map-info-toggle { align-self: flex-end; margin-top: 38px; padding: 4px 8px; font-size: 16px; }
+.map-status-panel { display:none; align-self:flex-end; padding:6px 10px; border:1px solid var(--gold); border-radius:6px; background:rgba(20,20,30,.94); color:var(--text); font-size:12px; z-index:5; }
 .map-layout { display: flex; gap: 16px; width: 100%; flex: 1; }
 .map-sidebar { display: flex; flex-direction: column; gap: 8px; min-width: 130px; max-width: 160px; padding-top: 40px; }
 .map-sidebar h2 { font-size: 18px; color: var(--gold); }
@@ -530,7 +538,8 @@ body {
 <div id="app">
 
     <!-- HUD (shown on game screens) -->
-    <div id="hud-bar" style="display:none;">
+<div id="hud-bar" style="display:none;">
+        <button class="btn btn-small hud-ui-toggle" id="btn-ui-toggle" onclick="toggleUiDisplay()" title="关闭UI显示" aria-label="关闭UI显示">ℹ️</button>
         <span class="hud-hp">❤️ <span id="hud-hp">100/100</span></span>
         <span class="hud-floor" id="hud-floor">第 1 层</span>
         <span class="hud-gold">💰 <span id="hud-gold">0</span></span>
@@ -593,10 +602,15 @@ body {
                     <span style="color:var(--text-dim);min-width:60px;">修改属性</span>
                 </div>
                 <div style="display:flex;gap:4px;flex-wrap:wrap;">
-                    <button class="btn btn-small" onclick="adminModStat('attack',1)">攻击+1</button>
-                    <button class="btn btn-small" onclick="adminModStat('attack',10)">攻击+10</button>
-                    <button class="btn btn-small" onclick="adminModStat('defense',1)">防御+1</button>
-                    <button class="btn btn-small" onclick="adminModStat('defense',10)">防御+10</button>
+                    <button class="btn btn-small admin-main-attr" onclick="adminModStat('attack',1)">攻击+1</button>
+                    <button class="btn btn-small admin-main-attr" onclick="adminModStat('attack',10)">攻击+10</button>
+                    <button class="btn btn-small admin-main-attr" onclick="adminModStat('defense',1)">防御+1</button>
+                    <button class="btn btn-small admin-main-attr" onclick="adminModStat('defense',10)">防御+10</button>
+                    <button class="btn btn-small admin-reinc-attr" onclick="adminModStat('crit',1)">暴击+1</button>
+                    <button class="btn btn-small admin-reinc-attr" onclick="adminModStat('evasion',1)">闪避+1</button>
+                    <button class="btn btn-small admin-career-test" onclick="adminModStat('careerAttackBuff',1)">攻击Buff+1</button>
+                    <button class="btn btn-small admin-career-test" onclick="adminModStat('careerAgilityBuff',1)">敏捷Buff+1</button>
+                    <button class="btn btn-small admin-career-test" onclick="adminModStat('careerRevive',1)">复活+1</button>
                     <button class="btn btn-small" onclick="adminModStat('maxHp',10)">HP+10</button>
                     <button class="btn btn-small" onclick="adminModStat('maxHp',50)">HP+50</button>
                     <button class="btn btn-small" onclick="adminModStat('gold',50)">金币+50</button>
@@ -640,6 +654,12 @@ body {
             <p><b>🛒 商店：</b>购买卡牌、属性、遗物、印记缝合等服务。属性越买越贵，价格随楼层上涨。每局随机上架2个遗物。</p>
             <p><b>📈 升级：</b>升级仅增加最大HP（+5），不回复生命。旅馆回血和事件成为重要的回血来源。</p>
             <p><b>🏆 目标：</b>击败第100层最终Boss「四神共选」通关！按 ` 键打开管理员面板调试。</p>
+            <p style="color:var(--gold);font-weight:900;margin-top:10px;">🧬 职业模式：人类轮回者</p>
+            <p><b>🧬 规则：</b>选择职业后跳过初始祝福，不使用攻击力、防御力、暴击、闪避和印记系统。玩家主要通过职业卡牌、Buff和最大生命值成长进行战斗。</p>
+            <p><b>⚡ 战斗资源：</b>职业模式每回合抽5张牌并恢复3点精力，保留玩家护盾和怪物防御池、行动意图。</p>
+            <p><b>🃏 卡牌奖励：</b>每次击败普通怪物、精英怪、楼层主或Boss后展示3张职业卡牌，只能选择1张，也可以放弃；普通怪和精英怪按品级概率抽取，楼层主和Boss固定获得橙色卡牌。</p>
+            <p><b>✨ Buff：</b>攻击Buff提高职业攻击卡伤害；敏捷Buff提高职业防御卡护盾；生命回复Buff在回合结束时回血；铁壁抵挡敌人直接攻击；共死在回合结束时同时影响玩家和敌人。临时Buff在战斗结束后清除。</p>
+            <p><b>♾️ 不灭：</b>等级1获得1次复活机会，此后每升10级增加1次；每次死亡消耗1次，复活时回复最大生命值50%。</p>
             <p style="color:var(--gold);font-weight:900;margin-top:10px;">♾️ 轮回模式介绍</p>
             <p><b>🛤️ 路线：</b>单线路无限推进，地图一次显示25层；每5层遇到精英、每25层遇到楼层主，每50层连续挑战楼层主与四神Boss。</p>
             <p><b>⚔️ 战斗：</b>复用卡牌与回合规则，但初始卡组只有「拳头」，不使用玩家护盾；防御力每1点提供1%伤害减免。</p>
@@ -670,6 +690,24 @@ body {
         <button class="btn btn-small" onclick="returnToMenu()">返回</button>
     </div>
 
+    <!-- CAREER SELECTION (main mode only) -->
+    <div id="screen-career-select" class="screen">
+        <h2>🧬 选择职业</h2>
+        <p>主模式可以选择是否使用职业规则。</p>
+        <div class="reward-options">
+            <div class="reward-card" onclick="selectCareer(null)">
+                <div class="reward-icon">🗺️</div>
+                <div class="reward-title">不使用职业</div>
+                <div class="reward-desc">继续使用主模式原有规则</div>
+            </div>
+            <div class="reward-card" onclick="selectCareer('humanReincarnator')">
+                <div class="reward-icon">♾️</div>
+                <div class="reward-title">人类轮回者</div>
+                <div class="reward-desc">个人意志，生生不息。使用职业专属卡牌与成长规则。</div>
+            </div>
+        </div>
+    </div>
+
     <!-- SAVE SELECTION -->
     <div id="screen-save-select" class="screen">
         <h2>💾 选择存档</h2>
@@ -695,6 +733,7 @@ body {
                 <div class="chars-row">
                     <div class="char-box">
                         <div class="shield-big" id="shield-display">🛡️ 0</div>
+                        <div class="career-buffs" id="player-career-buffs"></div>
                         <div class="char-sprite" id="player-sprite"></div>
                         <div class="hp-bar-wrap"><div class="hp-bar player-hp" id="player-hp-bar" style="width:100%"></div></div>
                         <div class="hp-text" id="player-hp-text">100 / 100</div>
@@ -703,6 +742,7 @@ body {
                     <div class="char-box">
                         <div class="char-name enemy-name" id="enemy-name">怪物</div>
                         <div class="intent-display" id="enemy-intent">⚔️ 0</div>
+                        <div class="career-buffs" id="enemy-career-buffs"></div>
                         <button class="btn-view-skill" id="btn-view-skill" style="display:none;" onclick="viewBossSkill()">查看技能</button>
                         <div class="char-sprite" id="enemy-sprite"></div>
                         <div class="hp-bar-wrap"><div class="hp-bar enemy-hp" id="enemy-hp-bar" style="width:100%"></div></div>
@@ -719,6 +759,7 @@ body {
         <div class="card-area">
             <div class="card-row">
                 <div class="energy-big" id="energy-display">⚡ 3 / 3</div>
+                <div class="battle-damage-total" id="battle-damage-total" style="display:none;">💥 0</div>
                 <div class="card-hand" id="card-hand"></div>
                 <button class="btn" id="btn-end-turn">结束回合</button>
             </div>
@@ -746,20 +787,9 @@ body {
 
     <!-- ATTR PICK -->
     <div id="screen-attr-pick" class="screen">
-        <h2>💪 选择一个属性免费提升</h2>
+        <h2 id="attr-pick-title">💪 选择升级属性</h2>
         <p id="attr-pick-gold" style="font-size:14px;color:var(--energy);margin-bottom:8px;"></p>
-        <div class="reward-options">
-            <div class="reward-card" onclick="pickAttr('attack')">
-                <div class="reward-icon">⚔️</div>
-                <div class="reward-title">攻击力 +1</div>
-                <div class="reward-desc">免费</div>
-            </div>
-            <div class="reward-card" onclick="pickAttr('defense')">
-                <div class="reward-icon">🛡️</div>
-                <div class="reward-title">防御力 +1</div>
-                <div class="reward-desc">免费</div>
-            </div>
-        </div>
+        <div class="reward-options" id="attr-pick-options"></div>
     </div>
 
     <!-- BLESSING -->
@@ -795,7 +825,7 @@ body {
                 <div class="reward-title">回血</div>
                 <div class="reward-desc">回复25%最大生命值</div>
             </div>
-            <div class="reward-card" onclick="pickInnAction('train')">
+            <div class="reward-card" id="inn-train-option" onclick="pickInnAction('train')">
                 <div class="reward-icon">💪</div>
                 <div class="reward-title">锻炼</div>
                 <div class="reward-desc">攻击力+5，防御力+5，最大HP+5</div>
@@ -853,6 +883,17 @@ body {
             <button class="btn btn-small" id="btn-shop-next" onclick="shopPage(1)">下一页 ▶</button>
         </div>
         <button class="btn" id="btn-leave-shop" style="margin-top:8px;">离开商店</button>
+        <button class="btn btn-small" id="btn-current-cards" onclick="showReincarnationCards()" style="display:none;margin-top:6px;">🃏 当前卡牌</button>
+        <button class="btn btn-small" id="btn-reinc-refresh" onclick="refreshReincarnationShop()" style="display:none;margin-top:6px;">🔄 刷新商品</button>
+        <button class="btn btn-small" id="btn-reinc-heal" onclick="buyReincarnationHeal()" style="display:none;margin-top:6px;">💚 回复当前5%血量</button>
+    </div>
+
+    <div id="screen-current-cards" class="screen">
+        <h2>🃏 当前卡牌</h2>
+        <p id="reinc-card-detail-hint">选择一张卡牌查看操作</p>
+        <div id="reinc-card-list" class="rune-options"></div>
+        <div id="reinc-card-actions" style="display:none;gap:8px;justify-content:center;flex-wrap:wrap;"></div>
+        <button class="btn btn-small" onclick="returnToReincarnationShop()">返回商店</button>
     </div>
 
     <!-- CHEST RESULT -->
@@ -988,9 +1029,17 @@ const GAME_MODE_CONFIGS = {
     },
     reincarnation: {
         id: 'reincarnation', name: '轮回', endless: true,
-        player: { level: 1, maxHp: 50, hp: 50, attack: 7, defense: 4, exp: 0, gold: 0 },
+        player: { level: 1, maxHp: 25, hp: 25, attack: 7, defense: 4, crit: 0, evasion: 0, exp: 0, gold: 0 },
         maxEnergy: 2,
         drawPerTurn: 4,
+    },
+};
+
+// Main-mode careers are isolated from reincarnation and legacy main-mode rules.
+const CAREER_DEFS = {
+    humanReincarnator: {
+        id: 'humanReincarnator', name: '人类轮回者', theme: '个人意志，生生不息',
+        initialRelic: 'immortal',
     },
 };
 
@@ -1111,6 +1160,11 @@ const BOSS_DEFS = {
 // RELIC DEFINITIONS (data-driven)
 // =====================================================================
 const RELIC_DEFS = {
+    immortal: {
+        id: 'immortal', name: '不灭', icon: '♾️',
+        desc: '职业专属遗物。等级1获得1次复活，此后每升10级获得1次。复活时回复最大生命值50%。',
+        source: 'career',
+    },
     runeGem: {
         id: 'runeGem', name: '符文宝石', icon: '💎',
         desc: '一块看似普通的宝石，内部封存着某种强大的力量。每回合精力值+1。',
@@ -1413,7 +1467,8 @@ function buildElite(floor, cfg) {
         name: cfg.name,
         maxHp: Math.floor(hpBase * cfg.hpMult * ELITE_GLOBAL_HP_MULT),
         hp: Math.floor(hpBase * cfg.hpMult * ELITE_GLOBAL_HP_MULT),
-        attack: Math.floor(atkBase * cfg.atkMult * ELITE_GLOBAL_ATK_MULT),
+        // Main-mode elite attack tuning; reincarnation keeps its existing scaling.
+        attack: Math.floor(atkBase * cfg.atkMult * ELITE_GLOBAL_ATK_MULT * (isReincarnationMode() ? 1 : 1.2)),
         defense: Math.max(1, Math.floor(defBase * 1.5)),
         isElite: true,
         eliteId: cfg.id,
@@ -1477,7 +1532,9 @@ function showRelicSelection() {
 }
 
 function calcEnemyAtk() {
-    let mod = 0.7 + Math.random() * 0.6;
+    // Main mode uses the fixed per-floor attack values from Scheme D;
+    // reincarnation retains its existing per-turn variation.
+    let mod = isReincarnationMode() ? 0.7 + Math.random() * 0.6 : 1;
     if (state.enemy && state.enemy.eliteSpecial === 'berserk') {
         const hpRatio = state.enemy.hp / state.enemy.maxHp;
         mod = 1 + (1 - hpRatio) * 2;
@@ -1527,6 +1584,34 @@ const ROOM_TYPES = {
 // CARD DEFINITIONS
 // =====================================================================
 const CARD_DEFS = {
+    careerAttack: { id: 'careerAttack', icon: '⚔️', type: 'atk', cost: 1, effect: 'careerDamage', careerOnly: true, careerDamage: 10 },
+    careerDefense: { id: 'careerDefense', icon: '🛡️', type: 'def', cost: 1, effect: 'careerShield', careerOnly: true, careerShield: 7 },
+    sacrifice: { id: 'sacrifice', icon: '🩸', type: 'atk', cost: 2, effect: 'careerSacrifice', careerOnly: true },
+    growth: { id: 'growth', icon: '🌱', type: 'atk', cost: 1, effect: 'careerGrowth', careerOnly: true },
+    tripleStrike: { id:'tripleStrike', icon:'⚔️', type:'atk', cost:1, effect:'careerSpecial', careerOnly:true },
+    doubleDefense: { id:'doubleDefense', icon:'🛡️', type:'def', cost:1, effect:'careerSpecial', careerOnly:true },
+    ponder: { id:'ponder', icon:'💭', type:'utility', cost:1, effect:'careerSpecial', careerOnly:true },
+    inspire: { id:'inspire', icon:'🔥', type:'utility', cost:0, effect:'careerSpecial', careerOnly:true },
+    bandage: { id:'bandage', icon:'🩹', type:'utility', cost:0, effect:'careerSpecial', careerOnly:true },
+    fightToLive: { id:'fightToLive', icon:'⚔️', type:'atk', cost:1, effect:'careerSpecial', careerOnly:true },
+    bloodRush: { id:'bloodRush', icon:'🩸', type:'utility', cost:0, effect:'careerSpecial', careerOnly:true },
+    recovery: { id:'recovery', icon:'💚', type:'utility', cost:0, effect:'careerSpecial', careerOnly:true },
+    bloodDefense: { id:'bloodDefense', icon:'🛡️', type:'utility', cost:0, effect:'careerSpecial', careerOnly:true },
+    bloodValor: { id:'bloodValor', icon:'⚔️', type:'utility', cost:0, effect:'careerSpecial', careerOnly:true },
+    flashOfInsight: { id:'flashOfInsight', icon:'✨', type:'utility', cost:0, effect:'careerSpecial', careerOnly:true },
+    pain: { id:'pain', icon:'💢', type:'atk', cost:2, effect:'careerSpecial', careerOnly:true },
+    rebirth: { id:'rebirth', icon:'🌿', type:'atk', cost:1, effect:'careerSpecial', careerOnly:true },
+    crouch: { id:'crouch', icon:'🛡️', type:'def', cost:1, effect:'careerSpecial', careerOnly:true },
+    bloodFlow: { id:'bloodFlow', icon:'💧', type:'utility', cost:2, effect:'careerSpecial', careerOnly:true },
+    lifeErosion: { id:'lifeErosion', icon:'☠️', type:'atk', cost:1, effect:'careerSpecial', careerOnly:true },
+    sharedDeath: { id:'sharedDeath', icon:'☯️', type:'utility', cost:2, effect:'careerSpecial', careerOnly:true },
+    overdraw: { id:'overdraw', icon:'⚡', type:'utility', cost:0, effect:'careerSpecial', careerOnly:true },
+    vitalityGuard: { id:'vitalityGuard', icon:'🛡️', type:'def', cost:1, effect:'careerSpecial', careerOnly:true },
+    bornAgain: { id:'bornAgain', icon:'🔥', type:'atk', cost:1, effect:'careerSpecial', careerOnly:true },
+    tireless: { id:'tireless', icon:'♾️', type:'atk', cost:1, effect:'careerSpecial', careerOnly:true },
+    blazingWill: { id:'blazingWill', icon:'🌟', type:'utility', cost:1, effect:'careerSpecial', careerOnly:true },
+    wildfire: { id:'wildfire', icon:'🔥', type:'utility', cost:1, effect:'careerSpecial', careerOnly:true },
+    lastStand: { id:'lastStand', icon:'🧱', type:'def', cost:2, effect:'careerSpecial', careerOnly:true },
     fist: {
         id: 'fist',
         icon: '✊',
@@ -1598,10 +1683,34 @@ const CARD_DEFS = {
     },
 };
 
+// Career card pool. Additional career cards can be appended here without changing reward logic.
+const CAREER_CARD_POOL = [
+    { id: 'careerAttack', rarity: 'normal' },
+    { id: 'careerDefense', rarity: 'normal' },
+    { id: 'sacrifice', rarity: 'blue' },
+    { id: 'growth', rarity: 'blue' },
+    ...['tripleStrike','doubleDefense','ponder','inspire','bandage','fightToLive','bloodRush'].map(id => ({id, rarity:'normal'})),
+    ...['recovery','bloodDefense','bloodValor','flashOfInsight','pain','rebirth','crouch','bloodFlow','lifeErosion','sharedDeath','overdraw','vitalityGuard'].map(id => ({id, rarity:'blue'})),
+    ...['bornAgain','tireless','blazingWill','wildfire','lastStand'].map(id => ({id, rarity:'orange'})),
+];
+
+const CAREER_RARITY_META = {
+    normal: { name: '普通', color: '#bdbdbd' },
+    blue: { name: '蓝色', color: '#42a5f5' },
+    orange: { name: '橙色', color: '#ff9800' },
+    red: { name: '红色', color: '#ef5350' },
+};
+
 // Modular card display helpers (used by hand, backpack, discard, engrave UIs)
 function getCardDisplayName(card) {
+    const careerNames = { tripleStrike:'三击', doubleDefense:'双防', ponder:'思索', inspire:'提气', bandage:'绷带', fightToLive:'以战养战', bloodRush:'激血', recovery:'复苏', bloodDefense:'血防', bloodValor:'血勇', flashOfInsight:'灵光乍现', pain:'痛楚', rebirth:'回生', crouch:'蛰伏', bloodFlow:'血脉奔流', lifeErosion:'蚀命', sharedDeath:'催命符', overdraw:'透支', vitalityGuard:'生机护体', bornAgain:'向死而生', tireless:'永不停歇', blazingWill:'意志如炬', wildfire:'野火不尽', lastStand:'次身不倒' };
+    if (careerNames[card.id]) return careerNames[card.id];
     switch (card.id) {
         case 'fist': return '拳头';
+        case 'careerAttack': return '攻击卡牌';
+        case 'careerDefense': return '防御卡牌';
+        case 'sacrifice': return '舍命';
+        case 'growth': return '成长';
         case 'attack': return T.cardAttack;
         case 'defense': return T.cardDefense;
         case 'magicBook': return '魔法书';
@@ -1614,8 +1723,21 @@ function getCardDisplayName(card) {
 }
 
 function getCardDisplayDesc(card) {
+    const careerDescs = {
+        tripleStrike:'造成5点伤害3次', doubleDefense:'获得5点护盾2次', ponder:'抽2张牌', inspire:'本回合获得1点精力', bandage:'回复5%生命值，使用后消耗', fightToLive:'造成5点伤害2次并回复2%生命值', bloodRush:'攻击Buff+3，并失去1%当前生命',
+        recovery:'回复12%生命值，使用后消耗', bloodDefense:'敏捷Buff+3，并失去3%当前生命', bloodValor:'攻击Buff+5，并失去3%当前生命', flashOfInsight:'抽3张牌，使用后消耗', pain:'造成本回合累计失去的生命值', rebirth:'造成本回合累计回复的生命值', crouch:'获得5点护盾并回复12%生命，攻击Buff-2', bloodFlow:'每25点当前生命额外抽1张牌', lifeErosion:'最大生命值-2，造成最大生命值10%的伤害2次', sharedDeath:'玩家与敌人各获得1层共死', overdraw:'获得2点精力并失去3%当前生命', vitalityGuard:'每25点当前生命获得1次5点护盾', bornAgain:'失去50%当前生命，造成10点伤害5次', tireless:'根据本回合失血与回复造成伤害', blazingWill:'攻击Buff+10、敏捷Buff+5', wildfire:'获得1层生命回复Buff', lastStand:'按当前生命获得铁壁，使用后消耗'
+    };
+    if (careerDescs[card.id]) return careerDescs[card.id];
     switch (card.id) {
-        case 'fist': return `造成 ${state.player.attack} 点伤害（攻击力×1）`;
+        case 'fist': {
+            const rarity = card.rarity || 'normal';
+            const multiplier = ({ normal: 1, blue: 1.25, orange: 1.5, red: 2 })[rarity] || 1;
+            return `造成 ${state.player.attack * multiplier} 点伤害（攻击力×${multiplier}）`;
+        }
+        case 'careerAttack': return '造成10点伤害';
+        case 'careerDefense': return '获得7点护盾';
+        case 'sacrifice': return '造成当前生命值50%的伤害，失去当前生命值5%';
+        case 'growth': return '造成敌方最大生命值10%的伤害；击杀时最大HP+5';
         case 'attack': return T.cardAttackDesc(state.player.attack);
         case 'defense': return T.cardDefenseDesc(state.player.defense);
         case 'magicBook': return `伤害 = 攻击力 + 等级×3（无视敌人防御）`;
@@ -1753,6 +1875,7 @@ const RUNE_DEFS = {
                 const reflect = Math.floor(enemyRawDamage * 0.5);
                 if (state.enemy && reflect > 0) {
                     state.enemy.hp -= reflect;
+                    recordReincarnationDamage(reflect);
                     addMessage(`⚔️ 防御反击：反弹 ${reflect} 点伤害！`, 'damage');
                     animateDamage('enemy-sprite', reflect, 'damage');
                 }
@@ -1811,6 +1934,7 @@ const RUNE_DEFS = {
                             state.enemyCurrentDef = 0;
                         }
                         state.enemy.hp -= bonusDmg;
+                        recordReincarnationDamage(bonusDmg);
                         if (bonusDmg > 0) {
                             addMessage(`🔮 杀戮尖塔：额外造成 ${bonusDmg} 点伤害`, 'damage');
                             animateDamage('enemy-sprite', bonusDmg, 'damage');
@@ -2204,26 +2328,24 @@ const CHEST_REWARDS = [
             return { msg: null, icon: '🃏' };
         },
     },
-    {
-        id: 'empty',
-        name: '空宝箱',
-        icon: '📦',
-        desc: '真倒霉',
-        weight: 1,
-        apply(state) {
-            return { msg: '📦 真倒霉…空宝箱！', icon: '📦' };
-        },
-    },
 ];
 
+const CAREER_CHEST_REWARDS = [
+    CHEST_REWARDS.find(reward => reward.id === 'heal'),
+    CHEST_REWARDS.find(reward => reward.id === 'exp'),
+    { id: 'careerCard', name: '职业卡牌奖励', icon: '🃏', desc: '获得一次职业卡牌奖励', weight: 1 },
+    { id: 'randomRelic', name: '随机遗物', icon: '🏆', desc: '随机获得一个可正常获得的遗物', weight: 1 },
+].filter(Boolean);
+
 function pickChestReward() {
-    const totalWeight = CHEST_REWARDS.reduce((sum, r) => sum + (r.weight || 1), 0);
+    const pool = isCareerMode() ? CAREER_CHEST_REWARDS : CHEST_REWARDS;
+    const totalWeight = pool.reduce((sum, r) => sum + (r.weight || 1), 0);
     let roll = Math.random() * totalWeight;
-    for (const reward of CHEST_REWARDS) {
+    for (const reward of pool) {
         roll -= (reward.weight || 1);
         if (roll <= 0) return reward;
     }
-    return CHEST_REWARDS[0];
+    return pool[0];
 }
 
 // =====================================================================
@@ -2234,6 +2356,9 @@ let state = {};
 function freshState() {
     return {
         gameMode: 'main',
+        careerId: null,
+        careerRevives: 0,
+        careerBuffs: { attack: 0, agility: 0, regen: 0, ironwall: 0, coDeath: 0 },
         screen: 'menu',
         floor: 1,
         player: {
@@ -2280,12 +2405,23 @@ function freshState() {
         _hasFreeFusion: false,
         _freeFusionCount: 0,
         _sealUsesThisBattle: 0,
+        _reincarnationBattleDamage: 0,
         _eventExtraGold: 0,
         _eventLevelBonus: 0,
         // Reincarnation mode state
         reincarnationCycle: 0,
         reincarnationBossStage: null,
         relicCounts: {},
+        crit: 0,
+        evasion: 0,
+        _pendingReincarnationLevelChoices: 0,
+        _reincarnationRewardResume: false,
+        _attrRefreshCount: 0,
+        _attrChoices: [],
+        _reincarnationShopItems: [],
+        _reincarnationShopRefreshCount: 0,
+        _reincarnationShopHealCount: 0,
+        _reincarnationSelectedCard: null,
     };
 }
 
@@ -2295,13 +2431,16 @@ function freshReincarnationState() {
     next.gameMode = 'reincarnation';
     next.player = {
         ...cfg.player,
-        cards: [{ ...CARD_DEFS.fist, rune: null, runeData: {} }],
+        cards: [{ ...CARD_DEFS.fist, rarity: 'normal', rune: null, runeData: {} }],
         relics: [],
         shopExtraEnergyBought: false,
         shopExtraDrawCount: 0,
     };
     next.maxEnergy = cfg.maxEnergy;
     next.pendingReward = false;
+    next._reincarnationShopItems = [];
+    next._reincarnationShopRefreshCount = 0;
+    next._reincarnationShopHealCount = 0;
     return next;
 }
 
@@ -2375,8 +2514,19 @@ function randInt(min, max) {
     return Math.floor(Math.random() * (max - min + 1)) + min;
 }
 
+// Keep internal values precise, but show decimals cleanly to players.
+function formatGameNumber(value) {
+    const n = Number(value);
+    if (!Number.isFinite(n)) return '0';
+    return Number(n.toFixed(1)).toString();
+}
+
 function isBossFloor(n) { return BALANCE.bossFloors.includes(n); }
-function healPlayer(amount) { state.player.hp = Math.min(state.player.maxHp, state.player.hp + amount); }
+function healPlayer(amount) {
+    const before = state.player.hp;
+    state.player.hp = Math.min(state.player.maxHp, state.player.hp + amount);
+    recordCareerHpHeal(state.player.hp - before);
+}
 function isRuneCompatible(rune, card) {
     if (card.playable === false) return false; // blank cards cannot be engraved
     if (card.noEngrave) return false; // curse cards cannot be engraved
@@ -2399,7 +2549,8 @@ function generateEnemy(floor) {
             name: bossData ? bossData.name : T.enemyBoss,
             maxHp: Math.floor(bossCfg.hp * bossHpMult),
             hp: Math.floor(bossCfg.hp * bossHpMult),
-            attack: Math.floor(bossCfg.attack * bossAtkMult),
+            // Main-mode floor lords/Bosses receive the stronger ×2.0 attack tuning.
+            attack: Math.floor(bossCfg.attack * bossAtkMult * (isReincarnationMode() ? 1 : 2.0)),
             defense: Math.floor(Math.floor(floor * 2) * bossDefMult),
             isBoss: true,
             bossId: bossData ? bossData.id : null,
@@ -2411,20 +2562,21 @@ function generateEnemy(floor) {
             simultAttackDefend: bossData ? (bossData.simultAttackDefend || false) : false,
         };
     }
-    // 4-tier HP/ATK scaling (HP ×1.5, ATK ×1.2 for normal monsters only)
+    // 4-tier HP scaling. Main-mode normal attacks use fixed values by floor band;
+    // reincarnation preserves its existing random attack progression.
     let hp, atk;
     if (floor <= 25) {
         hp = Math.floor((randInt(10, 30) + Math.floor(floor * 1.5)) * 1.5);
-        atk = Math.floor((randInt(1, 4) + Math.floor(floor * 0.22)) * 1.2);
+        atk = isReincarnationMode() ? Math.floor((randInt(1, 4) + Math.floor(floor * 0.22)) * 1.2) : 5 + Math.floor(floor * 0.4);
     } else if (floor <= 50) {
         hp = Math.floor((randInt(20, 50) + Math.floor(floor * 1.5)) * 1.5);
-        atk = Math.floor((randInt(3, 7) + Math.floor(floor * 0.3)) * 1.2);
+        atk = isReincarnationMode() ? Math.floor((randInt(3, 7) + Math.floor(floor * 0.3)) * 1.2) : 10 + Math.floor(floor * 0.45);
     } else if (floor <= 75) {
         hp = Math.floor((randInt(40, 80) + Math.floor(floor * 1.8)) * 1.5);
-        atk = Math.floor((randInt(5, 10) + Math.floor(floor * 0.38)) * 1.2);
+        atk = isReincarnationMode() ? Math.floor((randInt(5, 10) + Math.floor(floor * 0.38)) * 1.2) : 15 + Math.floor(floor * 0.5);
     } else {
         hp = Math.floor((randInt(60, 110) + Math.floor(floor * 2)) * 1.5);
-        atk = Math.floor((randInt(8, 14) + Math.floor(floor * 0.45)) * 1.2);
+        atk = isReincarnationMode() ? Math.floor((randInt(8, 14) + Math.floor(floor * 0.45)) * 1.2) : 20 + Math.floor(floor * 0.55);
     }
     const def = floor <= 20
         ? Math.floor(floor * 1) + randInt(-1, 2)
@@ -2478,6 +2630,14 @@ function drawCards(count) {
     return drawn;
 }
 
+function recordCareerHpLoss(amount) {
+    if (isCareerMode() && amount > 0) state._careerTurnLost = (state._careerTurnLost || 0) + amount;
+}
+
+function recordCareerHpHeal(amount) {
+    if (isCareerMode() && amount > 0) state._careerTurnHealed = (state._careerTurnHealed || 0) + amount;
+}
+
 function discardHand() {
     const kept = [];
     for (const card of state.deck.hand) {
@@ -2506,6 +2666,34 @@ function discardHand() {
 
 function discardCard(card) {
     state.deck.discard.push(card);
+}
+
+function resetCareerBattleBuffs() {
+    if (!isCareerMode()) return;
+    state.careerBuffs = { attack: 0, agility: 0, regen: 0, ironwall: 0, coDeath: 0 };
+}
+
+function getCareerAttackBuff() {
+    const b = state.careerBuffs || {};
+    let value = b.attack || 0;
+    if (hasRelic('chaosMark')) value += 5;
+    if (hasRelic('voidShard') && state.player.hp < state.player.maxHp * 0.5) value += 10;
+    return value;
+}
+
+function getCareerAgilityBuff() {
+    const b = state.careerBuffs || {};
+    let value = b.agility || 0;
+    if (hasRelic('chaosMark')) value += 3;
+    if (hasRelic('voidShard') && state.player.hp < state.player.maxHp * 0.5) value += 10;
+    return value;
+}
+
+// Career cards marked "use then consume" leave the current battle's deck
+// immediately.  They are cloned into a fresh battle deck next time, so this
+// is battle-only and does not remove the persistent card from the player's deck.
+function isBattleExhaustCard(card) {
+    return Boolean(card && ['bandage', 'recovery', 'flashOfInsight', 'lastStand'].includes(card.id));
 }
 
 // =====================================================================
@@ -2572,9 +2760,9 @@ function startTurn() {
         state.shield = 0;
         state.turnFlags = { damageReduction: false, damageReductionCard: null, counterAttack: false, counterAttackCard: null };
         const extraEnergy = (state.player.shopExtraEnergyBought ? 1 : 0) + getRelicCount('runeGem') + (state._battleTurnCount === 1 ? getRelicCount('hexCrystal') : 0);
-        state.energy = state.maxEnergy + extraEnergy;
+        state.energy = (isCareerMode() ? 3 : state.maxEnergy) + extraEnergy;
         const firstTurnBonus = state._battleTurnCount === 1 ? getRelicCount('snakeRing') + (state.enemyIntentType === 'attack' ? getRelicCount('scoutGoggles') : 0) : 0;
-        const drawCount = BALANCE.player.drawPerTurn + (state.player.shopExtraDrawCount || 0) + firstTurnBonus;
+        const drawCount = (isCareerMode() ? 5 : BALANCE.player.drawPerTurn) + (state.player.shopExtraDrawCount || 0) + firstTurnBonus;
         const drawn = drawCards(drawCount);
         if (drawn.length > 0) {
             SFX.play('draw');
@@ -2586,13 +2774,17 @@ function startTurn() {
     }
 
     state.battlePhase = 'player';
+    if (isCareerMode()) {
+        state._careerTurnLost = 0;
+        state._careerTurnHealed = 0;
+    }
     state._battleTurnCount = (state._battleTurnCount || 0) + 1;
     state.shield = 0;
     state.turnFlags = { damageReduction: false, damageReductionCard: null, counterAttack: false, counterAttackCard: null };
     const extraEnergy = (state.player.shopExtraEnergyBought ? 1 : 0) + getRelicCount('runeGem') + (state._battleTurnCount === 1 ? getRelicCount('hexCrystal') : 0);
-    state.energy = state.maxEnergy + extraEnergy;
+    state.energy = (isCareerMode() ? 3 : state.maxEnergy) + extraEnergy;
     const firstTurnBonus = state._battleTurnCount === 1 ? getRelicCount('snakeRing') + (state.enemyIntentType === 'attack' ? getRelicCount('scoutGoggles') : 0) : 0;
-    const drawCount = BALANCE.player.drawPerTurn + (state.player.shopExtraDrawCount || 0) + firstTurnBonus;
+    const drawCount = (isCareerMode() ? 5 : BALANCE.player.drawPerTurn) + (state.player.shopExtraDrawCount || 0) + firstTurnBonus;
     const drawn = drawCards(drawCount);
     if (drawn.length > 0) {
         SFX.play('draw');
@@ -2655,6 +2847,103 @@ function getCardHooks(card) {
     return hooks;
 }
 
+function isCareerMode() { return state.gameMode === 'main' && state.careerId === 'humanReincarnator'; }
+
+function applyCareerCardCost(card) {
+    if (!isCareerMode()) return true;
+    const rarity = card.rarity || 'normal';
+    const rate = ({ normal: 0.01, blue: 0.02, orange: 0.03, red: 0 })[rarity] || 0;
+    if (rate > 0) {
+        const loss = Math.max(1, Math.ceil(state.player.hp * rate));
+        state.player.hp = Math.max(1, state.player.hp - loss);
+        recordCareerHpLoss(loss);
+        addMessage(`🩸 职业代价：失去 ${loss} 点生命`, 'damage');
+    }
+    return state.player.hp > 0;
+}
+
+function playCareerCard(card) {
+    const buffs = state.careerBuffs || (state.careerBuffs = { attack: 0, agility: 0, regen: 0, ironwall: 0, coDeath: 0 });
+    let damage = 0;
+    let ignoreDefense = false;
+    if (card.effect === 'careerDamage') damage = 10 + getCareerAttackBuff();
+    else if (card.effect === 'magicAttack') {
+        damage = Math.round(state.player.maxHp * state.player.level / 5);
+        ignoreDefense = true;
+    }
+    else if (card.effect === 'careerSacrifice') {
+        damage = Math.round(state.player.hp * 0.5);
+        const sacrificeLoss = Math.max(1, Math.ceil(state.player.hp * 0.05));
+        state.player.hp = Math.max(1, state.player.hp - sacrificeLoss);
+        recordCareerHpLoss(sacrificeLoss);
+    } else if (card.effect === 'careerGrowth') {
+        damage = Math.round(state.enemy.maxHp * 0.1);
+    } else if (card.effect === 'careerShield') {
+        state.shield += 7 + getCareerAgilityBuff();
+        addMessage(`🛡️ 防御卡牌：获得 ${7 + getCareerAgilityBuff()} 点护盾`, 'info');
+        updateBattleUI();
+        return true;
+    }
+    if (damage > 0) {
+        let actual = damage;
+        if (!ignoreDefense) {
+            if (state.enemyCurrentDef >= damage) { state.enemyCurrentDef -= damage; actual = 0; }
+            else { actual = damage - state.enemyCurrentDef; state.enemyCurrentDef = 0; }
+        }
+        state.enemy.hp -= actual;
+        addMessage(`⚔️ ${getCardDisplayName(card)}：造成 ${actual} 点伤害`, 'damage');
+        recordReincarnationDamage(actual);
+        if (card.effect === 'careerGrowth' && state.enemy.hp <= 0) state.player.maxHp += 5;
+        if (state.enemy.hp <= 0) {
+            state.enemy.hp = 0; state.battlePhase = 'over'; updateBattleUI();
+            setTimeout(() => onEnemyDefeated(), 400);
+            return false;
+        }
+    }
+    updateBattleUI();
+    return true;
+}
+
+function playCareerSpecialCard(card) {
+    const b = state.careerBuffs || (state.careerBuffs = { attack: 0, agility: 0, regen: 0, ironwall: 0, coDeath: 0 });
+    const hit = (amount, times = 1) => { for (let i=0;i<times;i++) { if (state.enemy.hp <= 0) break; let d=amount; if (state.enemyCurrentDef >= d) { state.enemyCurrentDef -= d; d=0; } else { d-=state.enemyCurrentDef; state.enemyCurrentDef=0; } state.enemy.hp -= d; recordReincarnationDamage(d); } };
+    switch (card.id) {
+        case 'tripleStrike': hit(5 + getCareerAttackBuff(), 3); break;
+        case 'doubleDefense': state.shield += (5 + getCareerAgilityBuff()) * 2; break;
+        case 'ponder': drawCards(2); break;
+        case 'inspire': state.energy += 1; break;
+        case 'bandage': healPlayer(Math.ceil(state.player.maxHp * .05)); card._exhaustThisBattle = true; break;
+        case 'fightToLive': hit(5 + getCareerAttackBuff(), 2); healPlayer(Math.ceil(state.player.maxHp * .02)); break;
+        case 'bloodRush': b.attack += 3; b.agility += 1; break;
+        case 'recovery': healPlayer(Math.ceil(state.player.maxHp * .12)); card._exhaustThisBattle = true; break;
+        case 'bloodDefense': b.agility += 3; break;
+        case 'bloodValor': b.attack += 5; break;
+        case 'flashOfInsight': drawCards(3); card._exhaustThisBattle = true; break;
+        case 'pain': hit(state._careerTurnLost || 0); break;
+        case 'rebirth': hit(state._careerTurnHealed || 0); break;
+        case 'crouch': state.shield += 5 + getCareerAgilityBuff(); healPlayer(Math.ceil(state.player.maxHp*.12)); b.attack = Math.max(0,b.attack-2); break;
+        case 'bloodFlow': drawCards(Math.floor(state.player.hp / 25)); break;
+        case 'lifeErosion': state.player.maxHp = Math.max(1,state.player.maxHp-2); hit(Math.ceil(state.player.maxHp*.1),2); break;
+        case 'sharedDeath': b.coDeath += 1; break;
+        case 'overdraw': state.energy += 2; break;
+        case 'vitalityGuard': state.shield += Math.floor(state.player.hp/25) * (5 + getCareerAgilityBuff()); break;
+        case 'bornAgain': {
+            const bornAgainLoss = Math.max(1, Math.ceil(state.player.hp * .5));
+            state.player.hp = Math.max(1, state.player.hp - bornAgainLoss);
+            recordCareerHpLoss(bornAgainLoss);
+            hit(10 + getCareerAttackBuff(), 5);
+            break;
+        }
+        case 'blazingWill': b.attack += 10; b.agility += 5; break;
+        case 'wildfire': b.regen += 1; break;
+        case 'lastStand': b.ironwall += Math.floor(state.player.hp/10); card._exhaustThisBattle = true; break;
+        case 'tireless': hit((state._careerTurnLost || 0) + (state._careerTurnHealed || 0)); break;
+    }
+    updateBattleUI();
+    if (state.enemy.hp <= 0) { state.enemy.hp=0; state.battlePhase='over'; setTimeout(()=>onEnemyDefeated(),400); return false; }
+    return true;
+}
+
 function playCard(handIndex) {
     if (state.battlePhase !== 'player') return;
     // Skip card play if affected by Secret Keeper's pleasure
@@ -2704,6 +2993,7 @@ function playCard(handIndex) {
     }
     state.energy -= actualCost;
     SFX.play('play_card');
+    if (!applyCareerCardCost(card)) return;
 
     // Exhaust-self cards: removed for this battle (no discard). May cost HP.
     if (card.effect === 'exhaustSelf') {
@@ -2720,9 +3010,16 @@ function playCard(handIndex) {
         return;
     }
 
-    // Remove from hand, add to discard
+    // Remove from hand.  Single-use career cards are exhausted for this
+    // battle and must not enter the discard pile.
     state.deck.hand.splice(handIndex, 1);
-    discardCard(card);
+    if (!isBattleExhaustCard(card)) discardCard(card);
+
+    if (isCareerMode() && card.careerOnly) {
+        if (card.effect === 'careerSpecial') playCareerSpecialCard(card);
+        else playCareerCard(card);
+        return;
+    }
 
     // Check if enemy died from onPlay side-effects (e.g. Slay the Spire Logic on defense card)
     if (state.enemy && state.enemy.hp <= 0) {
@@ -2757,6 +3054,7 @@ function playCard(handIndex) {
         let dmg = relicStatBonus(state.player.attack + state.player.level * 3, 'attack');
         if (hooks.modifyDamage) dmg = hooks.modifyDamage(state, card, dmg);
         state.enemy.hp -= dmg;
+        recordReincarnationDamage(dmg);
         addMessage(`📖 魔法书：造成 ${dmg} 点伤害（无视防御）！`, 'damage');
         animateDamage('enemy-sprite', dmg, 'damage');
         shakeElement('enemy-sprite');
@@ -2770,8 +3068,16 @@ function playCard(handIndex) {
         }
     } else if (card.effect === 'dealDamage') {
         let dmg = relicStatBonus(state.player.attack, 'attack');
+        if (isReincarnationMode() && card.id === 'fist') {
+            const fistMultiplier = ({ normal: 1, blue: 1.25, orange: 1.5, red: 2 })[card.rarity || 'normal'] || 1;
+            dmg *= fistMultiplier;
+        }
         if (hooks.modifyDamage) {
             dmg = hooks.modifyDamage(state, card, dmg);
+        }
+        if (isReincarnationMode() && Math.random() < Math.min(100, state.player.crit || 0) / 100) {
+            dmg *= 2;
+            addMessage(`💥 暴击！伤害翻倍为 ${dmg}`, 'damage');
         }
 
         // Damage vs defense pool
@@ -2790,6 +3096,7 @@ function playCard(handIndex) {
         // Wrath elite takes 2x damage
         if (state.enemy && state.enemy.eliteSpecial === 'wrath') { actualDmg *= 2; }
         state.enemy.hp -= actualDmg;
+        recordReincarnationDamage(actualDmg);
         if (actualDmg > 0) {
             addMessage(`${T.player} 使用${T.cardAttack}，造成 ${actualDmg} 点伤害！`, 'damage');
             animateDamage('enemy-sprite', actualDmg, 'damage');
@@ -2834,6 +3141,7 @@ function playCard(handIndex) {
                 }
             }
             state.enemy.hp -= actualExtraDmg;
+            recordReincarnationDamage(actualExtraDmg);
             if (actualExtraDmg > 0) {
                 addMessage(`⚔️ 连击：额外造成 ${actualExtraDmg} 点伤害！`, 'damage');
                 animateDamage('enemy-sprite', actualExtraDmg, 'damage');
@@ -2956,6 +3264,20 @@ function initEnemyIntent() {
 function endPlayerTurn() {
     if (state.battlePhase !== 'player') return;
     state.battlePhase = 'enemy';
+
+    const buffs = state.careerBuffs || {};
+    if (isCareerMode() && buffs.regen > 0) {
+        const heal = Math.ceil(state.player.maxHp * 0.04 * buffs.regen);
+        healPlayer(heal);
+        addMessage(`🔥 生命回复：回复 ${heal} 点生命`, 'heal');
+    }
+    if (isCareerMode() && buffs.coDeath > 0 && state.enemy) {
+        const selfLoss = Math.max(1, Math.ceil(state.player.maxHp * 0.01 * buffs.coDeath));
+        const enemyLoss = Math.max(1, Math.ceil(state.enemy.maxHp * 0.05 * buffs.coDeath));
+        state.player.hp = Math.max(1, state.player.hp - selfLoss);
+        state.enemy.hp = Math.max(1, state.enemy.hp - enemyLoss);
+        addMessage(`☯️ 共死：你失去${selfLoss}生命，敌人失去${enemyLoss}生命`, 'damage');
+    }
 
     updateBattleUI();
     discardHand();
@@ -3176,7 +3498,22 @@ function applyDamageToPlayer(rawDmg) {
 
     // Reincarnation mode replaces player shield with percentage damage reduction.
     if (isReincarnationMode()) {
+        const evasion = Math.min(30, Math.max(0, state.player.evasion || 0));
+        if (Math.random() < evasion / 100) {
+            addMessage(`🌀 闪避成功！躲开了 ${rawDmg} 点直接攻击`, 'info');
+            updateBattleUI();
+            return 0;
+        }
         netDmg = applyReincarnationDefense(netDmg);
+    }
+
+    // Apply shield
+    if (isCareerMode() && state.careerBuffs && state.careerBuffs.ironwall > 0 && netDmg > 0) {
+        const blockedByWall = Math.min(netDmg, state.careerBuffs.ironwall * 30);
+        const layersUsed = Math.ceil(blockedByWall / 30);
+        state.careerBuffs.ironwall = Math.max(0, state.careerBuffs.ironwall - layersUsed);
+        netDmg -= blockedByWall;
+        addMessage(`🧱 铁壁抵挡了 ${blockedByWall} 点伤害`, 'info');
     }
 
     // Apply shield
@@ -3198,6 +3535,7 @@ function applyDamageToPlayer(rawDmg) {
         addMessage(`👑 帝皇圣印：致命伤害降至1点！（剩余${sealCount - state._sealUsesThisBattle}次）`, 'heal');
     }
     state.player.hp -= netDmg;
+    recordCareerHpLoss(netDmg);
     if (netDmg > 0) {
         addMessage(T.msgEnemyAttack(enemy.name, netDmg), 'damage');
         animateDamage('player-sprite', netDmg, 'damage');
@@ -3217,12 +3555,106 @@ function applyDamageToPlayer(rawDmg) {
     }
 }
 
+function getCareerRewardRarity() {
+    if (state.enemy && state.enemy.isBoss) return 'orange';
+    const roll = Math.random();
+    return roll < 0.6 ? 'normal' : roll < 0.9 ? 'blue' : 'orange';
+}
+
+function showCareerCardReward(rarity) {
+    const isFixedRarity = Boolean(rarity);
+    const rollRarity = () => {
+        if (isFixedRarity) return rarity;
+        const roll = Math.random();
+        return roll < 0.6 ? 'normal' : roll < 0.9 ? 'blue' : 'orange';
+    };
+    // Each offered card rolls its own rarity, so mixed-quality rewards are possible.
+    const choices = Array.from({ length: 3 }, () => {
+        const cardRarity = rollRarity();
+        const candidates = CAREER_CARD_POOL.filter(c => c.rarity === cardRarity);
+        const source = candidates.length ? candidates : CAREER_CARD_POOL;
+        const choice = source[Math.floor(Math.random() * source.length)];
+        return { ...choice, rarity: candidates.length ? cardRarity : choice.rarity };
+    });
+    state._careerRewardChoices = choices;
+    state.screen = 'reward';
+    const rewardSummary = `💰 +${formatGameNumber(state._lastGoldGain || 0)}金币　📈 +${formatGameNumber(state._lastExpGain || 0)}经验`;
+    $('reward-floor-text').textContent = `${rewardSummary}　${isFixedRarity ? `🃏 职业卡牌奖励（${CAREER_RARITY_META[rarity]?.name || rarity}）` : '🃏 职业卡牌奖励（每张独立抽取品级）'}`;
+    const opts = document.querySelector('#screen-reward .reward-options');
+    if (opts) opts.innerHTML = choices.map((choice, i) => {
+        const card = { ...CARD_DEFS[choice.id], rarity: choice.rarity, rune: null, runeData: {} };
+        const meta = CAREER_RARITY_META[choice.rarity];
+        return `<div class="reward-card" onclick="chooseCareerCardReward(${i})" style="border-color:${meta.color};">
+            <div class="reward-icon">${card.icon}</div><div class="reward-title" style="color:${meta.color};">${getCardDisplayName(card)}</div>
+            <div class="reward-desc">${getCardDisplayDesc(card)}<br>消耗${card.cost}点精力<br>使用时承担生命代价</div></div>`;
+    }).join('') + `<button class="btn btn-small" onclick="declineCareerCardReward()">放弃卡牌</button>`;
+    showScreen('reward');
+}
+
+function chooseCareerCardReward(index) {
+    const choice = state._careerRewardChoices && state._careerRewardChoices[index];
+    if (!choice) return;
+    state.player.cards.push({ ...CARD_DEFS[choice.id], rarity: choice.rarity, rune: null, runeData: {} });
+    addMessage(`🃏 获得职业卡牌「${getCardDisplayName(choice)}」`, 'heal');
+    state._careerRewardChoices = null;
+    advanceFloor();
+}
+window.chooseCareerCardReward = chooseCareerCardReward;
+
+function declineCareerCardReward() {
+    if (!state._careerRewardChoices) return;
+    state._careerRewardChoices = null;
+    addMessage('🃏 你放弃了本次职业卡牌奖励。', 'info');
+    advanceFloor();
+}
+window.declineCareerCardReward = declineCareerCardReward;
+
+function applyCareerBattleEndRelics() {
+    const chaosCount = getRelicCount('chaosMark');
+    if (chaosCount > 0) {
+        const loss = Math.max(1, Math.ceil(state.player.maxHp * 0.01 * chaosCount));
+        state.player.hp = Math.max(1, state.player.hp - loss);
+        addMessage(`🌀 混沌印记：战斗结束失去 ${loss} 点生命`, 'damage');
+    }
+    const healPercent = getRelicCount('medicKit') * 0.03 + getRelicCount('burningBlood') * 0.05;
+    if (healPercent > 0) {
+        const heal = Math.max(1, Math.ceil(state.player.maxHp * healPercent));
+        healPlayer(heal);
+        addMessage(`💚 战斗结束遗物：回复 ${heal} 点生命`, 'heal');
+    }
+}
+
 function onEnemyDefeated() {
     if (state.screen !== 'battle') return;
     state.battlePhase = 'over';
 
     if (isReincarnationMode()) {
         handleReincarnationVictory();
+        return;
+    }
+    if (isCareerMode()) {
+        // Career mode keeps its career-card choice, but now also receives the
+        // same gold/experience calculation as the main mode.
+        const careerBoss = Boolean(state.enemy && state.enemy.isBoss);
+        const careerGoldBase = careerBoss
+            ? Math.floor(10 + state.floor)
+            : Math.floor((8 + state.floor * 0.5) * 1.5);
+        const careerGold = careerGoldBase + Math.ceil(careerGoldBase * 0.1 * getRelicCount('dungeonTreasure'));
+        state.player.gold += careerGold;
+        state._lastGoldGain = careerGold;
+        const careerPrevExp = state.player.exp;
+        grantBattleExp();
+        state._lastExpGain = state.player.exp - careerPrevExp;
+        if (careerBoss) {
+            state.player.gold += careerGold;
+            state._lastGoldGain += careerGold;
+            const bossPrevExp = state.player.exp;
+            grantBattleExp();
+            state._lastExpGain += state.player.exp - bossPrevExp;
+        }
+        applyCareerBattleEndRelics();
+        addMessage(`💰 获得 ${state._lastGoldGain} 金币，📈 获得 ${state._lastExpGain} 经验！`, 'heal');
+        showCareerCardReward(state.enemy && state.enemy.isBoss ? 'orange' : null);
         return;
     }
 
@@ -3321,11 +3753,31 @@ function onEnemyDefeated() {
     }
 }
 
+function recordReincarnationDamage(amount) {
+    if (!isReincarnationMode()) return;
+    const damage = Number(amount) || 0;
+    if (damage > 0) state._reincarnationBattleDamage = (state._reincarnationBattleDamage || 0) + damage;
+}
+
+function grantReincarnationBattleReward() {
+    const totalDamage = Math.max(0, Number(state._reincarnationBattleDamage) || 0);
+    const rounds = Math.max(1, Number(state._battleTurnCount) || 1);
+    const reward = 5 + (0.1 * totalDamage) / rounds;
+    state.player.gold += reward;
+    state.player.exp += reward;
+    addMessage(`♾️ 轮回奖励：💰 +${formatGameNumber(reward)} 金币，📈 +${formatGameNumber(reward)} 经验（总伤害${formatGameNumber(totalDamage)}，${formatGameNumber(rounds)}回合）`, 'heal');
+    checkLevelUp();
+    state._lastGoldGain = reward;
+    state._lastExpGain = reward;
+    return (state._pendingReincarnationLevelChoices || 0) > 0;
+}
+
 function resetReincarnationBattleEffects() {
     state.shield = 0;
     state.plagueTurns = 0;
     state.skipCardPlayTurns = 0;
     state.enemyCurrentDef = 0;
+    state._reincarnationBattleDamage = 0;
     for (const card of state.player.cards) {
         if (card._savedCost !== undefined) {
             card.cost = card._savedCost;
@@ -3339,6 +3791,7 @@ function startReincarnationBossBattle(bossId) {
     state.messages = [];
     state.deck = { draw: createDeck(), hand: [], discard: [] };
     state._battleTurnCount = 0;
+    if (isReincarnationMode()) state._reincarnationBattleDamage = 0;
     state._sealUsedThisBattle = false;
     state._sealUsesThisBattle = 0;
     state._shieldDoubledThisBattle = false;
@@ -3360,6 +3813,15 @@ function startReincarnationBossBattle(bossId) {
 function handleReincarnationVictory() {
     const defeated = state.enemy;
     addMessage(`${T.msgEnemyDeath(defeated.name)}`, 'info');
+    if (!defeated.isElite && !defeated.isBoss) {
+        grantReincarnationBattleReward();
+        if ((state._pendingReincarnationLevelChoices || 0) > 0) {
+            state._reincarnationRewardResume = true;
+            return;
+        }
+    } else {
+        addMessage('♾️ 轮回：该敌人类型暂不提供金币与经验奖励。', 'info');
+    }
     resetReincarnationBattleEffects();
     applyReincarnationPostBattleRelics();
     updateBattleUI();
@@ -3401,6 +3863,14 @@ function applyReincarnationPostBattleRelics() {
 
 function onPlayerDeath() {
     if (state.screen !== 'battle') return;
+    if (state.careerId === 'humanReincarnator' && (state.careerRevives || 0) > 0) {
+        state.careerRevives--;
+        state.player.hp = Math.ceil(state.player.maxHp * 0.5);
+        addMessage(`♾️ 不灭发动！复活并回复50%生命值（剩余${state.careerRevives}次）`, 'heal');
+        state.battlePhase = 'player';
+        startTurn();
+        return;
+    }
     // Soul Stone: revive once
     if (hasRelic('soulStone')) {
         state.player.hp = Math.ceil(state.player.maxHp * 0.5);
@@ -3452,9 +3922,11 @@ function checkLevelUp() {
         state.player.exp -= cost;
         applyLevelUp();
         leveled = true;
+        if (isReincarnationMode()) state._pendingReincarnationLevelChoices = (state._pendingReincarnationLevelChoices || 0) + 1;
         SFX.play('level_up');
         addMessage(`${T.levelUp} 等级 ${state.player.level}！`, 'heal');
     }
+    if (isReincarnationMode() && state._pendingReincarnationLevelChoices > 0) showReincarnationAttrPick();
     return leveled;
 }
 
@@ -3462,6 +3934,11 @@ function checkLevelUp() {
 function applyLevelUp() {
     state.player.level++;
     state.player.maxHp += BALANCE.player.levelUpBonus.maxHp;
+    if (state.careerId === 'humanReincarnator' && state.player.level % 10 === 0) {
+        state.careerRevives = (state.careerRevives || 0) + 1;
+        addMessage(`♾️ 不灭：获得1次复活机会（当前${state.careerRevives}次）`, 'heal');
+    }
+    if (isReincarnationMode()) healPlayer(5);
     const hestiaCount = getRelicCount('hestiaBlessing');
     if (hestiaCount) healPlayer(Math.ceil(state.player.maxHp * 0.05 * hestiaCount));
 }
@@ -3472,6 +3949,9 @@ function grantLevels(n) {
 }
 
 function expToNextLevel() {
+    if (isReincarnationMode()) {
+        return Math.pow(state.player.level + 3, 2);
+    }
     // Halved from original curve (level*10+20) → keeps same shape
     return state.player.level * 5 + 10;
 }
@@ -3490,12 +3970,18 @@ function saveGame() {
     try {
         const data = {
             gameMode: state.gameMode || 'main',
+            careerId: state.careerId || null,
+            careerRevives: state.careerRevives || 0,
+            careerBuffs: state.careerBuffs || {},
             floor: state.floor, player: state.player,
             mapStartFloor: state.mapStartFloor, currentMap: state.currentMap,
             mapCursorFloor: state.mapCursorFloor, mapCursorPath: state.mapCursorPath,
             maxEnergy: state.maxEnergy,
             relicCounts: state.relicCounts || {},
             reincarnationBossStage: state.reincarnationBossStage || null,
+            _reincarnationShopItems: state._reincarnationShopItems || [],
+            _reincarnationShopRefreshCount: state._reincarnationShopRefreshCount || 0,
+            _reincarnationShopHealCount: state._reincarnationShopHealCount || 0,
         };
         localStorage.setItem(getSaveKey(), JSON.stringify(data));
     } catch (e) {}
@@ -3914,6 +4400,18 @@ function showMap() {
     }, 50);
 }
 
+function toggleUiDisplay() {
+    state._hudVisible = state._hudVisible === false ? true : false;
+    document.querySelectorAll('#hud-bar > span, #btn-effects').forEach(el => {
+        el.style.display = state._hudVisible ? '' : 'none';
+    });
+    const panel = $('side-panel-overlay');
+    if (panel) panel.style.display = state._hudVisible ? 'flex' : 'none';
+    const btn = $('btn-ui-toggle');
+    if (btn) btn.title = state._hudVisible ? '关闭UI显示' : '显示UI';
+}
+window.toggleUiDisplay = toggleUiDisplay;
+
 function selectRoom(targetFloor, targetCol) {
     if (targetFloor !== state.mapCursorFloor + 1) return;
     if (!getReachableCols(state.mapCursorPath).includes(targetCol)) return;
@@ -3939,6 +4437,7 @@ function selectRoom(targetFloor, targetCol) {
 }
 
 function resolveRoom(cell) {
+    resetCareerBattleBuffs();
     state.messages = [];
     state.shield = 0;
     state.plagueTurns = 0; // Reset permanent plague between battles
@@ -3948,6 +4447,7 @@ function resolveRoom(cell) {
     }
     state.deck = { draw: createDeck(), hand: [], discard: [] };
     state._battleTurnCount = 0;
+    if (isReincarnationMode()) state._reincarnationBattleDamage = 0;
     state._sealUsedThisBattle = false;
     state._sealUsesThisBattle = 0;
     state._shieldDoubledThisBattle = false;
@@ -4368,7 +4868,7 @@ const EVENT_DEFS = [
         id: 'runeMage', name: '流浪的符文法师', floorMin: 3,
         desc: '流浪的符文法师正在寻找遗失的符文宝石。',
         options: [
-            { label: '给予宝石', condition: s => hasRelic('runeGem'), effect(s) { state.player.cards.push({id:'magicBook',icon:'📖',type:'atk',cost:2,effect:'magicAttack',rune:null,runeData:{}}); addMessage('符文法师赠送了「魔法书」（符文宝石仍然保留）', 'heal'); }, resultText: '符文法师感谢你的慷慨，将珍藏的「魔法书」赠予了你（伤害 = 攻击力 + 等级×3，无视敌人防御）。你的符文宝石仍然保留。' },
+            { label: '给予宝石', condition: s => hasRelic('runeGem'), effect(s) { state.player.cards.push({id:'magicBook',icon:'📖',type:'atk',cost:2,effect:'magicAttack',careerOnly: isCareerMode(),rune:null,runeData:{}}); addMessage('符文法师赠送了「魔法书」（符文宝石仍然保留）', 'heal'); }, resultText: '符文法师感谢你的慷慨，将珍藏的「魔法书」赠予了你（伤害 = 攻击力 + 等级×3，无视敌人防御）。你的符文宝石仍然保留。' },
             { label: '离开', effect(s) {}, resultText: '你默默地离开了符文法师。' },
         ],
     },
@@ -4450,20 +4950,30 @@ const EVENT_DEFS = [
                 effect(s) {
                     const loss = Math.max(1, Math.ceil(s.player.maxHp * 0.05));
                     s.player.hp = Math.max(1, s.player.hp - loss);
-                    s.player.attack += 10;
-                    addMessage(`🌑 触碰裂缝：攻击力+10，但失去 ${loss} 点生命`, 'heal');
+                    if (isCareerMode()) {
+                        s.careerBuffs.attack += 2;
+                        addMessage(`🌑 触碰裂缝：攻击Buff+2，但失去 ${loss} 点生命`, 'heal');
+                    } else {
+                        s.player.attack += 10;
+                        addMessage(`🌑 触碰裂缝：攻击力+10，但失去 ${loss} 点生命`, 'heal');
+                    }
                 },
-                resultText: '虚空的力量进入了你的身体。攻击力永久+10，但你失去了部分生命值。',
+                resultText: s => isCareerMode() ? '虚空的力量进入了你的身体。获得攻击Buff+2（本场战斗有效），同时失去5%的生命值。' : '虚空的力量进入了你的身体。攻击力永久+10，但你失去了5%的生命值。',
             },
             {
                 label: '封印裂缝',
                 effect(s) {
-                    s.player.defense += 5;
-                    s.player.exp += 50;
-                    checkLevelUp();
-                    addMessage('🔒 封印裂缝：防御力+5，获得50经验！', 'heal');
+                    if (isCareerMode()) {
+                        s.careerBuffs.agility += 2;
+                        addMessage('🔒 封印裂缝：敏捷Buff+2，获得50经验！', 'heal');
+                    } else {
+                        s.player.defense += 5;
+                        s.player.exp += 50;
+                        checkLevelUp();
+                        addMessage('🔒 封印裂缝：防御力+5，获得50经验！', 'heal');
+                    }
                 },
-                resultText: '你成功阻止了虚空继续扩张。防御力永久+5，获得50经验。',
+                resultText: s => isCareerMode() ? '你成功阻止了虚空继续扩张。获得敏捷Buff+2（本场战斗有效），并获得50经验。' : '你成功阻止了虚空继续扩张。防御力永久+5，并获得50经验。',
             },
             { label: '远离这里', effect(s) {}, resultText: '你决定不与未知的力量接触。' },
         ],
@@ -4574,6 +5084,7 @@ const EVENT_DEFS = [
 ];
 
 function enterEventBattle() {
+    resetCareerBattleBuffs();
     state.deck = { draw: createDeck(), hand: [], discard: [] };
     state.shield = 0;
     state.messages = [];
@@ -4622,6 +5133,25 @@ function showQuestionRoom() {
             state.pendingRuneId = randomId;
             state.engraveOrigin = 'chest';
             showRuneConfirm(rune);
+        } else if (reward.id === 'careerCard') {
+            _questionRoomTimer = null;
+            state._lastGoldGain = 0;
+            state._lastExpGain = 0;
+            showCareerCardReward(null);
+        } else if (reward.id === 'randomRelic') {
+            const candidates = getAvailableRelics(['any', 'shop', 'boss']).filter(id => RELIC_DEFS[id] && RELIC_DEFS[id].source !== 'career');
+            let result;
+            if (candidates.length > 0) {
+                const relicId = candidates[Math.floor(Math.random() * candidates.length)];
+                const relic = RELIC_DEFS[relicId];
+                giveRelic(relicId);
+                result = { icon: relic.icon, msg: `🏆 获得遗物「${relic.name}」：${relic.desc}` };
+            } else {
+                result = { icon: '📦', msg: '当前没有可获得的遗物。' };
+            }
+            $('question-room-options').innerHTML = `<div class="reward-card"><div class="reward-icon">${result.icon}</div><div class="reward-title">发现宝箱！</div><div class="reward-desc">${result.msg}</div></div>`;
+            showScreen('question-room');
+            _questionRoomTimer = setTimeout(() => { _questionRoomTimer = null; proceedAfterRoom(); }, 1500);
         } else if (reward.id === 'randomCard') {
             _questionRoomTimer = null; // handled manually
             showCardReward();
@@ -4645,7 +5175,8 @@ function showQuestionRoom() {
         // Event (70%)
         _questionRoomTimer = null;
         if (!state.completedEvents) state.completedEvents = [];
-        const available = EVENT_DEFS.filter(e => !state.completedEvents.includes(e.id) && state.floor >= e.floorMin);
+        const careerEventExclusions = new Set(['chaosAltar']);
+        const available = EVENT_DEFS.filter(e => !state.completedEvents.includes(e.id) && state.floor >= e.floorMin && (!isCareerMode() || !careerEventExclusions.has(e.id)));
         if (available.length === 0) {
             proceedAfterRoom();
             return;
@@ -4687,9 +5218,10 @@ function handleEventOption(eventId, optIdx) {
     if (opt.condition && !opt.condition(state)) return;
     state.engraveOrigin = 'boss';
     // For battle/fusion options: show result text first, then trigger
+    const resolvedResultText = typeof opt.resultText === 'function' ? opt.resultText(state) : opt.resultText;
     if (opt.startsBattle || opt.startsFusion) {
-        if (opt.resultText) {
-            showEventResult(event.name, opt.resultText, () => { opt.effect(state); });
+        if (resolvedResultText) {
+            showEventResult(event.name, resolvedResultText, () => { opt.effect(state); });
         } else {
             opt.effect(state);
         }
@@ -4698,8 +5230,8 @@ function handleEventOption(eventId, optIdx) {
     // Normal options: execute effect, then show result
     opt.effect(state);
     if (state.screen === 'battle' || state.screen === 'rune-engrave') return;
-    if (opt.resultText) {
-        showEventResult(event.name, opt.resultText, () => proceedAfterRoom());
+    if (resolvedResultText) {
+        showEventResult(event.name, resolvedResultText, () => proceedAfterRoom());
     } else {
         proceedAfterRoom();
     }
@@ -4707,6 +5239,7 @@ function handleEventOption(eventId, optIdx) {
 window.handleEventOption = handleEventOption;
 
 function enterQuestionBattle() {
+    resetCareerBattleBuffs();
     state.enemy = generateEnemy(state.floor);
     state.plagueTurns = 0;
     for (const card of state.player.cards) {
@@ -4748,18 +5281,140 @@ function enterReincarnationShop() {
     SFX.play('shop');
     state.screen = 'shop';
     state._shopRelics = [];
-    $('shop-gold').textContent = `💰 ${state.player.gold}`;
-    $('shop-items').innerHTML = `
-        <div class="shop-item" style="width:260px;">
-            <div class="shop-item-icon">♾️</div>
-            <div class="shop-item-name">轮回商店</div>
-            <div class="shop-item-desc">当前版本暂时没有商品</div>
-        </div>`;
-    $('shop-page-num').textContent = '';
-    $('btn-shop-prev').style.display = 'none';
-    $('btn-shop-next').style.display = 'none';
+    state._reincarnationShopRefreshCount = 0;
+    generateReincarnationShopItems();
+    renderShop();
     showScreen('shop');
 }
+
+function getReincarnationShopPool() {
+    const relics = Object.values(RELIC_DEFS).map(r => ({
+        id: `relic_${r.id}`, type: 'relic', relicId: r.id,
+        name: r.name, icon: r.icon, desc: r.desc, price: 25
+    }));
+    const rarities = [
+        ['normal', '普通', 25], ['blue', '蓝色', 50],
+        ['orange', '橙色', 150], ['red', '红色', 300]
+    ];
+    const cards = rarities.map(([rarity, label, price]) => ({
+        id: `card_fist_${rarity}`, type: 'card', cardId: 'fist', rarity,
+        name: `拳头（${label}）`, icon: '✊',
+        desc: `造成玩家攻击力×${({normal:1,blue:1.25,orange:1.5,red:2})[rarity]}的伤害`, price
+    }));
+    return [...relics, ...cards];
+}
+
+function generateReincarnationShopItems() {
+    const pool = getReincarnationShopPool();
+    state._reincarnationShopItems = shuffle(pool).slice(0, 4);
+}
+
+function refreshReincarnationShop() {
+    const price = 10 + (state._reincarnationShopRefreshCount || 0) * 10;
+    const actualPrice = getShopPrice(price, 'reincRefresh');
+    if (state.player.gold < actualPrice) {
+        addMessage(`金币不足，刷新需要 ${actualPrice} 金币`, 'damage');
+        return;
+    }
+    state.player.gold -= actualPrice;
+    state._reincarnationShopRefreshCount = (state._reincarnationShopRefreshCount || 0) + 1;
+    generateReincarnationShopItems();
+    addMessage(`🔄 商店已刷新，消耗 ${actualPrice} 金币`, 'info');
+    renderShop();
+}
+
+function getReincarnationHealPrice() {
+    const basePrice = 5 + (state._reincarnationShopHealCount || 0) * 5;
+    return getShopPrice(basePrice, 'reincHeal');
+}
+
+function buyReincarnationHeal() {
+    const price = getReincarnationHealPrice();
+    if (state.player.gold < price) {
+        addMessage(`金币不足，回复需要 ${price} 金币`, 'damage');
+        return;
+    }
+    state.player.gold -= price;
+    const heal = Math.ceil(state.player.maxHp * 0.05);
+    healPlayer(heal);
+    state._reincarnationShopHealCount = (state._reincarnationShopHealCount || 0) + 1;
+    addMessage(`💚 回复了 ${heal} 点生命值，消耗 ${price} 金币`, 'heal');
+    renderShop();
+}
+
+function buyReincarnationShopItem(itemId) {
+    const item = (state._reincarnationShopItems || []).find(i => i.id === itemId);
+    if (!item) return;
+    const basePrice = item.type === 'healCurrent' ? 5 + (state._reincarnationShopHealCount || 0) * 5 : item.price;
+    const price = getShopPrice(basePrice, item.id);
+    if (state.player.gold < price) {
+        addMessage('金币不足！', 'damage');
+        return;
+    }
+    state.player.gold -= price;
+    if (item.type === 'relic') {
+        giveRelic(item.relicId);
+        addMessage(`🎁 获得遗物「${item.name}」！`, 'heal');
+    } else if (item.type === 'healCurrent') {
+        const heal = Math.ceil(state.player.maxHp * 0.05);
+        healPlayer(heal);
+        state._reincarnationShopHealCount = (state._reincarnationShopHealCount || 0) + 1;
+        addMessage(`💚 回复了 ${heal} 点生命值`, 'heal');
+    } else {
+        state.player.cards.push({ ...CARD_DEFS.fist, rarity: item.rarity, rune: null, runeData: {} });
+        addMessage(`✊ 获得${item.name}！`, 'heal');
+    }
+    state._reincarnationShopItems = state._reincarnationShopItems.filter(i => i.id !== itemId);
+    renderShop();
+}
+
+function showReincarnationCards() {
+    state.screen = 'current-cards';
+    state._reincarnationSelectedCard = null;
+    renderReincarnationCards();
+    showScreen('current-cards');
+}
+
+function renderReincarnationCards() {
+    const list = $('reinc-card-list');
+    const actions = $('reinc-card-actions');
+    const cards = state.player.cards || [];
+    list.innerHTML = cards.map((card, i) => `
+        <div class="rune-card" style="cursor:pointer;min-width:150px;" onclick="selectReincarnationCard(${i})">
+            <div style="font-size:24px;">${card.icon}</div>
+            <b>${getCardDisplayName(card)}（${({normal:'普通',blue:'蓝色',orange:'橙色',red:'红色'})[card.rarity || 'normal']}）</b>
+            <div style="font-size:11px;margin-top:4px;">${getCardDisplayDesc(card)}</div>
+        </div>`).join('');
+    actions.style.display = state._reincarnationSelectedCard === null ? 'none' : 'flex';
+    if (state._reincarnationSelectedCard !== null) {
+        const idx = state._reincarnationSelectedCard;
+        const card = cards[idx];
+        const next = ({normal:'blue',blue:'orange',orange:'red'})[card?.rarity || 'normal'];
+        const pair = card ? cards.findIndex((c, j) => j !== idx && c.id === card.id && (c.rarity || 'normal') === (card.rarity || 'normal')) : -1;
+        $('reinc-card-detail-hint').textContent = card ? `已选择：${getCardDisplayName(card)}。${pair >= 0 && next ? '可以升级。' : '暂无可升级的同等级卡牌。'}` : '';
+        actions.innerHTML = `<button class="btn btn-small" onclick="discardReincarnationCard()">🗑️ 丢弃</button>
+            <button class="btn btn-small" ${pair < 0 || !next ? 'disabled' : ''} onclick="upgradeReincarnationCard()">⬆️ 升级</button>`;
+    }
+}
+
+function selectReincarnationCard(index) { state._reincarnationSelectedCard = index; renderReincarnationCards(); }
+function discardReincarnationCard() {
+    const i = state._reincarnationSelectedCard;
+    if (i === null || !state.player.cards[i]) return;
+    if (state.player.cards.length <= 1) { addMessage('至少保留一张卡牌', 'damage'); return; }
+    state.player.cards.splice(i, 1); state._reincarnationSelectedCard = null; renderReincarnationCards();
+}
+function upgradeReincarnationCard() {
+    const i = state._reincarnationSelectedCard, cards = state.player.cards, card = cards[i];
+    if (!card) return;
+    const rarity = card.rarity || 'normal', next = ({normal:'blue',blue:'orange',orange:'red'})[rarity];
+    const pair = cards.findIndex((c, j) => j !== i && c.id === card.id && (c.rarity || 'normal') === rarity);
+    if (!next || pair < 0) return;
+    cards.splice(Math.max(i, pair), 1); cards.splice(Math.min(i, pair), 1);
+    cards.push({ ...CARD_DEFS.fist, rarity: next, rune: null, runeData: {} });
+    state._reincarnationSelectedCard = null; renderReincarnationCards();
+}
+function returnToReincarnationShop() { state.screen = 'shop'; renderShop(); }
 
 const ITEMS_PER_PAGE = 4;
 let _shopPage = 0;
@@ -4770,6 +5425,25 @@ function shopPage(dir) {
 }
 
 function renderShop() {
+    if (isReincarnationMode()) {
+        $('shop-gold').textContent = `💰 ${state.player.gold}`;
+        $('shop-items').innerHTML = (state._reincarnationShopItems || []).map(item => {
+            const price = getShopPrice(item.price, item.id);
+            return `<div class="shop-item"><div class="shop-item-icon">${item.icon}</div><div class="shop-item-name">${item.name}</div><div class="shop-item-desc">${item.desc}</div><div class="shop-item-price">💰 ${price}</div><button class="btn btn-small" ${state.player.gold < price ? 'disabled' : ''} onclick="buyReincarnationShopItem('${item.id}')">购买</button></div>`;
+        }).join('') || '<div class="shop-item"><div class="shop-item-name">商品已售罄</div></div>';
+        $('shop-page-num').textContent = '轮回商店：4件商品';
+        $('btn-shop-prev').style.display = 'none'; $('btn-shop-next').style.display = 'none';
+        const refreshPrice = getShopPrice(10 + (state._reincarnationShopRefreshCount || 0) * 10, 'reincRefresh');
+        $('btn-reinc-refresh').textContent = `🔄 刷新商品（${refreshPrice}金币）`;
+        $('btn-reinc-refresh').style.display = '';
+        const healBtn = $('btn-reinc-heal');
+        healBtn.textContent = `💚 回复当前5%血量（${getReincarnationHealPrice()}金币）`;
+        healBtn.disabled = state.player.gold < getReincarnationHealPrice();
+        healBtn.style.display = '';
+        $('btn-current-cards').style.display = '';
+        showScreen('shop');
+        return;
+    }
     $('shop-gold').textContent = `💰 ${state.player.gold}`;
     // Build full item list: regular items + shop relics
     let allItems = [...SHOP_ITEMS];
@@ -4819,6 +5493,7 @@ function renderShop() {
 }
 
 function buyShopItem(itemId) {
+    if (isReincarnationMode()) { buyReincarnationShopItem(itemId); return; }
     let item = SHOP_ITEMS.find(i => i.id === itemId);
     let itemPrice = item ? getShopPrice(item.price, item.id) : 0;
     // Check shop relics
@@ -4993,10 +5668,13 @@ window.cancelDiscardCard = cancelDiscardCard;
 function enterInn() {
     SFX.play('shop');
     state.screen = 'inn';
+    const trainOption = $('inn-train-option');
+    if (trainOption) trainOption.style.display = state.careerId ? 'none' : '';
     render();
 }
 
 function pickInnAction(action) {
+    if (action === 'train' && state.careerId) return;
     if (action === 'rest') {
         const heal = Math.ceil(state.player.maxHp * 0.25);
         healPlayer(heal);
@@ -5026,6 +5704,14 @@ window.selectRune = selectRune;
 window.engraveRuneOnCard = engraveRuneOnCard;
 window.enterShop = enterShop;
 window.buyShopItem = buyShopItem;
+window.buyReincarnationShopItem = buyReincarnationShopItem;
+window.refreshReincarnationShop = refreshReincarnationShop;
+window.buyReincarnationHeal = buyReincarnationHeal;
+window.showReincarnationCards = showReincarnationCards;
+window.selectReincarnationCard = selectReincarnationCard;
+window.discardReincarnationCard = discardReincarnationCard;
+window.upgradeReincarnationCard = upgradeReincarnationCard;
+window.returnToReincarnationShop = returnToReincarnationShop;
 window.leaveShop = leaveShop;
 window.continueAfterChest = continueAfterChest;
 
@@ -5039,17 +5725,28 @@ function showScreen(name) {
     const el = $(`screen-${name}`);
     if (el) el.classList.add('active');
     // Show HUD on game screens, hide on menu/victory/gameover
-    const gameScreens = ['map', 'battle', 'question-room', 'shop', 'inn', 'chest-result', 'rune-select', 'rune-engrave', 'rune-confirm', 'reward', 'attr-pick', 'blessing'];
+    const gameScreens = ['map', 'battle', 'question-room', 'shop', 'current-cards', 'inn', 'chest-result', 'rune-select', 'rune-engrave', 'rune-confirm', 'reward', 'attr-pick', 'blessing', 'career-select'];
     $('hud-bar').style.display = gameScreens.includes(name) ? 'flex' : 'none';
+    if (gameScreens.includes(name)) {
+        document.querySelectorAll('#hud-bar > span, #btn-effects').forEach(item => {
+            item.style.display = state._hudVisible === false ? 'none' : '';
+        });
+    }
     if (gameScreens.includes(name)) updateHUD();
     const effectsBtn = $('btn-effects');
     if (effectsBtn) effectsBtn.style.display = isReincarnationMode() ? 'none' : '';
+    const currentCardsBtn = $('btn-current-cards');
+    if (currentCardsBtn) currentCardsBtn.style.display = isReincarnationMode() && name === 'shop' ? '' : 'none';
+    const reincRefreshBtn = $('btn-reinc-refresh');
+    if (reincRefreshBtn) reincRefreshBtn.style.display = isReincarnationMode() && name === 'shop' ? '' : 'none';
+    const reincHealBtn = $('btn-reinc-heal');
+    if (reincHealBtn) reincHealBtn.style.display = isReincarnationMode() && name === 'shop' ? '' : 'none';
     // Show/hide floating side panel
-    const sidePanelGameScreens = ['battle', 'map', 'shop', 'reward'];
+    const sidePanelGameScreens = ['battle', 'map', 'shop', 'current-cards', 'reward', 'attr-pick'];
     const panel = document.getElementById('side-panel-overlay');
     if (panel) {
         if (sidePanelGameScreens.includes(name)) {
-            panel.style.display = 'flex';
+            panel.style.display = state._hudVisible === false ? 'none' : 'flex';
             panel.innerHTML = renderSidePanel() + renderCardBackpack();
         } else {
             panel.style.display = 'none';
@@ -5058,6 +5755,32 @@ function showScreen(name) {
 }
 
 function showEffects() {
+    if (isCareerMode()) {
+        $('effects-list').innerHTML = `
+            <div class="effect-entry" style="border-left-color:var(--gold);">
+                <div class="eff-name" style="color:var(--gold);">🧬 人类轮回者</div>
+                <div class="eff-desc">主题：个人意志，生生不息。职业模式不使用攻击、防御和印记系统，主要依靠职业卡牌、Buff与最大生命值成长。</div>
+            </div>
+            <div class="effect-entry" style="border-left-color:var(--energy);">
+                <div class="eff-name" style="color:var(--energy);">📈 职业卡牌</div>
+                <div class="eff-desc">每场战斗结束后可从3张职业卡牌中选择1张，也可以选择放弃。普通、蓝色、橙色品级分别按职业规则抽取。</div>
+            </div>
+            <div class="effect-entry" style="border-left-color:var(--player);">
+                <div class="eff-name" style="color:var(--player);">✨ Buff说明</div>
+                <div class="eff-desc">
+                    <b>⚔️攻击Buff：</b>提高职业攻击卡造成的伤害。<br>
+                    <b>🛡️敏捷Buff：</b>提高职业防御卡获得的护盾。<br>
+                    <b>💚生命回复Buff：</b>每层在回合结束时回复最大生命值的4%。<br>
+                    <b>🧱铁壁Buff：</b>每层抵挡一次最多30点敌人直接攻击伤害。<br>
+                    <b>☯️共死Buff：</b>每层在回合结束时使玩家失去最大生命值1%，敌人失去最大生命值5%。<br>
+                    Buff图标显示在玩家人物与生命条之间，点击图标可查看当前效果。
+                </div>
+            </div>`;
+        $('modal-effects').querySelector('h2').textContent = '🧬 职业模式说明';
+        $('modal-effects').style.display = 'flex';
+        return;
+    }
+    $('modal-effects').querySelector('h2').textContent = '🔮 印记图鉴';
     const combatInfo = `
         <div class="effect-entry" style="border-left-color:var(--gold);">
             <div class="eff-name" style="color:var(--gold);">⚔️ 战斗系统</div>
@@ -5097,6 +5820,24 @@ function showEffects() {
     }).join('');
     $('modal-effects').style.display = 'flex';
 }
+
+function showCareerBuffDetail(type) {
+    if (!isCareerMode()) return;
+    const b = state.careerBuffs || {};
+    const details = {
+        attack: ['⚔️ 攻击Buff', `当前层数：${b.attack || 0}`, '职业攻击卡造成的伤害增加对应数值。'],
+        agility: ['🛡️ 敏捷Buff', `当前层数：${b.agility || 0}`, '职业防御卡获得的护盾增加对应数值。'],
+        regen: ['💚 生命回复Buff', `当前层数：${b.regen || 0}`, '每层在回合结束时回复最大生命值的4%。'],
+        ironwall: ['🧱 铁壁Buff', `当前层数：${b.ironwall || 0}`, '每层抵挡一次最多30点敌人的直接攻击伤害。'],
+        coDeath: ['☯️ 共死Buff', `当前层数：${b.coDeath || 0}`, '每回合结束时，玩家失去最大生命值1%，敌人失去最大生命值5%。']
+    };
+    const detail = details[type];
+    if (!detail) return;
+    $('effects-list').innerHTML = `<div class="effect-entry"><div class="eff-name">${detail[0]}</div><div class="eff-desc"><b>${detail[1]}</b><br>${detail[2]}</div></div>`;
+    $('modal-effects').querySelector('h2').textContent = '当前Buff';
+    $('modal-effects').style.display = 'flex';
+}
+window.showCareerBuffDetail = showCareerBuffDetail;
 
 function closeEffects(e) {
     $('modal-effects').style.display = 'none';
@@ -5143,7 +5884,7 @@ window.closeBossSkill = closeBossSkill;
 
 function renderSidePanel() {
     const p = state.player;
-    const maxEnergy = state.maxEnergy + (p.shopExtraEnergyBought ? 1 : 0) + getRelicCount('runeGem');
+    const maxEnergy = (isCareerMode() ? 3 : state.maxEnergy) + (p.shopExtraEnergyBought ? 1 : 0) + getRelicCount('runeGem');
     // Relics
     let relicHTML = '<div class="panel-title">🏆 遗物</div><div class="side-relics">';
     if (p.relics && p.relics.length > 0) {
@@ -5159,12 +5900,13 @@ function renderSidePanel() {
     relicHTML += '</div>';
     // Player stats
     const statsHTML = `<div class="panel-title">📊 属性</div>
-        <div class="stat-row"><span class="stat-label">❤️HP</span><span class="stat-value">${p.hp}/${p.maxHp}</span></div>
-        <div class="stat-row"><span class="stat-label">⚔️攻击</span><span class="stat-value">${p.attack}</span></div>
-        <div class="stat-row"><span class="stat-label">🛡️防御</span><span class="stat-value">${p.defense}${isReincarnationMode() ? '%' : ''}</span></div>
+        <div class="stat-row"><span class="stat-label">❤️HP</span><span class="stat-value">${formatGameNumber(p.hp)}/${formatGameNumber(p.maxHp)}</span></div>
+        ${isCareerMode() ? '' : `<div class="stat-row"><span class="stat-label">⚔️攻击</span><span class="stat-value">${p.attack}</span></div>
+        <div class="stat-row"><span class="stat-label">🛡️防御</span><span class="stat-value">${p.defense}${isReincarnationMode() ? '%' : ''}</span></div>`}
+        ${isReincarnationMode() ? `<div class="stat-row"><span class="stat-label">💥暴击</span><span class="stat-value">${p.crit || 0}%</span></div><div class="stat-row"><span class="stat-label">🌀闪避</span><span class="stat-value">${Math.min(30, p.evasion || 0)}%</span></div>` : ''}
         <div class="stat-row"><span class="stat-label">⭐等级</span><span class="stat-value">${p.level}</span></div>
-        <div class="stat-row"><span class="stat-label">📈经验</span><span class="stat-value">${p.exp}/${expToNextLevel()}</span></div>
-        <div class="stat-row"><span class="stat-label">💰金币</span><span class="stat-value">${p.gold}</span></div>`;
+        <div class="stat-row"><span class="stat-label">📈经验</span><span class="stat-value">${formatGameNumber(p.exp)}/${formatGameNumber(expToNextLevel())}</span></div>
+        <div class="stat-row"><span class="stat-label">💰金币</span><span class="stat-value">${formatGameNumber(p.gold)}</span></div>`;
     return `<div class="side-panel">${relicHTML}${statsHTML}</div>`;
 }
 
@@ -5327,9 +6069,16 @@ window.closeRelicDetail = closeRelicDetail;
 // =====================================================================
 function openAdmin() {
     const sel = document.getElementById('admin-relic');
-    sel.innerHTML = Object.values(RELIC_DEFS).map(r => `<option value="${r.id}">${r.icon} ${r.name}</option>`).join('');
+    const careerExcludedRelics = new Set(['voidShard', 'chaosMark', 'netherAlloyShard', 'ururuMissile']);
+    const relicOptions = Object.values(RELIC_DEFS).filter(r => !isCareerMode() || r.source === 'career' || !careerExcludedRelics.has(r.id));
+    sel.innerHTML = relicOptions.map(r => `<option value="${r.id}">${r.icon} ${r.name}</option>`).join('');
     const evtSel = document.getElementById('admin-event');
-    evtSel.innerHTML = EVENT_DEFS.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+    const careerExcludedEvents = new Set(['chaosAltar']);
+    const eventOptions = EVENT_DEFS.filter(e => !isCareerMode() || !careerExcludedEvents.has(e.id));
+    evtSel.innerHTML = eventOptions.map(e => `<option value="${e.id}">${e.name}</option>`).join('');
+    document.querySelectorAll('.admin-main-attr').forEach(el => el.style.display = isCareerMode() || isReincarnationMode() ? 'none' : '');
+    document.querySelectorAll('.admin-reinc-attr').forEach(el => el.style.display = isReincarnationMode() ? '' : 'none');
+    document.querySelectorAll('.admin-career-test').forEach(el => el.style.display = isCareerMode() ? '' : 'none');
     $('modal-admin').style.display = 'flex';
 }
 function closeAdmin(e) { $('modal-admin').style.display = 'none'; }
@@ -5350,7 +6099,13 @@ function adminAddRelic() {
     }
 }
 function adminModStat(stat, amount) {
-    if (stat === 'level') {
+    if (stat === 'careerAttackBuff' || stat === 'careerAgilityBuff') {
+        const key = stat === 'careerAttackBuff' ? 'attack' : 'agility';
+        state.careerBuffs = state.careerBuffs || { attack: 0, agility: 0 };
+        state.careerBuffs[key] = (state.careerBuffs[key] || 0) + amount;
+    } else if (stat === 'careerRevive') {
+        state.careerRevives = (state.careerRevives || 0) + amount;
+    } else if (stat === 'level') {
         state.player.level += amount;
     } else if (stat === 'gold') {
         state.player.gold += amount;
@@ -5399,7 +6154,7 @@ window.adminHealFull = adminHealFull;
 
 function updateHUD() {
     const p = state.player;
-    $('hud-hp').textContent = `${p.hp} / ${p.maxHp}`;
+    $('hud-hp').textContent = `${formatGameNumber(p.hp)} / ${formatGameNumber(p.maxHp)}`;
     $('hud-gold').textContent = `${p.gold}`;
     const shownFloor = isReincarnationMode() && state.screen === 'map'
         ? Math.max(state.floor, state.mapStartFloor || 1)
@@ -5515,19 +6270,35 @@ function updateBattleUI() {
     // Player
     const p = state.player;
     $('player-hp-bar').style.width = (p.hp / p.maxHp * 100) + '%';
-    $('player-hp-text').textContent = `${p.hp} / ${p.maxHp}`;
+    $('player-hp-text').textContent = `${formatGameNumber(p.hp)} / ${formatGameNumber(p.maxHp)}`;
     $('player-stats').innerHTML = `
         <div class="stat-row"><span class="label">等级</span><span class="value">${p.level}</span></div>
-        <div class="stat-row"><span class="label">攻击</span><span class="value">${p.attack}</span></div>
-        <div class="stat-row"><span class="label">防御${isReincarnationMode() ? '减伤' : ''}</span><span class="value">${p.defense}${isReincarnationMode() ? '%' : ''}</span></div>
-        <div class="stat-row"><span class="label">经验</span><span class="value">${p.exp}/${expToNextLevel()}</span></div>
-        <div class="stat-row"><span class="label">金币</span><span class="value">${p.gold}</span></div>
+        ${isCareerMode() ? '' : `<div class="stat-row"><span class="label">攻击</span><span class="value">${p.attack}</span></div>
+        <div class="stat-row"><span class="label">防御${isReincarnationMode() ? '减伤' : ''}</span><span class="value">${p.defense}${isReincarnationMode() ? '%' : ''}</span></div>`}
+        ${isReincarnationMode() ? `<div class="stat-row"><span class="label">暴击</span><span class="value">${p.crit || 0}%</span></div><div class="stat-row"><span class="label">闪避</span><span class="value">${Math.min(30, p.evasion || 0)}%</span></div>` : ''}
+        <div class="stat-row"><span class="label">经验</span><span class="value">${formatGameNumber(p.exp)}/${formatGameNumber(expToNextLevel())}</span></div>
+        <div class="stat-row"><span class="label">金币</span><span class="value">${formatGameNumber(p.gold)}</span></div>
     `;
     $('header-gold').textContent = `💰 ${p.gold}`;
     $('shield-display').textContent = `🛡️ ${state.shield}`;
     $('shield-display').style.display = isReincarnationMode() ? 'none' : '';
-    const maxEnergy = state.maxEnergy + (state.player.shopExtraEnergyBought ? 1 : 0) + getRelicCount('runeGem');
+    const maxEnergy = (isCareerMode() ? 3 : state.maxEnergy) + (state.player.shopExtraEnergyBought ? 1 : 0) + getRelicCount('runeGem');
     $('energy-display').textContent = `⚡ ${state.energy}/${maxEnergy}`;
+    const careerBuffs = state.careerBuffs || {};
+    const buffText = isCareerMode() ? [
+        getCareerAttackBuff() ? `<span class="career-buff" onclick="showCareerBuffDetail('attack')">⚔️攻击+${getCareerAttackBuff()}</span>` : '',
+        getCareerAgilityBuff() ? `<span class="career-buff" onclick="showCareerBuffDetail('agility')">🛡️敏捷+${getCareerAgilityBuff()}</span>` : '',
+        careerBuffs.regen ? `<span class="career-buff" onclick="showCareerBuffDetail('regen')">💚回复×${careerBuffs.regen}</span>` : '',
+        careerBuffs.ironwall ? `<span class="career-buff" onclick="showCareerBuffDetail('ironwall')">🧱铁壁×${careerBuffs.ironwall}</span>` : '',
+        careerBuffs.coDeath ? `<span class="career-buff" onclick="showCareerBuffDetail('coDeath')">☯️共死×${careerBuffs.coDeath}</span>` : ''
+    ].filter(Boolean).join(' ｜ ') : '';
+    if ($('player-career-buffs')) $('player-career-buffs').innerHTML = buffText;
+    if ($('enemy-career-buffs')) $('enemy-career-buffs').textContent = '';
+    const damageTotalEl = $('battle-damage-total');
+    if (damageTotalEl) {
+        damageTotalEl.style.display = isReincarnationMode() ? '' : 'none';
+        damageTotalEl.textContent = `💥 ${formatGameNumber(Number(state._reincarnationBattleDamage) || 0)}`;
+    }
 
     // Enemy
     if (state.enemy) {
@@ -5561,7 +6332,7 @@ function updateBattleUI() {
         // Show view-skill button only for boss battles
         $('btn-view-skill').style.display = (e.isBoss) ? '' : 'none';
         $('enemy-hp-bar').style.width = (e.hp / e.maxHp * 100) + '%';
-        $('enemy-hp-text').textContent = `${e.hp} / ${e.maxHp}`;
+        $('enemy-hp-text').textContent = `${formatGameNumber(e.hp)} / ${formatGameNumber(e.maxHp)}`;
         $('enemy-stats').innerHTML = `
             <div class="stat-row"><span class="label">攻击</span><span class="value">${e.attack}</span></div>
             <div class="stat-row"><span class="label">防御</span><span class="value">${e.defense}</span></div>
@@ -5679,6 +6450,9 @@ function renderHand() {
             const typeLabelClass = card.type === 'atk' ? 'atk' : 'def';
             const name = getCardDisplayName(card);
             const desc = getCardDisplayDesc(card);
+            const rarityName = ({normal:'普通',blue:'蓝色',orange:'橙色',red:'红色'})[card.rarity || 'normal'];
+            const rarityColor = ({normal:'#bbb',blue:'#42a5f5',orange:'#ff9800',red:'#ef5350'})[card.rarity || 'normal'];
+            const rarityIndicator = isReincarnationMode() ? `<div style="font-size:10px;font-weight:700;color:${rarityColor};">${rarityName}品级</div>` : '';
             const runeIndicator = (() => {
                 const allRunes = [];
                 if (card.rune) {
@@ -5709,6 +6483,7 @@ function renderHand() {
                     <div class="card-cost">⚡${displayCost}</div>
                     <div class="card-icon">${card.icon}</div>
                     <div class="card-title">${name}</div>
+                    ${rarityIndicator}
                     <div class="card-desc">${desc}</div>
                     ${runeIndicator}
                     <div class="card-type-label ${typeLabelClass}">${typeLabel}</div>
@@ -5726,8 +6501,8 @@ function showRewardSummary() {
     $('reward-floor-text').textContent = T.floor(state.floor);
     const opts = document.querySelector('#screen-reward .reward-options');
     if (opts) opts.innerHTML = `
-        <div class="reward-card"><div class="reward-icon">💰</div><div class="reward-title">金币</div><div class="reward-desc">+${state._lastGoldGain || 0}</div></div>
-        <div class="reward-card"><div class="reward-icon">📈</div><div class="reward-title">经验</div><div class="reward-desc">+${state._lastExpGain || 0}</div></div>
+        <div class="reward-card"><div class="reward-icon">💰</div><div class="reward-title">金币</div><div class="reward-desc">+${formatGameNumber(state._lastGoldGain || 0)}</div></div>
+        <div class="reward-card"><div class="reward-icon">📈</div><div class="reward-title">经验</div><div class="reward-desc">+${formatGameNumber(state._lastExpGain || 0)}</div></div>
     `;
     showScreen('reward');
     setTimeout(() => advanceFloor(), 3000);
@@ -5751,6 +6526,9 @@ function render() {
             break;
         case 'mode-select':
             showScreen('mode-select');
+            break;
+        case 'career-select':
+            showScreen('career-select');
             break;
         case 'save-select':
             showScreen('save-select');
@@ -5859,7 +6637,7 @@ function startMode(mode) {
     clearSave('main');
     state = freshState();
     state.gameMode = 'main';
-    startGame();
+    showCareerSelect();
 }
 
 function returnToMenu() {
@@ -5870,6 +6648,34 @@ function returnToMenu() {
 window.startMode = startMode;
 window.continueMode = continueMode;
 window.returnToMenu = returnToMenu;
+
+function showCareerSelect() {
+    state.screen = 'career-select';
+    render();
+}
+
+function selectCareer(careerId) {
+    state.careerId = careerId;
+    if (careerId && CAREER_DEFS[careerId]) {
+        state.player.cards = [
+            ...Array.from({ length: 3 }, () => ({ ...CARD_DEFS.careerAttack, rarity: 'normal', rune: null, runeData: {} })),
+            ...Array.from({ length: 3 }, () => ({ ...CARD_DEFS.careerDefense, rarity: 'normal', rune: null, runeData: {} })),
+            { ...CARD_DEFS.sacrifice, rarity: 'blue', rune: null, runeData: {} },
+            { ...CARD_DEFS.growth, rarity: 'blue', rune: null, runeData: {} },
+        ];
+        state.player.relics = [];
+        state.careerRevives = 1;
+        giveRelic(CAREER_DEFS[careerId].initialRelic);
+        addMessage(`🧬 已选择职业：${CAREER_DEFS[careerId].name}`, 'info');
+        // Career runs skip the legacy initial blessing flow.
+        startNewArea(1);
+        return;
+    }
+    showBlessing();
+}
+
+window.showCareerSelect = showCareerSelect;
+window.selectCareer = selectCareer;
 
 // =====================================================================
 // INITIAL BLESSING (初始祝福)
@@ -5909,11 +6715,87 @@ function selectReward(type) {
 }
 
 function showAttrPick() {
+    if (isReincarnationMode()) { showReincarnationAttrPick(); return; }
     state.screen = 'attr-pick';
     state.pendingAttrType = null;
     $('attr-pick-gold').textContent = `💰 金币：${state.player.gold}`;
+    $('attr-pick-title').textContent = '💪 选择一个属性免费提升';
+    $('attr-pick-options').innerHTML = `<div class="reward-card" onclick="pickAttr('attack')"><div class="reward-icon">⚔️</div><div class="reward-title">攻击力 +1</div><div class="reward-desc">免费</div></div><div class="reward-card" onclick="pickAttr('defense')"><div class="reward-icon">🛡️</div><div class="reward-title">防御力 +1</div><div class="reward-desc">免费</div></div>`;
     showScreen('attr-pick');
 }
+
+const REINCARNATION_ATTR_RARITIES = [
+    { id: 'normal', name: '普通', color: '' , weight: 70, amount: 1 },
+    { id: 'blue', name: '蓝色', color: '#42a5f5', weight: 20, amount: 2 },
+    { id: 'orange', name: '橙色', color: '#ff9800', weight: 8, amount: 3 },
+    { id: 'red', name: '红色', color: '#ef5350', weight: 2, amount: 5 },
+];
+const REINCARNATION_ATTRS = [
+    { id: 'attack', name: '攻击力', icon: '⚔️' },
+    { id: 'defense', name: '防御力', icon: '🛡️' },
+    { id: 'crit', name: '暴击', icon: '💥' },
+    { id: 'evasion', name: '闪避', icon: '🌀' },
+];
+function randomReincarnationRarity() {
+    let roll = Math.random() * 100;
+    for (const rarity of REINCARNATION_ATTR_RARITIES) { roll -= rarity.weight; if (roll < 0) return rarity; }
+    return REINCARNATION_ATTR_RARITIES[0];
+}
+function rollReincarnationAttrChoices() {
+    const shuffled = [...REINCARNATION_ATTRS].sort(() => Math.random() - 0.5);
+    return shuffled.slice(0, 2).map(attr => ({ ...attr, rarity: randomReincarnationRarity() }));
+}
+function showReincarnationAttrPick() {
+    state.screen = 'attr-pick';
+    state._attrRefreshCount = state._attrRefreshCount || 0;
+    state._attrChoices = rollReincarnationAttrChoices();
+    renderReincarnationAttrPick();
+    showScreen('attr-pick');
+}
+function renderReincarnationAttrPick() {
+    $('attr-pick-title').textContent = `💪 升级奖励（剩余${state._pendingReincarnationLevelChoices || 1}次）`;
+    $('attr-pick-gold').textContent = `💰 金币：${state.player.gold} ｜ 刷新费用：${5 + (state._attrRefreshCount || 0) * 5}`;
+    const cards = state._attrChoices.map((choice, i) => `<div class="reward-card" onclick="pickReincarnationAttr(${i})"><div class="reward-icon">${choice.icon}</div><div class="reward-title" style="color:${choice.rarity.color || 'var(--text)'}">${choice.name} +${choice.rarity.amount}</div><div class="reward-desc">${choice.rarity.name}品级</div></div>`).join('');
+    $('attr-pick-options').innerHTML = `${cards}<button class="btn btn-small" onclick="refreshReincarnationAttrs()">刷新属性</button>`;
+}
+function refreshReincarnationAttrs() {
+    const price = 5 + (state._attrRefreshCount || 0) * 5;
+    if (state.player.gold < price) { addMessage('金币不足，无法刷新属性奖励', 'damage'); return; }
+    state.player.gold -= price;
+    state._attrRefreshCount = (state._attrRefreshCount || 0) + 1;
+    state._attrChoices = rollReincarnationAttrChoices();
+    renderReincarnationAttrPick();
+    updateHUD();
+    const sidePanel = $('side-panel-overlay');
+    if (sidePanel) sidePanel.innerHTML = renderSidePanel() + renderCardBackpack();
+}
+function pickReincarnationAttr(index) {
+    const choice = state._attrChoices[index];
+    if (!choice) return;
+    state.player[choice.id] = (state.player[choice.id] || 0) + choice.rarity.amount;
+    addMessage(`升级奖励：${choice.name} +${choice.rarity.amount}（${choice.rarity.name}）`, 'heal');
+    state._pendingReincarnationLevelChoices = Math.max(0, (state._pendingReincarnationLevelChoices || 1) - 1);
+    state._attrRefreshCount = 0;
+    if (state._pendingReincarnationLevelChoices > 0) {
+        state._attrChoices = rollReincarnationAttrChoices();
+        renderReincarnationAttrPick();
+        return;
+    }
+    state._attrChoices = [];
+    if (state._reincarnationRewardResume) {
+        state._reincarnationRewardResume = false;
+        const defeated = state.enemy;
+        resetReincarnationBattleEffects();
+        applyReincarnationPostBattleRelics();
+        updateBattleUI();
+        state.reincarnationBossStage = null;
+        setTimeout(() => advanceFloor(), 700);
+    } else {
+        startNewArea(state.floor + 1);
+    }
+}
+window.pickReincarnationAttr = pickReincarnationAttr;
+window.refreshReincarnationAttrs = refreshReincarnationAttrs;
 
 function pickAttr(type) {
     if (type === 'attack') {
