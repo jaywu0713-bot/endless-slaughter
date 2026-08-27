@@ -5431,7 +5431,10 @@ function generateCareerShopItems() {
         desc: relic.desc,
         price: 25,
     }));
-    state._careerShopItems = [...cardItems, ...relicItems, ...SHOP_ITEMS.filter(item => item.id === 'discardCard' || item.id === 'buyMaxHp')];
+    const serviceItems = SHOP_ITEMS
+        .filter(item => item.id === 'discardCard' || item.id === 'buyMaxHp')
+        .map(item => item.id === 'discardCard' ? { ...item, price: 75 } : { ...item });
+    state._careerShopItems = [...cardItems, ...relicItems, ...serviceItems];
 }
 
 function enterReincarnationShop() {
@@ -5684,6 +5687,7 @@ function buyShopItem(itemId) {
             giveRelic(item.relicId);
             addMessage(`🎁 获得遗物「${item.name}」！`, 'heal');
         } else if (item.id === 'discardCard') {
+            state._careerShopItems = state._careerShopItems.filter(i => i.id !== itemId);
             showDiscardScreen();
             return;
         } else if (item.id === 'buyMaxHp') {
