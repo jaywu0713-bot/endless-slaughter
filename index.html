@@ -1040,6 +1040,7 @@ const CAREER_DEFS = {
     humanReincarnator: {
         id: 'humanReincarnator', name: '人类轮回者', theme: '个人意志，生生不息',
         initialRelic: 'immortal',
+        initialMaxHp: 75,
     },
 };
 
@@ -5270,11 +5271,49 @@ function enterShop() {
     SFX.play('shop');
     _shopPage = 0;
     state.screen = 'shop';
+    if (isCareerMode()) {
+        generateCareerShopItems();
+        renderShop();
+        return;
+    }
     // Pick 2 random relics the player doesn't have yet (exclude event-exclusive)
     const available = getAvailableRelics(['any', 'shop']);
     const shuffled = shuffle([...available]);
     state._shopRelics = shuffled.slice(0, 2).map(r => r.id);
     renderShop();
+}
+
+function generateCareerShopItems() {
+    const rarityPrices = { normal: 25, blue: 75, orange: 125 };
+    const cardItems = Array.from({ length: 10 }, (_, i) => {
+        const roll = Math.random();
+        const rarity = roll < 0.6 ? 'normal' : roll < 0.9 ? 'blue' : 'orange';
+        const candidates = CAREER_CARD_POOL.filter(c => c.rarity === rarity);
+        const picked = candidates[Math.floor(Math.random() * candidates.length)];
+        const card = CARD_DEFS[picked.id];
+        return {
+            id: `careerShopCard_${i}`,
+            type: 'careerCard',
+            cardId: picked.id,
+            rarity,
+            name: `${getCardDisplayName(card)}（${CAREER_RARITY_META[rarity].name}）`,
+            icon: card.icon,
+            desc: getCardDisplayDesc({ ...card, rarity }),
+            price: rarityPrices[rarity],
+        };
+    });
+    const relicPool = getAvailableRelics(['any', 'shop'])
+        .filter(r => r.id !== CAREER_DEFS.humanReincarnator.initialRelic && r.source !== 'career');
+    const relicItems = shuffle([...relicPool]).slice(0, 3).map((relic, i) => ({
+        id: `careerShopRelic_${i}`,
+        type: 'relic',
+        relicId: relic.id,
+        name: relic.name,
+        icon: relic.icon,
+        desc: relic.desc,
+        price: 25,
+    }));
+    state._careerShopItems = [...cardItems, ...relicItems, ...SHOP_ITEMS.filter(item => item.id === 'discardCard' || item.id === 'buyMaxHp')];
 }
 
 function enterReincarnationShop() {
@@ -5444,6 +5483,26 @@ function renderShop() {
         showScreen('shop');
         return;
     }
+    if (isCareerMode()) {
+        $('shop-gold').textContent = `💰 ${state.player.gold}`;
+        const items = state._careerShopItems || [];
+        const totalPages = Math.max(1, Math.ceil(items.length / ITEMS_PER_PAGE));
+        if (_shopPage < 0) _shopPage = 0;
+        if (_shopPage >= totalPages) _shopPage = totalPages - 1;
+        const pageItems = items.slice(_shopPage * ITEMS_PER_PAGE, (_shopPage + 1) * ITEMS_PER_PAGE);
+        $('shop-items').innerHTML = pageItems.map(item => {
+            const actualPrice = getShopPrice(item.price, item.id);
+            return `<div class="shop-item"><div class="shop-item-icon">${item.icon}</div><div class="shop-item-name">${item.name}</div><div class="shop-item-desc">${item.desc}</div><div class="shop-item-price">💰 ${actualPrice}</div><button class="btn btn-small" ${state.player.gold < actualPrice ? 'disabled' : ''} onclick="buyShopItem('${item.id}')">购买</button></div>`;
+        }).join('') || '<div class="shop-item"><div class="shop-item-name">商品已售罄</div></div>';
+        $('shop-page-num').textContent = `职业商店：${_shopPage + 1} / ${totalPages}`;
+        $('btn-shop-prev').style.display = _shopPage > 0 ? '' : 'none';
+        $('btn-shop-next').style.display = _shopPage < totalPages - 1 ? '' : 'none';
+        $('btn-reinc-refresh').style.display = 'none';
+        $('btn-reinc-heal').style.display = 'none';
+        $('btn-current-cards').style.display = 'none';
+        showScreen('shop');
+        return;
+    }
     $('shop-gold').textContent = `💰 ${state.player.gold}`;
     // Build full item list: regular items + shop relics
     let allItems = [...SHOP_ITEMS];
@@ -5494,6 +5553,30 @@ function renderShop() {
 
 function buyShopItem(itemId) {
     if (isReincarnationMode()) { buyReincarnationShopItem(itemId); return; }
+    if (isCareerMode()) {
+        const item = (state._careerShopItems || []).find(i => i.id === itemId);
+        if (!item) return;
+        const price = getShopPrice(item.price, item.id);
+        if (state.player.gold < price) return;
+        state.player.gold -= price;
+        if (item.type === 'careerCard') {
+            state.player.cards.push({ ...CARD_DEFS[item.cardId], rarity: item.rarity, rune: null, runeData: {} });
+            addMessage(`🃏 获得职业卡牌「${item.name}」`, 'heal');
+        } else if (item.type === 'relic') {
+            giveRelic(item.relicId);
+            addMessage(`🎁 获得遗物「${item.name}」！`, 'heal');
+        } else if (item.id === 'discardCard') {
+            showDiscardScreen();
+            return;
+        } else if (item.id === 'buyMaxHp') {
+            state.player.maxHp += 5;
+            state.player.hpBuyCount = (state.player.hpBuyCount || 0) + 1;
+            addMessage('❤️ 最大生命值永久+5！', 'heal');
+        }
+        state._careerShopItems = state._careerShopItems.filter(i => i.id !== itemId);
+        renderShop();
+        return;
+    }
     let item = SHOP_ITEMS.find(i => i.id === itemId);
     let itemPrice = item ? getShopPrice(item.price, item.id) : 0;
     // Check shop relics
@@ -6663,6 +6746,8 @@ function selectCareer(careerId) {
             { ...CARD_DEFS.sacrifice, rarity: 'blue', rune: null, runeData: {} },
             { ...CARD_DEFS.growth, rarity: 'blue', rune: null, runeData: {} },
         ];
+        state.player.maxHp = CAREER_DEFS[careerId].initialMaxHp || state.player.maxHp;
+        state.player.hp = state.player.maxHp;
         state.player.relics = [];
         state.careerRevives = 1;
         giveRelic(CAREER_DEFS[careerId].initialRelic);
