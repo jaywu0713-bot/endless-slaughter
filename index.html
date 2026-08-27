@@ -1723,12 +1723,128 @@ function getCardDisplayName(card) {
     }
 }
 
-function getCardDisplayDesc(card) {
-    const careerDescs = {
-        tripleStrike:'造成5点伤害3次', doubleDefense:'获得5点护盾2次', ponder:'抽2张牌', inspire:'本回合获得1点精力', bandage:'回复最大生命值10%', fightToLive:'造成5点伤害2次并回复2%生命值', bloodRush:'攻击Buff+3，并失去1%当前生命',
-        recovery:'回复最大生命值20%，使用后消耗', bloodDefense:'敏捷Buff+3，并失去3%当前生命', bloodValor:'攻击Buff+5，并失去3%当前生命', flashOfInsight:'抽3张牌，使用后消耗', pain:`造成本场战斗累计失去的生命值（当前${formatGameNumber(state._careerBattleLost || 0)}）`, rebirth:`造成本场战斗累计回复的生命值（当前${formatGameNumber(state._careerBattleHealed || 0)}）`, crouch:'获得5点护盾并回复最大生命值15%，攻击Buff-2', bloodFlow:'每25点当前生命额外抽1张牌', lifeErosion:'最大生命值-2，造成最大生命值10%的伤害2次', sharedDeath:'玩家与敌人各获得1层共死', overdraw:'获得2点精力并失去3%当前生命', vitalityGuard:'每25点当前生命获得1次5点护盾', bornAgain:'失去50%当前生命，造成10点伤害5次', tireless:`根据本场战斗累计失血与回复造成伤害（当前${formatGameNumber((state._careerBattleLost || 0) + (state._careerBattleHealed || 0))}）`, blazingWill:'攻击Buff+10、敏捷Buff+5', wildfire:'获得1层生命回复Buff', lastStand:'按当前生命获得铁壁，使用后消耗'
+function getCareerRarityHpCost(card, hp = state.player.hp) {
+    if (!isCareerMode() || !card || !card.careerOnly) return 0;
+    const rate = ({ normal: 0.01, blue: 0.02, orange: 0.03, red: 0 })[card.rarity || 'normal'] || 0;
+    return rate > 0 ? Math.max(1, Math.ceil(hp * rate)) : 0;
+}
+
+function getCareerCardDisplayDesc(card) {
+    const maxHp = state.player.maxHp;
+    const rarityCost = getCareerRarityHpCost(card);
+    const hpAfterRarityCost = Math.max(1, state.player.hp - rarityCost);
+    const attackBuff = getCareerAttackBuff();
+    const agilityBuff = getCareerAgilityBuff();
+    const enemyMaxHp = state.enemy ? state.enemy.maxHp : 0;
+    const healText = (amount, hpBeforeHeal = hpAfterRarityCost) => {
+        const actual = Math.max(0, Math.min(amount, maxHp - hpBeforeHeal));
+        return actual === amount ? `回复${amount}点生命` : `回复${amount}点生命（当前实际可回复${actual}点）`;
     };
-    if (careerDescs[card.id]) return careerDescs[card.id];
+    let desc = '';
+    switch (card.id) {
+        case 'careerAttack': desc = `造成${10 + attackBuff}点伤害（10+攻击Buff ${attackBuff}）`; break;
+        case 'careerDefense': desc = `获得${7 + agilityBuff}点护盾（7+敏捷Buff ${agilityBuff}）`; break;
+        case 'sacrifice': {
+            const damage = Math.round(hpAfterRarityCost * 0.5);
+            const loss = Math.max(1, Math.ceil(hpAfterRarityCost * 0.05));
+            desc = `造成${damage}点伤害；卡牌效果失去${loss}点生命`;
+            break;
+        }
+        case 'growth': {
+            const damage = enemyMaxHp ? Math.round(enemyMaxHp * 0.15) : null;
+            const maxHpGain = Math.ceil(maxHp * 0.05);
+            const heal = Math.ceil((maxHp + maxHpGain) * 0.10);
+            desc = `${damage === null ? '造成敌方最大生命值15%的伤害' : `造成${damage}点伤害（敌方最大生命值15%）`}；击杀时最大生命值+${maxHpGain}，回复${heal}点生命`;
+            break;
+        }
+        case 'tripleStrike': {
+            const perHit = 5 + attackBuff;
+            desc = `每次造成${perHit}点伤害，共3次（合计${perHit * 3}点）`;
+            break;
+        }
+        case 'doubleDefense': {
+            const perShield = 5 + agilityBuff;
+            desc = `每次获得${perShield}点护盾，共2次（合计${perShield * 2}点）`;
+            break;
+        }
+        case 'ponder': desc = '抽2张卡牌'; break;
+        case 'inspire': desc = '本回合获得1点精力'; break;
+        case 'bandage': desc = healText(Math.ceil(maxHp * 0.10)); break;
+        case 'fightToLive': {
+            const perHit = 5 + attackBuff;
+            desc = `每次造成${perHit}点伤害，共2次（合计${perHit * 2}点）；${healText(Math.ceil(maxHp * 0.02))}`;
+            break;
+        }
+        case 'bloodRush': desc = '攻击Buff+3，敏捷Buff+1'; break;
+        case 'recovery': desc = `${healText(Math.ceil(maxHp * 0.20))}；使用后消耗`; break;
+        case 'bloodDefense': desc = '敏捷Buff+3'; break;
+        case 'bloodValor': desc = '攻击Buff+5'; break;
+        case 'flashOfInsight': desc = '抽3张卡牌；使用后消耗'; break;
+        case 'pain': {
+            const damage = (state._careerBattleLost || 0) + rarityCost;
+            desc = `造成本场战斗累计失血值：${formatGameNumber(damage)}点伤害`;
+            break;
+        }
+        case 'rebirth': desc = `造成本场战斗累计回复值：${formatGameNumber(state._careerBattleHealed || 0)}点伤害`; break;
+        case 'crouch': {
+            const shield = 5 + agilityBuff;
+            desc = `获得${shield}点护盾；${healText(Math.ceil(maxHp * 0.15))}；攻击Buff-${Math.min(2, attackBuff)}`;
+            break;
+        }
+        case 'bloodFlow': desc = `抽${Math.floor(hpAfterRarityCost / 25)}张卡牌（当前生命值每25点抽1张）`; break;
+        case 'lifeErosion': {
+            const reducedMaxHp = Math.max(1, maxHp - 2);
+            const perHit = Math.ceil(reducedMaxHp * 0.10);
+            desc = `最大生命值-2；每次造成${perHit}点伤害，共2次（合计${perHit * 2}点）`;
+            break;
+        }
+        case 'sharedDeath': {
+            const playerLoss = Math.max(1, Math.ceil(maxHp * 0.01));
+            const enemyLoss = enemyMaxHp ? Math.max(1, Math.ceil(enemyMaxHp * 0.05)) : null;
+            desc = `获得1层共死：每回合玩家失去${playerLoss}点生命${enemyLoss === null ? '，敌人失去最大生命值5%' : `，敌人失去${enemyLoss}点生命`}`;
+            break;
+        }
+        case 'overdraw': desc = '获得2点精力'; break;
+        case 'vitalityGuard': {
+            const times = Math.floor(hpAfterRarityCost / 25);
+            const perShield = 5 + agilityBuff;
+            desc = `获得${perShield}点护盾×${times}次（合计${perShield * times}点）`;
+            break;
+        }
+        case 'bornAgain': {
+            const loss = Math.max(1, Math.ceil(hpAfterRarityCost * 0.5));
+            const perHit = 10 + attackBuff;
+            desc = `失去${loss}点生命；每次造成${perHit}点伤害，共5次（合计${perHit * 5}点）`;
+            break;
+        }
+        case 'tireless': {
+            const damage = (state._careerBattleLost || 0) + (state._careerBattleHealed || 0) + rarityCost;
+            desc = `本场累计失血与回复合计：${formatGameNumber(damage)}点伤害`;
+            break;
+        }
+        case 'blazingWill': desc = '攻击Buff+10，敏捷Buff+5'; break;
+        case 'wildfire': {
+            const perLayer = Math.ceil(maxHp * 0.04);
+            const layers = (state.careerBuffs?.regen || 0) + 1;
+            desc = `生命回复Buff+1；每层回复${perLayer}点，使用后共${layers}层（每回合${perLayer * layers}点）`;
+            break;
+        }
+        case 'lastStand': {
+            const layers = Math.floor(hpAfterRarityCost / 10);
+            desc = `获得${layers}层铁壁（最多抵挡${layers * 30}点直接攻击伤害）；使用后消耗`;
+            break;
+        }
+        case 'magicBook': desc = `无视敌方防御造成${Math.round(maxHp * state.player.level / 5)}点伤害（最大生命值×等级÷5）`; break;
+        default: return null;
+    }
+    return rarityCost > 0 ? `${desc}；职业品级代价：失去${rarityCost}点生命` : desc;
+}
+
+function getCardDisplayDesc(card) {
+    if (isCareerMode() && card && card.careerOnly) {
+        const careerDesc = getCareerCardDisplayDesc(card);
+        if (careerDesc !== null) return careerDesc;
+    }
     switch (card.id) {
         case 'fist': {
             const rarity = card.rarity || 'normal';
@@ -1741,7 +1857,7 @@ function getCardDisplayDesc(card) {
         case 'growth': return '造成敌方最大生命值15%的伤害；击杀时最大HP提高5%，并回复最大生命值10%';
         case 'attack': return T.cardAttackDesc(state.player.attack);
         case 'defense': return T.cardDefenseDesc(state.player.defense);
-        case 'magicBook': return `伤害 = 攻击力 + 等级×3（无视敌人防御）`;
+        case 'magicBook': return isCareerMode() ? `无视敌方防御造成${Math.round(state.player.maxHp * state.player.level / 5)}点伤害（最大生命值×等级÷5）` : `伤害 = 攻击力 + 等级×3（无视敌人防御）`;
         case 'warriorBlood': return '抽到时失去3%生命；0费打出消耗本场移除';
         case 'emptyMagazine': return '无效果，打出后本场移除';
         case 'energyCard': return '使用后获得2点精力';
@@ -2850,10 +2966,8 @@ function isCareerMode() { return state.gameMode === 'main' && state.careerId ===
 
 function applyCareerCardCost(card) {
     if (!isCareerMode()) return true;
-    const rarity = card.rarity || 'normal';
-    const rate = ({ normal: 0.01, blue: 0.02, orange: 0.03, red: 0 })[rarity] || 0;
-    if (rate > 0) {
-        const loss = Math.max(1, Math.ceil(state.player.hp * rate));
+    const loss = getCareerRarityHpCost(card);
+    if (loss > 0) {
         state.player.hp = Math.max(1, state.player.hp - loss);
         recordCareerHpLoss(loss);
         addMessage(`🩸 职业代价：失去 ${loss} 点生命`, 'damage');
