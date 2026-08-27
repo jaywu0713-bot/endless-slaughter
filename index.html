@@ -3674,16 +3674,19 @@ function applyDamageToPlayer(rawDmg) {
 
 function getCareerRewardRarity() {
     if (state.enemy && state.enemy.isBoss) return 'orange';
+    return rollCareerCardRarity();
+}
+
+function rollCareerCardRarity() {
     const roll = Math.random();
-    return roll < 0.6 ? 'normal' : roll < 0.9 ? 'blue' : 'orange';
+    return roll < 0.70 ? 'normal' : roll < 0.97 ? 'blue' : 'orange';
 }
 
 function showCareerCardReward(rarity) {
     const isFixedRarity = Boolean(rarity);
     const rollRarity = () => {
         if (isFixedRarity) return rarity;
-        const roll = Math.random();
-        return roll < 0.6 ? 'normal' : roll < 0.9 ? 'blue' : 'orange';
+        return rollCareerCardRarity();
     };
     // Each offered card rolls its own rarity, so mixed-quality rewards are possible.
     const choices = Array.from({ length: 3 }, () => {
@@ -5402,8 +5405,7 @@ function enterShop() {
 function generateCareerShopItems() {
     const rarityPrices = { normal: 25, blue: 75, orange: 125 };
     const cardItems = Array.from({ length: 10 }, (_, i) => {
-        const roll = Math.random();
-        const rarity = roll < 0.6 ? 'normal' : roll < 0.9 ? 'blue' : 'orange';
+        const rarity = rollCareerCardRarity();
         const candidates = CAREER_CARD_POOL.filter(c => c.rarity === rarity);
         const picked = candidates[Math.floor(Math.random() * candidates.length)];
         const card = CARD_DEFS[picked.id];
