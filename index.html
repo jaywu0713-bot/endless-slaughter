@@ -1738,7 +1738,7 @@ function getCardDisplayDesc(card) {
         case 'careerAttack': return '造成10点伤害';
         case 'careerDefense': return '获得7点护盾';
         case 'sacrifice': return '造成当前生命值50%的伤害，失去当前生命值5%';
-        case 'growth': return '造成敌方最大生命值10%的伤害；击杀时最大HP+5';
+        case 'growth': return '造成敌方最大生命值15%的伤害；击杀时最大HP提高5%，并回复最大生命值10%';
         case 'attack': return T.cardAttackDesc(state.player.attack);
         case 'defense': return T.cardDefenseDesc(state.player.defense);
         case 'magicBook': return `伤害 = 攻击力 + 等级×3（无视敌人防御）`;
@@ -2878,7 +2878,7 @@ function playCareerCard(card) {
         state.player.hp = Math.max(1, state.player.hp - sacrificeLoss);
         recordCareerHpLoss(sacrificeLoss);
     } else if (card.effect === 'careerGrowth') {
-        damage = Math.round(state.enemy.maxHp * 0.1);
+        damage = Math.round(state.enemy.maxHp * 0.15);
     } else if (card.effect === 'careerShield') {
         state.shield += 7 + getCareerAgilityBuff();
         addMessage(`🛡️ 防御卡牌：获得 ${7 + getCareerAgilityBuff()} 点护盾`, 'info');
@@ -2894,7 +2894,11 @@ function playCareerCard(card) {
         state.enemy.hp -= actual;
         addMessage(`⚔️ ${getCardDisplayName(card)}：造成 ${actual} 点伤害`, 'damage');
         recordReincarnationDamage(actual);
-        if (card.effect === 'careerGrowth' && state.enemy.hp <= 0) state.player.maxHp += 5;
+        if (card.effect === 'careerGrowth' && state.enemy.hp <= 0) {
+            state.player.maxHp += Math.ceil(state.player.maxHp * 0.05);
+            healPlayer(Math.ceil(state.player.maxHp * 0.10));
+            addMessage('🌱 成长：最大生命值提高5%，并回复最大生命值10%', 'heal');
+        }
         if (state.enemy.hp <= 0) {
             state.enemy.hp = 0; state.battlePhase = 'over'; updateBattleUI();
             setTimeout(() => onEnemyDefeated(), 400);
