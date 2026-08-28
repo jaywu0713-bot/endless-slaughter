@@ -4917,13 +4917,14 @@ function resolveRoom(cell) {
             if (state.enemy.bossId === 'fourGodsChosen') {
                 state.plagueTurns = 999;
                 state.enemy._skillIndex = 0;
-                BGM.playFourGods();
-            } else {
-                BGM.playFloorLord();
             }
             initEnemyIntent();
             state.screen = 'battle';
             render();
+            // render() stops non-menu music, so start the boss track after the
+            // battle screen has been rendered.
+            if (state.enemy.bossId === 'fourGodsChosen') BGM.playFourGods();
+            else BGM.playFloorLord();
             renderStickFigure('player-sprite', 'var(--player)', false, false);
             renderStickFigure('enemy-sprite', 'var(--enemy)', true, true);
             // Show boss intro, then start turn
