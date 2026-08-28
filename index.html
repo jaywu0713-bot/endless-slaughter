@@ -46,15 +46,17 @@ body {
 /* ==================== HUD BAR ==================== */
 #hud-bar {
     position: absolute; top: 0; left: 0; right: 0; z-index: 100;
-    display: flex; justify-content: space-between; align-items: center;
-    padding: 6px 16px; background: rgba(10,10,26,0.92);
-    border-bottom: 1px solid #333; font-size: 14px; font-weight: 700;
+    display: flex; justify-content: flex-start; align-items: center;
+    padding: 6px 10px; background: transparent;
+    border: 0; font-size: 14px; font-weight: 700;
+    pointer-events: none;
 }
 .hud-ui-toggle { padding: 3px 8px; font-size: 12px; }
+.hud-left-group { display:flex; align-items:center; gap:10px; padding:5px 9px; background:rgba(10,10,26,0.92); border:1px solid #333; border-radius:8px; pointer-events:auto; }
 .hud-hp { color: var(--hp-green); }
 .hud-floor { color: var(--gold); }
 .hud-gold { color: var(--energy); }
-.hud-effects-btn { padding: 3px 10px; font-size: 12px; }
+.hud-effects-btn { padding: 3px 10px; font-size: 12px; margin-left:auto; pointer-events:auto; }
 
 /* ==================== MODAL ==================== */
 .modal-overlay {
@@ -88,8 +90,20 @@ body {
 
 /* ==================== MAIN MENU ==================== */
 #screen-menu { gap: 16px; }
+#screen-menu { justify-content: flex-start; padding-top: 10vh; }
 #screen-menu .title { font-size: 38px; font-weight: 900; color: var(--gold); text-shadow: 0 0 20px rgba(255,215,0,0.4), 2px 2px 0 var(--gold-dark); letter-spacing: 4px; }
 #screen-menu .subtitle { font-size: 16px; color: var(--text-dim); margin-bottom: 12px; letter-spacing: 2px; }
+.menu-mode-list { width: min(420px, 92vw); display:flex; flex-direction:column; gap:10px; align-self:center; }
+.menu-mode-row { display:flex; align-items:center; gap:8px; }
+.menu-mode-btn { flex:1; margin:0; }
+.mode-info-btn { flex:0 0 42px; width:42px; padding:6px 0; margin:0; }
+#screen-menu .menu-buttons { display:flex; flex-direction:column; align-items:stretch; gap:8px; width:min(420px,92vw); margin-top:2px; }
+.mode-info-content { text-align:left; color:#bbb; font-size:13px; line-height:1.7; }
+.mode-info-content p { margin:0 0 8px; }
+#screen-question-room, #screen-chest-result, #screen-attr-pick { justify-content:flex-start; padding-top:8vh; overflow-y:auto; }
+#screen-career-select { justify-content:center; padding-top:24px; overflow-y:auto; }
+#screen-question-room h2, #screen-chest-result h2, #screen-attr-pick h2, #screen-career-select h2 { margin-bottom:8px; }
+#screen-question-room .reward-options, #screen-chest-result .reward-options, #screen-attr-pick .reward-options, #screen-career-select .reward-options { max-width:720px; width:96vw; justify-content:center; }
 .menu-instructions {
     max-width: 580px; max-height: 280px; overflow-y: auto; text-align: left;
     font-size: 13px; color: #aaa; line-height: 1.7; margin-bottom: 16px;
@@ -142,6 +156,8 @@ body {
 .battle-left { width: 110px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; }
 .battle-center { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 4px; }
 .battle-right { width: 110px; display: flex; flex-direction: column; align-items: center; gap: 2px; font-size: 12px; }
+.battle-right { display:none; }
+.battle-right.enemy-stats-visible { display:flex; }
 /* Hide player-stats when side panel is shown */
 #screen-battle .side-panel ~ .battle-left { display: none; }
 
@@ -264,9 +280,10 @@ body {
 .end-turn-wrap .btn { min-width: 140px; }
 
 /* ==================== REWARD SCREEN ==================== */
-#screen-reward { gap: 24px; }
+#screen-reward { justify-content: flex-start; gap: 12px; padding-top: 8vh; overflow-y:auto; }
 #screen-reward h2 { font-size: 28px; color: var(--gold); }
-#screen-reward .reward-options { display: flex; gap: 20px; }
+#screen-reward > p { margin:0; text-align:center; }
+#screen-reward .reward-options { display: flex; gap: 12px; flex-wrap:wrap; justify-content:center; width:min(720px,96vw); }
 .reward-card {
     width: 200px; padding: 20px; border-radius: 12px;
     border: 2px solid #555; background: var(--panel-light);
@@ -276,6 +293,7 @@ body {
 .reward-card .reward-icon { font-size: 40px; margin-bottom: 8px; }
 .reward-card .reward-title { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
 .reward-card .reward-desc { font-size: 13px; color: var(--text-dim); }
+.reward-next-button { margin-top: 8px; }
 
 /* ==================== VICTORY & GAMEOVER ==================== */
 #screen-victory h2 { font-size: 36px; color: var(--gold); margin-bottom: 8px; text-shadow: 0 0 20px rgba(255,215,0,0.5); }
@@ -539,10 +557,10 @@ body {
 
     <!-- HUD (shown on game screens) -->
 <div id="hud-bar" style="display:none;">
-        <button class="btn btn-small hud-ui-toggle" id="btn-ui-toggle" onclick="toggleUiDisplay()" title="关闭UI显示" aria-label="关闭UI显示">ℹ️</button>
-        <span class="hud-hp">❤️ <span id="hud-hp">100/100</span></span>
-        <span class="hud-floor" id="hud-floor">第 1 层</span>
-        <span class="hud-gold">💰 <span id="hud-gold">0</span></span>
+        <div class="hud-left-group">
+            <button class="btn btn-small hud-ui-toggle" id="btn-ui-toggle" onclick="toggleUiDisplay()" title="关闭UI显示" aria-label="关闭UI显示">ℹ️</button>
+            <span class="hud-floor" id="hud-floor">第 1 层</span>
+        </div>
         <button class="btn btn-small hud-effects-btn" id="btn-effects">效果</button>
     </div>
 
@@ -646,11 +664,20 @@ body {
         </div>
     </div>
 
+    <!-- MODE INTRO MODAL -->
+    <div id="modal-mode-info" class="modal-overlay" style="display:none;" onclick="closeModeInfo(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2 id="mode-info-title" style="color:var(--gold);"></h2>
+            <div id="mode-info-content" class="mode-info-content"></div>
+            <button class="btn btn-small" onclick="closeModeInfo()">关闭</button>
+        </div>
+    </div>
+
     <!-- MAIN MENU -->
     <div id="screen-menu" class="screen active">
         <div class="title">无尽杀戮</div>
         <div class="subtitle">组建卡组，击杀怪物</div>
-        <div class="menu-instructions">
+        <div class="menu-instructions" style="display:none;">
             <p style="color:var(--gold);font-weight:900;">🗺️ 主模式介绍</p>
             <p><b>⚔️ 战斗：</b>回合制卡牌对战。每回合抽4张牌、恢复2点精力。怪物有防御池——攻击优先消耗防御再扣HP。每回合可看到敌人的意图（攻击/防御/技能）。</p>
             <p><b>✨ 初始祝福：</b>开局三选一——随机遗物、随机印记，或200金币+空白卡牌（废牌，不可打出）。</p>
@@ -670,8 +697,12 @@ body {
             <p><b>⚔️ 战斗：</b>复用卡牌与回合规则，但初始卡组只有「拳头」，不使用玩家护盾；防御力每1点提供1%伤害减免。</p>
             <p><b>🎁 收益：</b>普通怪按本场实际伤害和回合数获得金币与经验；精英、楼层主和Boss暂不发放击杀奖励，战后进入轮回商店。商店随机出售4件遗物或拳头卡牌，并可刷新、回血和管理卡牌。遗物可以重复获得且每一份效果都会叠加。</p>
         </div>
+        <div class="menu-mode-list">
+            <div class="menu-mode-row"><button class="btn menu-mode-btn" onclick="startMode('main')">轮回初始</button><button class="btn btn-small mode-info-btn" onclick="showModeInfo('main')" title="查看轮回初始介绍">ℹ️</button></div>
+            <div class="menu-mode-row"><button class="btn menu-mode-btn" onclick="startMode('career')">杀戮轮回</button><button class="btn btn-small mode-info-btn" onclick="showModeInfo('career')" title="查看杀戮轮回介绍">ℹ️</button></div>
+            <div class="menu-mode-row"><button class="btn menu-mode-btn" onclick="startMode('reincarnation')">无尽轮回</button><button class="btn btn-small mode-info-btn" onclick="showModeInfo('reincarnation')" title="查看无尽轮回介绍">ℹ️</button></div>
+        </div>
         <div class="menu-buttons">
-            <button class="btn" id="btn-start">开始游戏</button>
             <button class="btn" id="btn-continue" style="display:none;">继续游戏</button>
             <button class="btn btn-small" id="btn-records" onclick="showRecordsModal()">📜 历史记录</button>
         </div>
@@ -698,13 +729,8 @@ body {
     <!-- CAREER SELECTION (main mode only) -->
     <div id="screen-career-select" class="screen">
         <h2>🧬 选择职业</h2>
-        <p>主模式可以选择是否使用职业规则。</p>
+        <p>请选择要使用的职业。</p>
         <div class="reward-options">
-            <div class="reward-card" onclick="selectCareer(null)">
-                <div class="reward-icon">🗺️</div>
-                <div class="reward-title">不使用职业</div>
-                <div class="reward-desc">继续使用主模式原有规则</div>
-            </div>
             <div class="reward-card" onclick="selectCareer('humanReincarnator')">
                 <div class="reward-icon">♾️</div>
                 <div class="reward-title">人类轮回者</div>
@@ -722,17 +748,7 @@ body {
 
     <!-- BATTLE -->
     <div id="screen-battle" class="screen">
-        <div class="battle-header">
-            <span class="floor" id="battle-floor">第 1 层</span>
-            <span class="header-gold" id="header-gold">💰 0</span>
-            <button class="btn btn-small" id="btn-quit-battle">返回主界面</button>
-        </div>
         <div class="battle-main">
-            <!-- Player Stats (left) -->
-            <div class="battle-left">
-                <div class="char-name player-name">玩家</div>
-                <div class="stats" id="player-stats"></div>
-            </div>
             <!-- Center: Characters + Shield -->
             <div class="battle-center">
                 <div class="chars-row">
@@ -748,7 +764,7 @@ body {
                         <div class="char-name enemy-name" id="enemy-name">怪物</div>
                         <div class="intent-display" id="enemy-intent">⚔️ 0</div>
                         <button class="btn-view-skill" id="btn-view-skill" style="display:none;" onclick="viewBossSkill()">查看技能</button>
-                        <div class="char-sprite" id="enemy-sprite"></div>
+                        <div class="char-sprite" id="enemy-sprite" onclick="toggleEnemyStats()" title="点击查看敌人属性"></div>
                         <div class="career-buffs" id="enemy-career-buffs"></div>
                         <div class="hp-bar-wrap"><div class="hp-bar enemy-hp" id="enemy-hp-bar" style="width:100%"></div></div>
                         <div class="hp-text" id="enemy-hp-text"></div>
@@ -756,7 +772,7 @@ body {
                 </div>
             </div>
             <!-- Enemy Stats (right) -->
-            <div class="battle-right">
+            <div class="battle-right" id="battle-enemy-stats-panel">
                 <div class="stats" id="enemy-stats"></div>
             </div>
         </div>
@@ -1518,14 +1534,19 @@ function showEliteReward() {
         <div class="reward-card"><div class="reward-icon">💰</div><div class="reward-title">印记</div><div class="reward-desc">点击获得随机印记</div></div>
     `;
     showScreen('reward');
-    setTimeout(() => {
+    const next = document.createElement('button');
+    next.className = 'btn reward-next-button';
+    next.textContent = '选择印记';
+    next.onclick = () => {
+        next.remove();
         const runeIds = ALL_RUNE_IDS;
         const randomId = runeIds[Math.floor(Math.random() * runeIds.length)];
         const rune = RUNE_DEFS[randomId];
         state.pendingRuneId = randomId;
         state.engraveOrigin = 'elite';
         showRuneConfirm(rune);
-    }, 2500);
+    };
+    document.getElementById('screen-reward')?.appendChild(next);
 }
 
 function showRelicSelection() {
@@ -1564,7 +1585,7 @@ function pickBossForFloor(floor) {
 // =====================================================================
 const MAP_CONFIG = {
     cols: 5,              // 5 columns — cleaner layout
-    previewRows: 8,
+    previewRows: 25,
     cellW: 80,
     cellH: 64,
     rowGap: 40,
@@ -2639,6 +2660,30 @@ const SFX = {
                 case 'victory': { [392,440,494,523,587,659,784,880,1047].forEach((f,i)=>{ const o=osc(f,'sine',0.2); o.connect(g(0.08,0.3)); o.start(t+i*0.08); o.stop(t+i*0.08+0.2); }); break; }
             }
         } catch(e){ /*silently ignore audio errors*/ }
+    }
+};
+
+// Background music for the menu and special battles.
+const BGM = {
+    boss: null,
+    playTrack(path) {
+        this.stop();
+        try {
+            this.boss = new Audio(path);
+            this.boss.loop = true;
+            this.boss.volume = 0.7;
+            const result = this.boss.play();
+            if (result && result.catch) result.catch(() => { /* browser autoplay policy */ });
+        } catch (e) { this.boss = null; }
+    },
+    playMenu() { this.playTrack('audio/main-menu.mp3'); },
+    playFourGods() { this.playTrack('audio/four-gods-chosen.mp3'); },
+    playFloorLord() { this.playTrack('audio/floor-lord.mp3'); },
+    stop() {
+        if (!this.boss) return;
+        this.boss.pause();
+        this.boss.currentTime = 0;
+        this.boss = null;
     }
 };
 
@@ -3834,18 +3879,38 @@ function showCareerCardReward(rarity) {
         return { ...choice, rarity: candidates.length ? cardRarity : choice.rarity };
     });
     state._careerRewardChoices = choices;
+    document.getElementById('btn-next-floor')?.remove();
     state.screen = 'reward';
     const rewardSummary = `💰 +${formatGameNumber(state._lastGoldGain || 0)}金币　📈 +${formatGameNumber(state._lastExpGain || 0)}经验`;
     $('reward-floor-text').textContent = `${rewardSummary}　${isFixedRarity ? `🃏 职业卡牌奖励（${CAREER_RARITY_META[rarity]?.name || rarity}）` : '🃏 职业卡牌奖励（每张独立抽取品级）'}`;
     const opts = document.querySelector('#screen-reward .reward-options');
-    if (opts) opts.innerHTML = choices.map((choice, i) => {
+    if (opts) opts.innerHTML = `<button class="btn reward-card reveal-career-reward" onclick="revealCareerCardReward()">🃏 随机卡牌奖励</button>`;
+    showScreen('reward');
+}
+
+function revealCareerCardReward() {
+    const choices = state._careerRewardChoices || [];
+    const opts = document.querySelector('#screen-reward .reward-options');
+    if (!opts) return;
+    opts.innerHTML = choices.map((choice, i) => {
         const card = { ...CARD_DEFS[choice.id], rarity: choice.rarity, rune: null, runeData: {} };
         const meta = CAREER_RARITY_META[choice.rarity];
         return `<div class="reward-card" onclick="chooseCareerCardReward(${i})" style="border-color:${meta.color};">
             <div class="reward-icon">${card.icon}</div><div class="reward-title" style="color:${meta.color};">${getCardDisplayName(card)}</div>
             <div class="reward-desc">${getCardDisplayDesc(card)}<br>消耗${card.cost}点精力<br>使用时承担生命代价</div></div>`;
     }).join('') + `<button class="btn btn-small" onclick="declineCareerCardReward()">放弃卡牌</button>`;
-    showScreen('reward');
+}
+window.revealCareerCardReward = revealCareerCardReward;
+
+function showNextFloorButton() {
+    const old = document.getElementById('btn-next-floor');
+    if (old) old.remove();
+    const btn = document.createElement('button');
+    btn.id = 'btn-next-floor';
+    btn.className = 'btn reward-next-button';
+    btn.textContent = '前往下一层';
+    btn.onclick = () => { btn.remove(); advanceFloor(); };
+    document.getElementById('screen-reward')?.appendChild(btn);
 }
 
 function chooseCareerCardReward(index) {
@@ -3854,7 +3919,7 @@ function chooseCareerCardReward(index) {
     state.player.cards.push({ ...CARD_DEFS[choice.id], rarity: choice.rarity, rune: null, runeData: {} });
     addMessage(`🃏 获得职业卡牌「${getCardDisplayName(choice)}」`, 'heal');
     state._careerRewardChoices = null;
-    advanceFloor();
+    showNextFloorButton();
 }
 window.chooseCareerCardReward = chooseCareerCardReward;
 
@@ -3862,7 +3927,7 @@ function declineCareerCardReward() {
     if (!state._careerRewardChoices) return;
     state._careerRewardChoices = null;
     addMessage('🃏 你放弃了本次职业卡牌奖励。', 'info');
-    advanceFloor();
+    showNextFloorButton();
 }
 window.declineCareerCardReward = declineCareerCardReward;
 
@@ -3914,6 +3979,7 @@ function applyPendingEventBattleRewards() {
 }
 
 function completeMainVictory() {
+    BGM.stop();
     saveRecord('victory');
     clearSave('main');
     SFX.play('victory');
@@ -3925,6 +3991,7 @@ function completeMainVictory() {
 function onEnemyDefeated() {
     if (state.screen !== 'battle') return;
     state.battlePhase = 'over';
+    if (state.enemy && state.enemy.bossId === 'fourGodsChosen') BGM.stop();
 
     if (isReincarnationMode()) {
         handleReincarnationVictory();
@@ -4023,7 +4090,11 @@ function onEnemyDefeated() {
             <div class="reward-card"><div class="reward-icon">📈</div><div class="reward-title">经验×2</div><div class="reward-desc">+${state._lastExpGain}</div></div>
         `;
         showScreen('reward');
-        setTimeout(() => showRuneSelection(), 3000);
+        const runeButton = document.createElement('button');
+        runeButton.className = 'btn reward-next-button';
+        runeButton.textContent = '继续选择印记';
+        runeButton.onclick = () => { runeButton.remove(); showRuneSelection(); };
+        document.getElementById('screen-reward')?.appendChild(runeButton);
     } else if (state.enemy && state.enemy.isElite) {
         // Elite: show rune selection (1 rune), then advance
         // Elite: give random relic
@@ -4152,6 +4223,7 @@ function applyReincarnationPostBattleRelics() {
 
 function onPlayerDeath() {
     if (state.screen !== 'battle') return;
+    BGM.stop();
     if (state.careerId === 'humanReincarnator' && (state.careerRevives || 0) > 0) {
         state.careerRevives--;
         state.player.hp = Math.ceil(state.player.maxHp * 0.5);
@@ -4345,6 +4417,29 @@ function showRecordsModal() {
 function closeRecordsModal(e) {
     $('modal-records').style.display = 'none';
 }
+
+function showModeInfo(mode) {
+    const info = {
+        main: {
+            title: '🗺️ 轮回初始',
+            html: '<p>经典主模式。每层在地图上选择路线，进入普通战斗、精英怪、问号房、商店或旅馆。</p><p>可以通过卡牌、印记、遗物、属性奖励和商店逐步成长。第25层和第50层挑战楼层主，第75层挑战最终Boss“四神共选”，击败后直接通关。</p><p>每回合抽4张牌并恢复2点精力，怪物拥有可被攻击消耗的防御池，并会提前显示行动意图。</p>'
+        },
+        career: {
+            title: '🧬 杀戮轮回',
+            html: '<p>职业模式：人类轮回者。跳过初始祝福，不使用攻击力、防御力和印记系统，主要依靠职业卡牌、Buff和最大生命值成长。</p><p>初始拥有2张攻击卡、2张防御卡，以及蓝色卡牌“舍命”和“再战”。战斗结束后可从3张职业卡牌中选择1张，也可以放弃。</p><p>每回合抽5张牌并恢复3点精力。职业卡牌会根据品级承担生命代价，Buff只在战斗中生效。</p>'
+        },
+        reincarnation: {
+            title: '♾️ 无尽轮回',
+            html: '<p>单线路无限推进的挑战模式，地图一次显示25层，没有最终终点。</p><p>每5层遇到精英怪，每25层遇到楼层主，每50层连续挑战楼层主和“四神Boss”。</p><p>初始卡组只有“拳头”，不使用玩家护盾；防御力改为百分比伤害减免。普通怪物奖励根据本场伤害和战斗回合数计算。</p>'
+        }
+    }[mode];
+    if (!info) return;
+    $('mode-info-title').textContent = info.title;
+    $('mode-info-content').innerHTML = info.html;
+    $('modal-mode-info').style.display = 'flex';
+}
+
+function closeModeInfo(e) { $('modal-mode-info').style.display = 'none'; }
 
 function loadGame(mode = 'main') {
     try { const raw = localStorage.getItem(getSaveKey(mode)); return raw ? JSON.parse(raw) : null; }
@@ -4725,7 +4820,7 @@ function showMap() {
 
 function toggleUiDisplay() {
     state._hudVisible = state._hudVisible === false ? true : false;
-    document.querySelectorAll('#hud-bar > span, #btn-effects').forEach(el => {
+    document.querySelectorAll('#hud-bar .hud-floor, #btn-effects').forEach(el => {
         el.style.display = state._hudVisible ? '' : 'none';
     });
     const panel = $('side-panel-overlay');
@@ -4822,6 +4917,9 @@ function resolveRoom(cell) {
             if (state.enemy.bossId === 'fourGodsChosen') {
                 state.plagueTurns = 999;
                 state.enemy._skillIndex = 0;
+                BGM.playFourGods();
+            } else {
+                BGM.playFloorLord();
             }
             initEnemyIntent();
             state.screen = 'battle';
@@ -4994,16 +5092,24 @@ function engraveRuneOnCard(cardIndex) {
         state.engraveOrigin = 'boss';
         proceedAfterRoom();
     } else if (state.engraveOrigin === 'elite') {
-        // Elite: rune chosen, advance
+        // Elite: wait for the player's explicit next-floor confirmation.
         state.engraveOrigin = 'boss';
-        advanceFloor();
+        state.screen = 'reward';
+        const opts = document.querySelector('#screen-reward .reward-options');
+        if (opts) opts.innerHTML = '<div class="reward-card"><div class="reward-icon">🔮</div><div class="reward-title">印记已刻印</div><div class="reward-desc">本次精英奖励已完成</div></div>';
+        showScreen('reward');
+        showNextFloorButton();
     } else if (state.engraveOrigin === 'blessing') {
         // Initial blessing rune engraved → start the run
         state.engraveOrigin = 'boss';
         startNewArea(1);
     } else {
-        // Boss rune → advance (boss already gave relic earlier)
-        advanceFloor();
+        // Boss rune → wait for the player's explicit next-floor confirmation.
+        state.screen = 'reward';
+        const opts = document.querySelector('#screen-reward .reward-options');
+        if (opts) opts.innerHTML = '<div class="reward-card"><div class="reward-icon">🔮</div><div class="reward-title">印记已刻印</div><div class="reward-desc">本次楼层主奖励已完成</div></div>';
+        showScreen('reward');
+        showNextFloorButton();
     }
 }
 
@@ -5281,8 +5387,8 @@ const EVENT_DEFS = [
                     } else {
                         s.player.attack += 10;
                         addMessage(`🌑 触碰裂缝：攻击力+10，但失去 ${loss} 点生命`, 'heal');
-                    }
-                },
+        }
+    },
                 resultText: s => isCareerMode() ? '虚空的力量进入了你的身体。获得攻击Buff+2（本场战斗有效），同时失去5%的生命值。' : '虚空的力量进入了你的身体。攻击力永久+10，但你失去了5%的生命值。',
             },
             {
@@ -6165,11 +6271,15 @@ function showScreen(name) {
     document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
     const el = $(`screen-${name}`);
     if (el) el.classList.add('active');
+    if (name === 'battle') {
+        const enemyPanel = $('battle-enemy-stats-panel');
+        if (enemyPanel) enemyPanel.classList.remove('enemy-stats-visible');
+    }
     // Show HUD on game screens, hide on menu/victory/gameover
     const gameScreens = ['map', 'battle', 'question-room', 'shop', 'current-cards', 'inn', 'chest-result', 'rune-select', 'rune-engrave', 'rune-confirm', 'reward', 'attr-pick', 'blessing', 'career-select'];
     $('hud-bar').style.display = gameScreens.includes(name) ? 'flex' : 'none';
     if (gameScreens.includes(name)) {
-        document.querySelectorAll('#hud-bar > span, #btn-effects').forEach(item => {
+        document.querySelectorAll('#hud-bar .hud-floor, #btn-effects').forEach(item => {
             item.style.display = state._hudVisible === false ? 'none' : '';
         });
     }
@@ -6652,12 +6762,12 @@ window.adminHealFull = adminHealFull;
 
 function updateHUD() {
     const p = state.player;
-    $('hud-hp').textContent = `${formatGameNumber(p.hp)} / ${formatGameNumber(p.maxHp)}`;
-    $('hud-gold').textContent = `${p.gold}`;
+    if ($('hud-hp')) $('hud-hp').textContent = `${formatGameNumber(p.hp)} / ${formatGameNumber(p.maxHp)}`;
+    if ($('hud-gold')) $('hud-gold').textContent = `${p.gold}`;
     const shownFloor = isReincarnationMode() && state.screen === 'map'
         ? Math.max(state.floor, state.mapStartFloor || 1)
         : state.floor;
-    $('hud-floor').textContent = T.floor(shownFloor);
+    if ($('hud-floor')) $('hud-floor').textContent = T.floor(shownFloor);
 }
 
 function addMessage(text, cls = '') {
@@ -6769,7 +6879,7 @@ function updateBattleUI() {
     const p = state.player;
     $('player-hp-bar').style.width = (p.hp / p.maxHp * 100) + '%';
     $('player-hp-text').textContent = `${formatGameNumber(p.hp)} / ${formatGameNumber(p.maxHp)}`;
-    $('player-stats').innerHTML = `
+    if ($('player-stats')) $('player-stats').innerHTML = `
         <div class="stat-row"><span class="label">等级</span><span class="value">${p.level}</span></div>
         ${isCareerMode() ? '' : `<div class="stat-row"><span class="label">攻击</span><span class="value">${p.attack}</span></div>
         <div class="stat-row"><span class="label">防御${isReincarnationMode() ? '减伤' : ''}</span><span class="value">${p.defense}${isReincarnationMode() ? '%' : ''}</span></div>`}
@@ -6777,7 +6887,7 @@ function updateBattleUI() {
         <div class="stat-row"><span class="label">经验</span><span class="value">${formatGameNumber(p.exp)}/${formatGameNumber(expToNextLevel())}</span></div>
         <div class="stat-row"><span class="label">金币</span><span class="value">${formatGameNumber(p.gold)}</span></div>
     `;
-    $('header-gold').textContent = `💰 ${p.gold}`;
+    if ($('header-gold')) $('header-gold').textContent = `💰 ${p.gold}`;
     $('shield-display').textContent = `🛡️ ${state.shield}`;
     $('shield-display').style.display = isReincarnationMode() ? 'none' : '';
     const maxEnergy = (isCareerMode() ? 3 : state.maxEnergy) + (state.player.shopExtraEnergyBought ? 1 : 0) + getRelicCount('runeGem');
@@ -6847,7 +6957,7 @@ function updateBattleUI() {
     $('deck-info').textContent = T.deckInfo(state.deck.draw.length, state.deck.discard.length);
 
     // Floor
-    $('battle-floor').textContent = T.floor(state.floor);
+    if ($('battle-floor')) $('battle-floor').textContent = T.floor(state.floor);
 
     // Update end turn button state
     updateEndTurnButton();
@@ -6865,6 +6975,11 @@ function updateBattleUI() {
         }
         badge.textContent = `×${revives}`;
     }
+}
+
+function toggleEnemyStats() {
+    const panel = $('battle-enemy-stats-panel');
+    if (panel) panel.classList.toggle('enemy-stats-visible');
 }
 
 function updateEndTurnButton() {
@@ -7019,7 +7134,7 @@ function showRewardSummary() {
         <div class="reward-card"><div class="reward-icon">📈</div><div class="reward-title">经验</div><div class="reward-desc">+${formatGameNumber(state._lastExpGain || 0)}</div></div>
     `;
     showScreen('reward');
-    setTimeout(() => advanceFloor(), 3000);
+    showNextFloorButton();
 }
 
 function showReward() {
@@ -7029,12 +7144,14 @@ function showReward() {
     const floorEl = $('reward-floor-text'); if (floorEl) floorEl.textContent = T.floor(state.floor);
     const healEl = $('reward-heal-desc'); if (healEl) healEl.textContent = T.rewardHealDesc(Math.ceil(state.player.maxHp * BALANCE.healPercent));
     showScreen('reward');
-    setTimeout(() => advanceFloor(), 2000);
+    showNextFloorButton();
 }
 
 function render() {
+    if (state.screen !== 'menu') BGM.stop();
     switch (state.screen) {
         case 'menu':
+            BGM.playMenu();
             showScreen('menu');
             $('btn-continue').style.display = hasAnySave() ? '' : 'none';
             break;
@@ -7116,12 +7233,17 @@ function render() {
 // EVENT HANDLERS & INITIALIZATION
 // =====================================================================
 function bindEvents() {
-    $('btn-start').addEventListener('click', () => {
-        state.screen = 'mode-select';
-        render();
-    });
+    // Browsers commonly block autoplay on file:// pages. Retry menu music
+    // after the first user gesture, while preserving the normal stop-on-entry
+    // behavior when the click opens another screen.
+    document.addEventListener('click', () => {
+        if (state.screen === 'menu' && !BGM.boss) BGM.playMenu();
+    }, { capture: true });
+    const startButton = $('btn-start');
+    if (startButton) startButton.addEventListener('click', () => { state.screen = 'mode-select'; render(); });
     $('btn-continue').addEventListener('click', continueGame);
-    $('btn-quit-battle').addEventListener('click', backToMenu);
+    const quitBattleButton = $('btn-quit-battle');
+    if (quitBattleButton) quitBattleButton.addEventListener('click', backToMenu);
     $('btn-end-turn').addEventListener('click', endPlayerTurn);
     $('btn-victory-menu').addEventListener('click', backToMenu);
     $('btn-gameover-menu').addEventListener('click', backToMenu);
@@ -7143,6 +7265,15 @@ function startGame() {
 }
 
 function startMode(mode) {
+    if (mode === 'career') {
+        clearSave('main');
+        state = freshState();
+        state.gameMode = 'main';
+        // Career mode opens the profession selection screen so future
+        // professions can be added without changing the mode entry point.
+        showCareerSelect();
+        return;
+    }
     if (mode === 'reincarnation') {
         clearSave('reincarnation');
         state = freshReincarnationState();
@@ -7153,7 +7284,9 @@ function startMode(mode) {
     clearSave('main');
     state = freshState();
     state.gameMode = 'main';
-    showCareerSelect();
+    // The main mode never uses career selection; it starts with its normal
+    // initial blessing flow.
+    showBlessing();
 }
 
 function returnToMenu() {
@@ -7327,6 +7460,7 @@ function pickAttr(type) {
 }
 
 function backToMenu() {
+    BGM.stop();
     clearSave();
     state = freshState();
     state.screen = 'menu';
