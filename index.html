@@ -97,6 +97,8 @@ body {
 .menu-mode-row { display:flex; align-items:center; gap:8px; }
 .menu-mode-btn { flex:1; margin:0; }
 .mode-info-btn { flex:0 0 42px; width:42px; padding:6px 0; margin:0; }
+#menu-music-toggle { position:absolute; top:16px; right:16px; min-width:52px; padding:6px 12px; font-size:18px; z-index:2; }
+#menu-music-toggle.music-off { opacity:0.55; }
 #screen-menu .menu-buttons { display:flex; flex-direction:column; align-items:stretch; gap:8px; width:min(420px,92vw); margin-top:2px; }
 .mode-info-content { text-align:left; color:#bbb; font-size:13px; line-height:1.7; }
 .mode-info-content p { margin:0 0 8px; }
@@ -702,6 +704,7 @@ body {
             <div class="menu-mode-row"><button class="btn menu-mode-btn" onclick="startMode('career')">杀戮轮回</button><button class="btn btn-small mode-info-btn" onclick="showModeInfo('career')" title="查看杀戮轮回介绍">ℹ️</button></div>
             <div class="menu-mode-row"><button class="btn menu-mode-btn" onclick="startMode('reincarnation')">无尽轮回</button><button class="btn btn-small mode-info-btn" onclick="showModeInfo('reincarnation')" title="查看无尽轮回介绍">ℹ️</button></div>
         </div>
+        <button class="btn btn-small music-off" id="menu-music-toggle" onclick="toggleMenuMusic()" title="开启主界面音乐">🎵</button>
         <div class="menu-buttons">
             <button class="btn" id="btn-continue" style="display:none;">继续游戏</button>
             <button class="btn btn-small" id="btn-records" onclick="showRecordsModal()">📜 历史记录</button>
@@ -2666,6 +2669,7 @@ const SFX = {
 // Background music for the menu and special battles.
 const BGM = {
     boss: null,
+    menuEnabled: false,
     playTrack(path) {
         this.stop();
         try {
@@ -2676,7 +2680,7 @@ const BGM = {
             if (result && result.catch) result.catch(() => { /* browser autoplay policy */ });
         } catch (e) { this.boss = null; }
     },
-    playMenu() { this.playTrack('audio/main-menu.mp3'); },
+    playMenu() { if (this.menuEnabled) this.playTrack('audio/main-menu.mp3'); },
     playFourGods() { this.playTrack('audio/four-gods-chosen.mp3'); },
     playFloorLord() { this.playTrack('audio/floor-lord.mp3'); },
     stop() {
@@ -2686,6 +2690,18 @@ const BGM = {
         this.boss = null;
     }
 };
+
+function toggleMenuMusic() {
+    BGM.menuEnabled = !BGM.menuEnabled;
+    if (BGM.menuEnabled) BGM.playMenu();
+    else BGM.stop();
+    const button = $('menu-music-toggle');
+    if (button) {
+        button.textContent = '🎵';
+        button.classList.toggle('music-off', !BGM.menuEnabled);
+        button.title = BGM.menuEnabled ? '关闭主界面音乐' : '开启主界面音乐';
+    }
+}
 
 // =====================================================================
 // UTILITY FUNCTIONS
@@ -7153,6 +7169,12 @@ function render() {
     switch (state.screen) {
         case 'menu':
             BGM.playMenu();
+            const menuMusicButton = $('menu-music-toggle');
+            if (menuMusicButton) {
+            menuMusicButton.textContent = '🎵';
+            menuMusicButton.classList.toggle('music-off', !BGM.menuEnabled);
+                menuMusicButton.title = BGM.menuEnabled ? '关闭主界面音乐' : '开启主界面音乐';
+            }
             showScreen('menu');
             $('btn-continue').style.display = hasAnySave() ? '' : 'none';
             break;
@@ -7234,12 +7256,6 @@ function render() {
 // EVENT HANDLERS & INITIALIZATION
 // =====================================================================
 function bindEvents() {
-    // Browsers commonly block autoplay on file:// pages. Retry menu music
-    // after the first user gesture, while preserving the normal stop-on-entry
-    // behavior when the click opens another screen.
-    document.addEventListener('click', () => {
-        if (state.screen === 'menu' && !BGM.boss) BGM.playMenu();
-    }, { capture: true });
     const startButton = $('btn-start');
     if (startButton) startButton.addEventListener('click', () => { state.screen = 'mode-select'; render(); });
     $('btn-continue').addEventListener('click', continueGame);
