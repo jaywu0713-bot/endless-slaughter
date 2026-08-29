@@ -216,6 +216,7 @@ body {
 
 /* Card row at bottom */
 .card-row { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+.battle-controls { display:flex; align-items:center; justify-content:center; gap:12px; margin-bottom:6px; }
 .energy-big {
     font-size: 24px; font-weight: 900; color: var(--energy);
     text-shadow: 0 0 8px rgba(255,235,59,0.4); white-space: nowrap;
@@ -247,6 +248,10 @@ body {
 .card.atk-card:hover:not(.disabled) { box-shadow: 0 8px 24px rgba(239,83,80,0.3); }
 .card.def-card { border-color: var(--card-def); }
 .card.def-card:hover:not(.disabled) { box-shadow: 0 8px 24px rgba(66,165,245,0.3); }
+.card.career-rarity-normal { border-color:#bdbdbd; box-shadow:0 0 8px rgba(189,189,189,.18); }
+.card.career-rarity-blue { border-color:#42a5f5; box-shadow:0 0 10px rgba(66,165,245,.35); }
+.card.career-rarity-orange { border-color:#ff9800; box-shadow:0 0 12px rgba(255,152,0,.42); }
+.card.career-rarity-red { border-color:#ef5350; box-shadow:0 0 14px rgba(239,83,80,.5); }
 .card.disabled { opacity: 0.4; cursor: not-allowed; filter: grayscale(50%); }
 .card.junk-card { border-color: #555; background: #1a1a1a; }
 .card-type-label.junk { color: #888; }
@@ -269,6 +274,7 @@ body {
 .card-type-label { font-size: 9px; text-align: center; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; }
 .card-type-label.atk { color: var(--card-atk); }
 .card-type-label.def { color: var(--card-def); }
+.card-type-label.career-type { color:var(--text-dim); }
 
 .card-rune {
     display: flex; flex-wrap: wrap; gap: 2px; justify-content: center;
@@ -276,6 +282,9 @@ body {
 }
 
 .deck-info { text-align: center; font-size: 11px; color: var(--text-dim); margin-top: 4px; }
+.deck-pile-buttons { display:flex; justify-content:center; gap:6px; margin-top:4px; flex-wrap:wrap; }
+.deck-pile-buttons .btn { padding:3px 8px; font-size:10px; }
+.career-reward-selected { border-color:var(--gold) !important; box-shadow:0 0 0 4px rgba(255,215,0,.45), 0 8px 24px rgba(255,215,0,.2); transform:translateY(-4px); }
 
 /* ==================== END TURN BUTTON ==================== */
 .end-turn-wrap { text-align: center; padding-bottom: 4px; }
@@ -675,6 +684,14 @@ body {
         </div>
     </div>
 
+    <div id="modal-card-pile" class="modal-overlay" style="display:none;" onclick="closeCardPile(event)">
+        <div class="modal-content" onclick="event.stopPropagation()">
+            <h2 id="card-pile-title" style="color:var(--gold);"></h2>
+            <div id="card-pile-list" style="max-height:60vh;overflow-y:auto;text-align:left;"></div>
+            <button class="btn btn-small" onclick="closeCardPile()">关闭</button>
+        </div>
+    </div>
+
     <!-- MAIN MENU -->
     <div id="screen-menu" class="screen active">
         <div class="title">无尽杀戮</div>
@@ -781,13 +798,18 @@ body {
         </div>
         <div class="message-log" id="message-log"></div>
         <div class="card-area">
-            <div class="card-row">
+            <div class="battle-controls">
                 <div class="energy-big" id="energy-display">⚡ 3 / 3</div>
                 <div class="battle-damage-total" id="battle-damage-total" style="display:none;">💥 0</div>
-                <div class="card-hand" id="card-hand"></div>
                 <button class="btn" id="btn-end-turn">结束回合</button>
             </div>
+            <div class="card-row"><div class="card-hand" id="card-hand"></div></div>
             <div class="deck-info" id="deck-info"></div>
+            <div class="deck-pile-buttons">
+                <button class="btn btn-small" onclick="showCardPile('draw')">抽牌堆</button>
+                <button class="btn btn-small" onclick="showCardPile('discard')">弃牌堆</button>
+                <button class="btn btn-small" onclick="showCardPile('exhaust')">消耗牌堆</button>
+            </div>
         </div>
     </div>
 
@@ -1778,24 +1800,24 @@ function getCareerCardDisplayDesc(card) {
     };
     let desc = '';
     switch (card.id) {
-        case 'careerAttack': desc = `造成${10 + attackBuff}点伤害（10+攻击Buff ${attackBuff}）`; break;
-        case 'careerDefense': desc = `获得${7 + agilityBuff}点护盾（7+敏捷Buff ${agilityBuff}）`; break;
+        case 'careerAttack': desc = `造成${10 + attackBuff}点伤害`; break;
+        case 'careerDefense': desc = `获得${7 + agilityBuff}点护盾`; break;
         case 'sacrifice': {
-            const damage = Math.round(hpAfterRarityCost * 0.5);
+            const damage = Math.round(hpAfterRarityCost * 0.3);
             const loss = Math.max(1, Math.ceil(hpAfterRarityCost * 0.05));
-            desc = `造成${damage}点伤害；卡牌效果失去${loss}点生命`;
+            desc = `造成${damage}伤害；失去${loss}生命`;
             break;
         }
         case 'growth': {
             const damage = enemyMaxHp ? Math.round(enemyMaxHp * 0.15) : null;
             const maxHpGain = Math.ceil(maxHp * 0.05);
             const heal = Math.ceil((maxHp + maxHpGain) * 0.10);
-            desc = `${damage === null ? '造成敌方最大生命值15%的伤害' : `造成${damage}点伤害（敌方最大生命值15%）`}；击杀时最大生命值+${maxHpGain}，回复${heal}点生命；使用后消耗`;
+            desc = `${damage === null ? '造成敌方最大生命值15%伤害' : `造成${damage}伤害`}；击杀时最大HP+${maxHpGain}、回复${heal}；使用后消耗`;
             break;
         }
         case 'fightAgain': {
-            const drawCount = Math.max(0, Math.floor(state._careerTurnHpLost || 0));
-            desc = `当前回合每失去1点生命抽1张牌（当前可抽${drawCount}张）`;
+            const drawCount = Math.max(0, state._careerTurnHpLossEvents || 0);
+            desc = `本回合每次失血抽1张（当前${drawCount}张）`;
             break;
         }
         case 'tripleStrike': {
@@ -1900,7 +1922,7 @@ function getCardDisplayDesc(card) {
         }
         case 'careerAttack': return '造成10点伤害';
         case 'careerDefense': return '获得7点护盾';
-        case 'sacrifice': return '造成当前生命值50%的伤害，失去当前生命值5%';
+        case 'sacrifice': return '造成当前生命值30%的伤害，失去当前生命值5%';
         case 'growth': return '造成敌方最大生命值15%的伤害；击杀时最大HP提高5%，并回复最大生命值10%';
         case 'fightAgain': return `当前回合每失去1点生命抽1张牌（当前可抽${Math.max(0, Math.floor(state._careerTurnHpLost || 0))}张）`;
         case 'attack': return T.cardAttackDesc(state.player.attack);
@@ -2535,7 +2557,7 @@ function freshState() {
             })),
         },
         enemy: null,
-        deck: { draw: [], hand: [], discard: [] },
+        deck: { draw: [], hand: [], discard: [], exhaust: [] },
         energy: 0,
         maxEnergy: BALANCE.player.maxEnergy,
         shield: 0,
@@ -2836,10 +2858,27 @@ function drawCards(count) {
     return drawn;
 }
 
+function showCardPile(pile) {
+    if (!state.deck) return;
+    const labels = { draw: '抽牌堆', discard: '弃牌堆', exhaust: '消耗牌堆' };
+    const cards = state.deck[pile] || [];
+    $('card-pile-title').textContent = `${labels[pile] || '卡牌堆'}（${cards.length}张）`;
+    $('card-pile-list').innerHTML = cards.length ? cards.map(card => `
+        <div style="padding:7px 4px;border-bottom:1px solid #333;">
+            <b>${card.icon || '🃏'} ${getCardDisplayName(card)}</b>
+            <div style="font-size:11px;color:var(--text-dim);">${getCardDisplayDesc(card)}</div>
+        </div>`).join('') : '<div style="padding:16px;text-align:center;color:var(--text-dim);">这里没有卡牌</div>';
+    $('modal-card-pile').style.display = 'flex';
+}
+function closeCardPile(e) { $('modal-card-pile').style.display = 'none'; }
+window.showCardPile = showCardPile;
+window.closeCardPile = closeCardPile;
+
 function recordCareerHpLoss(amount) {
     if (isCareerMode() && amount > 0) {
         state._careerBattleLost = (state._careerBattleLost || 0) + amount;
         state._careerTurnHpLost = (state._careerTurnHpLost || 0) + amount;
+        state._careerTurnHpLossEvents = (state._careerTurnHpLossEvents || 0) + 1;
         const bloodHunterStacks = state.careerBuffs?.bloodHunter || 0;
         if (bloodHunterStacks > 0) {
             state.careerBuffs.attack = (state.careerBuffs.attack || 0) + bloodHunterStacks;
@@ -2907,6 +2946,7 @@ function resetCareerBattleBuffs() {
     state._careerBattleLost = 0;
     state._careerBattleHealed = 0;
     state._careerTurnHpLost = 0;
+    state._careerTurnHpLossEvents = 0;
     state._careerTurnHpHealed = 0;
 }
 
@@ -3102,7 +3142,7 @@ function playCareerCard(card) {
         ignoreDefense = true;
     }
     else if (card.effect === 'careerSacrifice') {
-        damage = Math.round(state.player.hp * 0.5);
+        damage = Math.round(state.player.hp * 0.3);
         const sacrificeLoss = Math.max(1, Math.ceil(state.player.hp * 0.05));
         state.player.hp = Math.max(1, state.player.hp - sacrificeLoss);
         recordCareerHpLoss(sacrificeLoss);
@@ -3150,7 +3190,7 @@ function playCareerSpecialCard(card) {
         case 'tripleStrike': hit(5 + getCareerAttackBuff(), 3); break;
         case 'doubleDefense': state.shield += (5 + getCareerAgilityBuff()) * 2; break;
         case 'ponder': drawCards(2); break;
-        case 'fightAgain': drawCards(Math.max(0, Math.floor(state._careerTurnHpLost || 0))); break;
+        case 'fightAgain': drawCards(Math.max(0, state._careerTurnHpLossEvents || 0)); break;
         case 'bloodHunter': b.bloodHunter += 1; card._exhaustThisBattle = true; addMessage('🩸 嗜血者：获得嗜血Buff，本场战斗每次失去生命时攻击Buff+1', 'info'); break;
         case 'lifeOrigin': {
             const layers = Math.floor((state._careerTurnHpHealed || 0) / 10);
@@ -3251,6 +3291,7 @@ function playCard(handIndex) {
     // Exhaust-self cards: removed for this battle (no discard). May cost HP.
     if (card.effect === 'exhaustSelf') {
         state.deck.hand.splice(handIndex, 1);
+        state.deck.exhaust.push(card);
         if (card.exhaustHpCost) {
             const cost = Math.max(1, Math.ceil(state.player.hp * 0.03));
             state.player.hp = Math.max(1, state.player.hp - cost);
@@ -3267,11 +3308,17 @@ function playCard(handIndex) {
     // Remove from hand.  Single-use career cards are exhausted for this
     // battle and must not enter the discard pile.
     state.deck.hand.splice(handIndex, 1);
-    if (!isBattleExhaustCard(card)) discardCard(card);
+    if (isBattleExhaustCard(card)) state.deck.exhaust.push(card);
+    else discardCard(card);
 
     if (isCareerMode() && card.careerOnly) {
         if (card.effect === 'careerSpecial') playCareerSpecialCard(card);
         else playCareerCard(card);
+        if (card._exhaustThisBattle) {
+            const discardIndex = state.deck.discard.lastIndexOf(card);
+            if (discardIndex >= 0) state.deck.discard.splice(discardIndex, 1);
+            if (!state.deck.exhaust.includes(card)) state.deck.exhaust.push(card);
+        }
         return;
     }
 
@@ -3908,15 +3955,45 @@ function revealCareerCardReward() {
     const choices = state._careerRewardChoices || [];
     const opts = document.querySelector('#screen-reward .reward-options');
     if (!opts) return;
+    state._selectedCareerReward = null;
+    renderCareerRewardChoices(choices, null, opts);
+}
+
+function renderCareerRewardChoices(choices, selectedIndex, opts) {
     opts.innerHTML = choices.map((choice, i) => {
         const card = { ...CARD_DEFS[choice.id], rarity: choice.rarity, rune: null, runeData: {} };
         const meta = CAREER_RARITY_META[choice.rarity];
-        return `<div class="reward-card" onclick="chooseCareerCardReward(${i})" style="border-color:${meta.color};">
+        const selected = selectedIndex === i ? ' career-reward-selected' : '';
+        return `<div class="reward-card${selected}" onclick="selectCareerCardReward(${i})" style="border-color:${meta.color};">
             <div class="reward-icon">${card.icon}</div><div class="reward-title" style="color:${meta.color};">${getCardDisplayName(card)}</div>
             <div class="reward-desc">${getCardDisplayDesc(card)}<br>消耗${card.cost}点精力<br>使用时承担生命代价</div></div>`;
-    }).join('') + `<button class="btn btn-small" onclick="declineCareerCardReward()">放弃卡牌</button>`;
+    }).join('') + (selectedIndex === null
+        ? '<button class="btn btn-small" onclick="selectCareerDecline()">放弃卡牌</button>'
+        : `<button class="btn btn-small" onclick="chooseCareerCardReward(${selectedIndex})">确认选择</button><button class="btn btn-small" onclick="selectCareerDecline()">放弃卡牌</button>`);
 }
 window.revealCareerCardReward = revealCareerCardReward;
+
+function selectCareerCardReward(index) {
+    if (!state._careerRewardChoices || !state._careerRewardChoices[index]) return;
+    state._selectedCareerReward = index;
+    const opts = document.querySelector('#screen-reward .reward-options');
+    if (opts) renderCareerRewardChoices(state._careerRewardChoices, index, opts);
+}
+window.selectCareerCardReward = selectCareerCardReward;
+
+function selectCareerDecline() {
+    if (!state._careerRewardChoices) return;
+    const opts = document.querySelector('#screen-reward .reward-options');
+    if (!opts) return;
+    opts.innerHTML = state._careerRewardChoices.map((choice, i) => {
+        const card = { ...CARD_DEFS[choice.id], rarity: choice.rarity, rune: null, runeData: {} };
+        const meta = CAREER_RARITY_META[choice.rarity];
+        return `<div class="reward-card" onclick="selectCareerCardReward(${i})" style="border-color:${meta.color};">
+            <div class="reward-icon">${card.icon}</div><div class="reward-title" style="color:${meta.color};">${getCardDisplayName(card)}</div>
+            <div class="reward-desc">${getCardDisplayDesc(card)}<br>消耗${card.cost}点精力<br>使用时承担生命代价</div></div>`;
+    }).join('') + '<button class="btn btn-small career-reward-selected" onclick="declineCareerCardReward()">确认放弃卡牌</button>';
+}
+window.selectCareerDecline = selectCareerDecline;
 
 function showNextFloorButton() {
     const old = document.getElementById('btn-next-floor');
@@ -4165,7 +4242,7 @@ function resetReincarnationBattleEffects() {
 function startReincarnationBossBattle(bossId) {
     resetReincarnationBattleEffects();
     state.messages = [];
-    state.deck = { draw: createDeck(), hand: [], discard: [] };
+    state.deck = { draw: createDeck(), hand: [], discard: [], exhaust: [] };
     state._battleTurnCount = 0;
     if (isReincarnationMode()) state._reincarnationBattleDamage = 0;
     state._sealUsedThisBattle = false;
@@ -4878,7 +4955,7 @@ function resolveRoom(cell) {
     for (const card of state.player.cards) {
         if (card._savedCost !== undefined) { card.cost = card._savedCost; delete card._savedCost; }
     }
-    state.deck = { draw: createDeck(), hand: [], discard: [] };
+    state.deck = { draw: createDeck(), hand: [], discard: [], exhaust: [] };
     state._battleTurnCount = 0;
     if (isReincarnationMode()) state._reincarnationBattleDamage = 0;
     state._sealUsedThisBattle = false;
@@ -5535,7 +5612,7 @@ const EVENT_DEFS = [
 
 function enterEventBattle() {
     resetCareerBattleBuffs();
-    state.deck = { draw: createDeck(), hand: [], discard: [] };
+    state.deck = { draw: createDeck(), hand: [], discard: [], exhaust: [] };
     state.shield = 0;
     state.messages = [];
     state.pendingReward = true;
@@ -5696,7 +5773,7 @@ function enterQuestionBattle() {
     for (const card of state.player.cards) {
         if (card._savedCost !== undefined) { card.cost = card._savedCost; delete card._savedCost; }
     }
-    state.deck = { draw: createDeck(), hand: [], discard: [] };
+    state.deck = { draw: createDeck(), hand: [], discard: [], exhaust: [] };
     state.shield = 0;
     state.messages = [];
     state.pendingReward = true;
@@ -7093,12 +7170,13 @@ function renderHand() {
             const disabled = (state.energy < displayCost) ? 'disabled' : '';
             const typeClass = card.type === 'atk' ? 'atk-card' : 'def-card';
             const typeLabel = card.type === 'atk' ? 'ATTACK' : 'DEFENSE';
-            const typeLabelClass = card.type === 'atk' ? 'atk' : 'def';
+            const typeLabelClass = isCareerMode() ? 'career-type' : (card.type === 'atk' ? 'atk' : 'def');
             const name = getCardDisplayName(card);
             const desc = getCardDisplayDesc(card);
             const rarityName = ({normal:'普通',blue:'蓝色',orange:'橙色',red:'红色'})[card.rarity || 'normal'];
             const rarityColor = ({normal:'#bbb',blue:'#42a5f5',orange:'#ff9800',red:'#ef5350'})[card.rarity || 'normal'];
-            const rarityIndicator = isReincarnationMode() ? `<div style="font-size:10px;font-weight:700;color:${rarityColor};">${rarityName}品级</div>` : '';
+            const rarityIndicator = '';
+            const rarityClass = isCareerMode() && card.rarity ? ` career-rarity-${card.rarity}` : '';
             const runeIndicator = (() => {
                 const allRunes = [];
                 if (card.rune) {
@@ -7125,7 +7203,7 @@ function renderHand() {
                 ).join('')}</div>`;
             })();
             html += `
-                <div class="card-slot"><div class="card ${typeClass} ${disabled}" onclick="playCard(${i})">
+                <div class="card-slot"><div class="card ${typeClass}${rarityClass} ${disabled}" onclick="playCard(${i})">
                     <div class="card-cost">⚡${displayCost}</div>
                     <div class="card-icon">${card.icon}</div>
                     <div class="card-title">${name}</div>
@@ -7324,8 +7402,8 @@ function selectCareer(careerId) {
     state.careerId = careerId;
     if (careerId && CAREER_DEFS[careerId]) {
         state.player.cards = [
-            ...Array.from({ length: 2 }, () => ({ ...CARD_DEFS.careerAttack, rarity: 'normal', rune: null, runeData: {} })),
-            ...Array.from({ length: 2 }, () => ({ ...CARD_DEFS.careerDefense, rarity: 'normal', rune: null, runeData: {} })),
+            ...Array.from({ length: 3 }, () => ({ ...CARD_DEFS.careerAttack, rarity: 'normal', rune: null, runeData: {} })),
+            ...Array.from({ length: 3 }, () => ({ ...CARD_DEFS.careerDefense, rarity: 'normal', rune: null, runeData: {} })),
             { ...CARD_DEFS.sacrifice, rarity: 'blue', rune: null, runeData: {} },
             { ...CARD_DEFS.fightAgain, rarity: 'blue', rune: null, runeData: {} },
         ];
